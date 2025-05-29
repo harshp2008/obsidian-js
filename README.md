@@ -1,36 +1,128 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# obsidian-js
 
-## Getting Started
+A React component for an Obsidian-like Markdown editor using CodeMirror 6. It supports light/dark themes and provides a clean interface for Markdown editing.
 
-First, run the development server:
+## Features
+
+- CodeMirror 6 based Markdown editor
+- Light and Dark mode support, synchronized with application theme
+- Theme toggle component included
+- Basic Markdown formatting (Bold, Italic, Headings, etc.) via keybindings
+- Live preview mode (toggles between editor and rendered HTML)
+
+## Installation
 
 ```bash
-npm run dev
+npm install obsidian-js
 # or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn add obsidian-js
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Make sure you have the peer dependencies installed:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm install react react-dom
+# or
+yarn add react react-dom
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Basic Usage
 
-## Learn More
+### 1. Wrap your application with `ThemeProvider`
 
-To learn more about Next.js, take a look at the following resources:
+This is necessary for the theme toggling and editor theming to work correctly.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```tsx
+// app/layout.tsx or your main application file
+import { ThemeProvider } from 'obsidian-js';
+import 'obsidian-js/dist/index.css'; // Import editor's base CSS
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
 
-## Deploy on Vercel
+**Note:** The path `obsidian-js/dist/CodeMirrorEditor.css` assumes the CSS file is copied to the `dist` folder during the build process of the `obsidian-js` package.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 2. Use the `ThemeToggle` component (Optional)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```tsx
+import { ThemeToggle } from 'obsidian-js';
+
+function MyHeader() {
+  return (
+    <header>
+      <h1>My App</h1>
+      <ThemeToggle />
+    </header>
+  );
+}
+```
+
+### 3. Use the `CodeMirrorEditor` component
+
+```tsx
+import React, { useState } from 'react';
+import { CodeMirrorEditor } from 'obsidian-js';
+
+function MyEditorPage() {
+  const [markdown, setMarkdown] = useState('# Hello World\n\nThis is **markdown**.');
+
+  const handleEditorChange = (newMarkdown: string) => {
+    setMarkdown(newMarkdown);
+  };
+
+  const handleSave = () => {
+    console.log('Content saved:', markdown);
+  };
+
+  return (
+    <div style={{ height: '500px', border: '1px solid #ccc' }}>
+      <CodeMirrorEditor
+        content={markdown}
+        onChange={handleEditorChange}
+        onSave={handleSave}
+        editable={true}
+      />
+    </div>
+  );
+}
+
+export default MyEditorPage;
+```
+
+## `CodeMirrorEditor` Props
+
+| Prop       | Type                          | Default | Description                                                                 |
+|------------|-------------------------------|---------|-----------------------------------------------------------------------------|
+| `content`  | `string`                      |         | The initial markdown content of the editor.                                 |
+| `onChange` | `(markdown: string) => void`  |         | Callback function triggered when the editor content changes.                |
+| `onSave`   | `() => void` (optional)       |         | Optional callback function triggered when a save action is requested (e.g., Ctrl+S). |
+| `editable` | `boolean` (optional)          | `true`  | Optional flag to make the editor read-only.                                 |
+
+## Peer Dependencies
+
+This package has `react` and `react-dom` as peer dependencies. You need to have these installed in your project.
+
+- `react`: `>=17.0.0`
+- `react-dom`: `>=17.0.0`
+
+## Building the Package Locally (for contributors)
+
+1. Clone the repository.
+2. Install dependencies: `npm install` or `yarn install`.
+3. Install `tsup` if you haven't already: `npm install --save-dev tsup`.
+4. Build the package: `npm run build:package` or `yarn build:package`.
+   This will output the compiled files to the `dist` directory.
+
+## License
+
+MIT

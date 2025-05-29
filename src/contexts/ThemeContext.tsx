@@ -2,15 +2,31 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'light' | 'dark';
+/**
+ * Represents the possible theme states.
+ */
+export type Theme = 'light' | 'dark';
 
-type ThemeContextType = {
+/**
+ * Defines the shape of the ThemeContext.
+ */
+export type ThemeContextType = {
+  /** The current active theme ('light' or 'dark'). */
   theme: Theme;
+  /** Function to toggle the current theme. */
   toggleTheme: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+/**
+ * Provides the theme state and toggle function to its children components.
+ * It handles theme persistence in localStorage and synchronization with system preferences.
+ *
+ * @param {object} props - The component props.
+ * @param {React.ReactNode} props.children - The child components to be wrapped by the provider.
+ * @returns {JSX.Element | null} The ThemeProvider component or null if not mounted yet.
+ */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
@@ -67,6 +83,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Custom hook to access the theme context (theme state and toggle function).
+ * This hook must be used within a component wrapped by `ThemeProvider`.
+ *
+ * @throws {Error} If used outside of a `ThemeProvider`.
+ * @returns {ThemeContextType} The theme context.
+ */
 export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {

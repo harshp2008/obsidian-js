@@ -11,13 +11,29 @@ import defaultContentString from './obsidian-editor/defaultText.md';
 
 const initialContent = defaultContentString;
 
+/**
+ * The main demo page for the CodeMirror-based Markdown editor.
+ * It showcases the editor's functionality, including theme toggling and content handling.
+ *
+ * @returns {JSX.Element} The CodeMirror demo page component.
+ */
 export default function CodeMirrorDemoPage() {
   const [content, setContent] = useState(initialContent);
   
+  /**
+   * Handles changes to the editor's content.
+   * Updates the local state with the new content.
+   *
+   * @param {string} newContent - The new content from the editor.
+   */
   const handleContentChange = (newContent: string) => {
     setContent(newContent);
   };
   
+  /**
+   * Handles the save action triggered from the editor (e.g., Ctrl+S).
+   * Logs the current content to the console and shows an alert.
+   */
   const handleSave = () => {
     console.log('Content saved:', content);
     alert('Content saved to console!');

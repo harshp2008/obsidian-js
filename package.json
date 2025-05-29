@@ -1,10 +1,28 @@
 {
   "name": "obsidian-js",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "description": "A React component for an Obsidian-like Markdown editor using CodeMirror 6.",
+  "author": "Your Name or Org",
+  "license": "MIT",
+  "keywords": [
+    "react",
+    "codemirror",
+    "markdown",
+    "editor",
+    "obsidian"
+  ],
+  "main": "dist/index.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "dist/index.css"
+  ],
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:demo": "next build",
+    "build:package": "tsup src/index.ts --format cjs,esm --dts --external react react-dom --out-dir dist",
     "start": "next start",
     "lint": "next lint"
   },
@@ -25,9 +43,11 @@
     "marked": "^15.0.12",
     "next": "15.3.2",
     "postcss": "^8.5.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "zod": "^3.24.2"
+  },
+  "peerDependencies": {
+    "react": ">=17.0.0",
+    "react-dom": ">=17.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -40,6 +60,7 @@
     "eslint-config-next": "15.3.2",
     "raw-loader": "^4.0.2",
     "tailwindcss": "^4.1.8",
+    "tsup": "^8.5.0",
     "typescript": "^5"
   }
 }

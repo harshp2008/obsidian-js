@@ -31,10 +31,17 @@ import {
 } from './utils/FormattingFunctions';
 
 
-interface CodeMirrorEditorProps {
+/**
+ * Props for the CodeMirrorEditor component.
+ */
+export interface CodeMirrorEditorProps {
+  /** The initial markdown content of the editor. */
   content: string;
+  /** Callback function triggered when the editor content changes. */
   onChange: (markdown: string) => void;
+  /** Optional callback function triggered when a save action is requested (e.g., Ctrl+S). */
   onSave?: () => void;
+  /** Optional flag to make the editor read-only. Defaults to true. */
   editable?: boolean;
 }
 
@@ -62,6 +69,13 @@ const darkTheme = EditorView.theme({
   '.cm-cursor': { borderLeftWidth: '2px', borderLeftColor: '#3b82f6' },
 }, { dark: true });
 
+/**
+ * A React component that wraps a CodeMirror 6 editor instance,
+ * configured for an Obsidian-like Markdown editing experience.
+ *
+ * @param {CodeMirrorEditorProps} props - The props for the component.
+ * @returns {JSX.Element} The CodeMirror editor component.
+ */
 const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   content,
   onChange,
@@ -70,6 +84,11 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
 }) => {
   const themeCompartment = useRef(new Compartment()).current;
 
+  /**
+   * Gets the current theme ('light' or 'dark') from the document's classList.
+   * This is used to synchronize the CodeMirror theme with the application's theme.
+   * @returns {'light' | 'dark'} The current document theme.
+   */
   const getCurrentDocumentTheme = () => {
     if (typeof window === 'undefined') return 'light';
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
@@ -89,6 +108,11 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  /**
+   * useEffect hook to synchronize the CodeMirror editor's theme with the application's theme.
+   * It observes changes to the `class` attribute of the `document.documentElement`.
+   * When the 'dark' class is added or removed, it dispatches a reconfigure effect to CodeMirror.
+   */
   // Effect to update CodeMirror theme when document theme changes
   useEffect(() => {
     if (!editorView) return;
@@ -114,6 +138,12 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     };
   }, [editorView, themeCompartment]);
 
+  /**
+   * useEffect hook to initialize the CodeMirror EditorView instance.
+   * This sets up the editor state, extensions (including keymaps, markdown support, custom syntax highlighting, and theming),
+   * and mounts the editor to the DOM.
+   * It also handles the cleanup of the EditorView instance when the component unmounts or dependencies change.
+   */
   // Initialize the editor
   useEffect(() => {
     if (!editorRef.current) return;
@@ -281,6 +311,10 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
     };
   }, [editable]); // currentMode removed to prevent re-initialization on mode switch
 
+  /**
+   * useEffect hook to update the editor's content if the `content` prop changes externally.
+   * This ensures that the editor reflects changes made outside of its own input.
+   */
   // Update content when the prop changes
   useEffect(() => {
     if (!editorView) return;
@@ -300,6 +334,11 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   
 
 
+  /**
+   * useEffect hook to handle changes in `currentMode` (live/preview) and the `editable` prop.
+   * It dispatches effects to CodeMirror to update the Markdown syntax rendering mode
+   * and the editor's editable status accordingly.
+   */
   // Effect to handle currentMode and editable prop changes
   useEffect(() => {
     if (editorView) {
