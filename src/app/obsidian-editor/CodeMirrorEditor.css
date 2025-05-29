@@ -1,0 +1,736 @@
+/* CodeMirrorEditor.css */
+
+/* Base editor styles */
+.cm-content {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  line-height: 1.5;
+  font-size: 16px;
+}
+
+/* Horizontal Rule Widget Styling */
+.cm-rendered-hr {
+  border: none;
+  height: 1px; /* The HR element itself is the 1px line */
+  width: 100%;
+  background-color: var(--hr-color, #ccc); /* Color of the HR line */
+  margin-top: 11.8px;    /* (25.6px total - 1px HR height) / 2 */
+  margin-bottom: 11.8px; /* (25.6px total - 1px HR height) / 2 */
+  box-sizing: border-box;
+  display: block; /* Ensure it takes up its own line and respects margins */
+}
+
+/* Dark mode specific HR color if needed */
+.cm-editor.cm-dark .cm-rendered-hr {
+  background-color: var(--hr-color-dark, #555);
+}
+
+/* Attempt to aggressively hide widget buffer on lines containing our HR widget */
+.cm-line:has(.cm-rendered-hr) img.cm-widgetBuffer {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  visibility: hidden !important; /* Strongest way to hide and remove from layout */
+  content: '' !important; /* For pseudo-elements, but sometimes helps with img replacement */
+  font-size: 0 !important; /* Just in case */
+  line-height: 0 !important; /* Just in case */
+}
+
+/* Markdown syntax styles - shown when cursor is near, hidden when not */
+.markdown-syntax-dim {
+  display: none; /* Completely hidden and takes no space */
+  color: #8b5cf6; /* Use same color as active for consistency */
+}
+
+.markdown-syntax-active {
+  display: inline; /* Ensure it's visible */
+  opacity: 1;
+  color: #8b5cf6;
+}
+
+/* Debug style for highlight markers */
+.debug-highlight-marker {
+  color: green !important;
+  background-color: yellow !important;
+  font-weight: bold !important;
+  display: inline !important; /* Ensure it's visible for debugging */
+}
+
+/* Text styling for markdown elements */
+.markdown-bold-dim {
+  font-weight: bold;
+}
+
+.markdown-bold-active {
+  font-weight: bold;
+}
+
+.markdown-italic-dim {
+  font-style: italic;
+}
+
+.markdown-italic-active {
+  font-style: italic;
+}
+
+/* Strikethrough styling */
+.markdown-strikethrough-dim {
+  text-decoration: line-through;
+}
+
+.markdown-strikethrough-active {
+  text-decoration: line-through;
+  color: #6b7280; /* Light gray color for strikethrough text */
+}
+
+/* Highlight styling */
+.markdown-highlight-dim {
+  background-color: rgba(255, 255, 0, 0.3);
+  border-radius: 2px;
+}
+
+.markdown-highlight-active {
+  background-color: rgba(255, 255, 0, 0.3);
+  border-radius: 2px;
+}
+
+/* Style for old markdown syntax markers content */
+.markdown-old-syntax-red {
+  color: #e53e3e; /* Red color for text with old markdown markers */
+}
+
+/* Heading styles - applied to the heading content */
+.markdown-heading-1 {
+  font-size: 2em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.markdown-heading-2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.markdown-heading-3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.markdown-heading-4 {
+  font-size: 1.1em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.markdown-heading-5 {
+  font-size: 1em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.markdown-heading-6 {
+  font-size: 0.9em;
+  font-weight: bold;
+  line-height: 1.2;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #111827;
+}
+
+.cm-content h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  line-height: 1.3;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #1f2937;
+}
+
+.cm-content h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  line-height: 1.4;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  color: #374151;
+}
+
+/* Code styles */
+.markdown-code-dim {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.1em 0.2em;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #10b981;
+}
+
+/* Code block styles */
+.markdown-codeblock-dim, .markdown-codeblock-line-dim {
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #10b981;
+  display: block;
+  padding: 0.5em;
+  margin: 0.5em 0;
+}
+
+/* Link styles */
+.markdown-link-text-dim {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.markdown-link-url-dim {
+  color: #10b981;
+  font-size: 0.9em;
+}
+
+/* List styles */
+.markdown-list-dim {
+  color: #f59e0b;
+  font-weight: bold;
+}
+
+/* Blockquote styles */
+.markdown-blockquote-dim {
+  color: #6b7280;
+  font-weight: bold;
+}
+
+.markdown-blockquote-content-dim {
+  color: #6b7280;
+  font-style: italic;
+  padding-left: 0.5em;
+  border-left: 3px solid rgba(107, 114, 128, 0.3);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .markdown-heading1-dim,
+  .markdown-heading2-dim,
+  .markdown-heading3-dim {
+    color: #e5e7eb;
+  }
+  
+  .markdown-code-dim,
+  .markdown-codeblock-dim,
+  .markdown-codeblock-line-dim {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #34d399;
+  }
+  
+  .markdown-link-text-dim {
+    color: #60a5fa;
+  }
+  
+  .markdown-link-url-dim {
+    color: #34d399;
+  }
+  
+  .markdown-blockquote-dim,
+  .markdown-blockquote-content-dim {
+    color: #9ca3af;
+  }
+}
+
+/* Ensure the editor has proper spacing */
+.cm-editor {
+  height: 100%;
+  padding: 1rem;
+}
+
+/* Improve cursor visibility */
+.cm-cursor {
+  border-left-width: 2px !important;
+  border-left-color: #3b82f6 !important;
+}
+
+/* Improve selection styling */
+.cm-selectionBackground {
+  background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Style for different markdown elements */
+.ProseMirror strong {
+  font-weight: bold;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror code {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  padding: 0.2em 0.4em;
+  font-family: monospace;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25em;
+}
+
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  color: #6b7280;
+  margin: 1em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 1em 0;
+}
+
+.ProseMirror li {
+  margin: 0.5em 0;
+}
+
+/* Dark mode adjustments */
+.dark .markdown-syntax-hidden {
+  color: #9ca3af;
+}
+
+.dark .ProseMirror code {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .ProseMirror blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+/* Focus styles */
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* Link styles */
+.ProseMirror a {
+  color: #2563eb;
+  text-decoration: underline;
+}
+
+.dark .ProseMirror a {
+  color: #60a5fa;
+}
+
+/* Custom Indentation Preview Styles */
+.cm-preview-indent-block {
+  background-color: rgba(80, 80, 80, 0.15); /* Darker box - adjust as needed */
+  padding: 8px 12px;
+  margin: 4px 0;
+  border-radius: 4px;
+  position: relative; /* For positioning the copy button */
+  font-family: Menlo, Monaco, Courier New, monospace; /* Ensure monospaced font like editor */
+  font-size: 16px; /* Match editor font size */
+  line-height: 1.6; /* Match editor line height */
+  white-space: pre-wrap; /* Preserve whitespace and wrap lines */
+  overflow-x: auto; /* Allow horizontal scrolling for long lines */
+}
+
+.cm-preview-indent-text {
+  /* The <pre> tag inside IndentationWidget handles text display */
+  margin: 0; /* Reset margin for <pre> */
+}
+
+.cm-indent-copy-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background-color: rgba(120, 120, 120, 0.3);
+  color: #333;
+  border: 1px solid rgba(100, 100, 100, 0.4);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+}
+
+.cm-preview-indent-block:hover .cm-indent-copy-button {
+  opacity: 1;
+}
+
+.cm-indent-copy-button:hover {
+  background-color: rgba(100, 100, 100, 0.5);
+}
+
+.cm-indent-copy-button span {
+  pointer-events: none; /* Ensure click goes to button */
+}
+
+/* === Fenced Code Block Preview Styles === */
+
+.cm-fenced-code-block-preview {
+  background-color: #fbf5eb; /* Light warm beige */
+  padding: 12px 16px;
+  margin: 8px 0;
+  border-radius: 8px;
+  position: relative; /* For copy button positioning */
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 15px; /* Slightly smaller than base editor */
+  line-height: 1.6;
+  color: #5c5248; /* Default text color inside code block */
+  overflow-x: auto;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02), 0 1px 1px rgba(0,0,0,0.01); /* Softer shadow */
+}
+
+.cm-fenced-code-block-preview pre {
+  margin: 0;
+  padding: 0;
+  background: transparent !important; /* Ensure no other pre background interferes */
+  border: none;
+  white-space: pre-wrap;   /* Wrap lines */
+  word-break: break-all; /* Break long words if necessary */
+}
+
+.cm-fenced-code-block-preview code {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent !important; /* Ensure no other code background interferes */
+  padding: 0;
+  display: block; /* Ensure it takes full width for highlighting */
+}
+
+/* Placeholder Syntax Highlighting for Preview */
+/* These would be applied by a syntax highlighting library */
+.cm-fenced-code-block-preview .token.keyword { color: #a37acc; } /* Muted purple/magenta */
+.cm-fenced-code-block-preview .token.number { color: #6c98d9; } /* Muted blue */
+.cm-fenced-code-block-preview .token.string { color: #8f9c6c; } /* Muted green */
+.cm-fenced-code-block-preview .token.comment { color: #ab9f91; font-style: italic; } /* Brownish gray */
+.cm-fenced-code-block-preview .token.punctuation { color: #5c5248; }
+.cm-fenced-code-block-preview .token.operator { color: #a37acc; } /* Often same as keyword */
+.cm-fenced-code-block-preview .token.function { color: #d98e73; } /* Muted orange */
+
+
+/* Adjustments for the copy button within Fenced Code Blocks */
+.cm-fenced-code-block-preview .cm-indent-copy-button {
+  background-color: transparent;
+  color: #85796e; /* Icon color */
+  border: none;
+  padding: 5px 8px; /* Adjust for icon size */
+  font-size: 14px; /* Adjust if using text, or for icon size */
+  top: 8px;
+  right: 8px;
+  line-height: 1; /* Prevent extra space if using text/emoji */
+}
+
+.cm-fenced-code-block-preview .cm-indent-copy-button:hover {
+  background-color: rgba(0,0,0,0.05); /* Subtle hover */
+  color: #5c5248;
+}
+
+/* --- Dark Mode Fenced Code Block Preview --- */
+.dark .cm-fenced-code-block-preview {
+  background-color: #2a2722; /* Dark warm gray/brown */
+  color: #d4cdc4; /* Light beige/gray text */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.08);
+}
+
+.dark .cm-fenced-code-block-preview .token.keyword { color: #c792ea; }
+.dark .cm-fenced-code-block-preview .token.number { color: #82aaff; }
+.dark .cm-fenced-code-block-preview .token.string { color: #c3e88d; }
+.dark .cm-fenced-code-block-preview .token.comment { color: #6c675f; font-style: italic; }
+.dark .cm-fenced-code-block-preview .token.punctuation { color: #d4cdc4; }
+.dark .cm-fenced-code-block-preview .token.operator { color: #c792ea; }
+.dark .cm-fenced-code-block-preview .token.function { color: #ffcb8b; }
+
+
+.dark .cm-fenced-code-block-preview .cm-indent-copy-button {
+  color: #a0958a; /* Lighter icon color for dark mode */
+}
+
+.dark .cm-fenced-code-block-preview .cm-indent-copy-button:hover {
+  background-color: rgba(255,255,255,0.08);
+  color: #d4cdc4;
+}
+
+
+/* === Fenced Code Block Live Editor Styles === */
+
+.cm-live-fenced-code-fence-line {
+  display: block; /* Ensure block display */
+  width: 100%;    /* Ensure full width */
+  background-color: #fbf5eb;
+  color: #9ca3af;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  box-sizing: border-box; /* Include padding/border in element's total width/height */
+  padding: 0; /* Ensure no internal padding affects background extent */
+  /* If there's editor-wide line padding, the text might appear offset from non-styled lines.
+     If so, match that padding here, e.g., padding-left: var(--cm-default-line-padding-left, 4px); */
+}
+
+.cm-live-fenced-code-lang {
+  color: #7c6a5c;
+  font-style: italic;
+}
+
+.cm-live-fenced-code-content-line {
+  display: block; 
+  width: 100%;    
+  background-color: #fbf5eb;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #5c5248 !important; /* MODIFIED: Make base color !important */
+  font-weight: normal !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  box-sizing: border-box;
+  padding: 0; 
+}
+
+/* MODIFIED: Aggressively neutralize styling on child elements and common Markdown classes */
+.cm-live-fenced-code-content-line *,
+.cm-live-fenced-code-content-line .cm-strong,
+.cm-live-fenced-code-content-line .cm-em,
+.cm-live-fenced-code-content-line .cm-link,
+.cm-live-fenced-code-content-line .cm-strikethrough,
+.cm-live-fenced-code-content-line .obsidian-search-match-highlight /* Example of another potential interfering class */
+ {
+  font-weight: normal !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  color: inherit !important; /* Inherit from .cm-live-fenced-code-content-line's color */
+  background: none !important;
+  /* Reset any other potentially interfering properties */
+  border: none !important; 
+  padding: 0 !important;
+  margin: 0 !important;
+  vertical-align: baseline !important;
+}
+
+/* MODIFIED: Reinforce visibility of Markdown delimiters */
+.cm-live-fenced-code-content-line .cm-formatting,
+.cm-live-fenced-code-content-line .cm-formatting-strong,
+.cm-live-fenced-code-content-line .cm-formatting-emphasis,
+.cm-live-fenced-code-content-line .cm-formatting-strikethrough,
+.cm-live-fenced-code-content-line .cm-formatting-link,
+.cm-live-fenced-code-content-line .cm-md-delimiter, /* Generic delimiter */
+.cm-live-fenced-code-content-line .cm-md-strongDelim, /* Specific to ** in some modes */
+.cm-live-fenced-code-content-line .cm-md-emphasisDelim, /* Specific to _ or * in some modes */
+.cm-live-fenced-code-content-line .markdown-syntax-dim /* ADDED: Target the specific class */
+ {
+  display: inline !important;
+  font-size: inherit !important;
+  color: inherit !important; 
+  background-color: transparent !important;
+  text-decoration: none !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  padding: 0 !important; 
+  margin: 0 !important;  
+  /* ADDED: Attempt to override other hiding mechanisms */
+  opacity: 1 !important;
+  visibility: visible !important;
+  width: auto !important; /* Counteract width: 0 or similar */
+  height: auto !important; /* Counteract height: 0 or similar */
+  line-height: inherit !important; /* Ensure it doesn't have a zero line-height */
+  overflow: visible !important; /* Counteract hidden overflow */
+  clip: auto !important; /* Counteract clipping */
+  -webkit-text-fill-color: inherit !important; /* Ensure text color is not transparent via this property */
+}
+
+/* --- Dark Mode Fenced Code Block Live Editor --- */
+.dark .cm-live-fenced-code-fence-line {
+  background-color: #2a2722;
+  color: #6b7280;
+}
+
+.dark .cm-live-fenced-code-lang {
+  color: #a0958a;
+}
+
+.dark .cm-live-fenced-code-content-line {
+  background-color: #2a2722;
+  color: #d4cdc4 !important; /* MODIFIED: Make base dark mode color !important */
+}
+
+/* The aggressive neutralization rules above use 'inherit' for color and other properties,
+   so they should adapt to dark mode correctly. */
+
+
+
+/* Override active line background for styled fenced code block lines */
+.cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-fence-line,
+.cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-content-line {
+  background-color: transparent !important; /* Ensure light mode code block background persists */
+}
+
+/* Override active line background for styled fenced code block lines in dark mode */
+.dark .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-fence-line,
+.dark .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-content-line {
+  background-color: transparent !important; /* Ensure dark mode code block background persists */
+}
+
+
+
+/* Dark mode adjustments (optional, if your app supports it) */
+/* You might need to scope this with a dark mode class from your app's body/html tag */
+/* For example, if your dark mode class is '.dark-theme' on the body: */
+/* .dark-theme .cm-preview-indent-block { ... } */
+.dark .cm-preview-indent-block { /* Assuming a simple '.dark' class on a parent */
+  background-color: rgba(200, 200, 200, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark .cm-indent-copy-button {
+  background-color: rgba(100, 100, 100, 0.3);
+  color: #ccc;
+  border: 1px solid rgba(150, 150, 150, 0.4);
+}
+
+.dark .cm-indent-copy-button:hover {
+  background-color: rgba(120, 120, 120, 0.5);
+}
+
+.dark .cm-preview-indent-block .cm-indent-copy-button {
+  background-color: #353f56;
+  color: #a0aec0;
+  border-color: #4a5568;
+}
+
+.dark .cm-preview-indent-block .cm-indent-copy-button:hover {
+  background-color: #4a5568;
+}
+
+/* Horizontal Rule Styles */
+.cm-hr-syntax {
+  display: inline-block; /* Or inline, depending on desired behavior with surrounding text */
+  width: 100%; /* Make the syntax part take full width if it's on its own line */
+  text-align: center; /* Center the '---' if you want */
+  color: #ccc; /* Light gray for the '---', '***', etc. */
+  font-weight: bold;
+  letter-spacing: 0.2em; /* Space out the characters a bit */
+}
+
+.cm-rendered-hr {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: #ddd; /* Light gray line */
+  margin-top: 1em;
+  margin-bottom: 1em;
+  border: none; /* Remove any default browser border */
+}
+
+/* Dark mode for horizontal rules */
+.dark .cm-hr-syntax {
+  color: #555; /* Darker gray for dark mode syntax */
+}
+
+.dark .cm-rendered-hr {
+  background-color: #444; /* Darker gray line for dark mode */
+}
+
+/* Line Break Syntax Indicator (Live Mode) */
+.cm-line-break-syntax {
+  background-color: rgba(0, 0, 0, 0.04); /* Very subtle background for the two spaces */
+  border-radius: 3px;
+  padding: 0 1px; /* Minimal padding to make it less intrusive */
+  /* You could also use a faint border or a different text color */
+  /* border: 1px dotted rgba(0,0,0,0.1); */
+}
+
+/* Dark mode for line break syntax */
+.dark .cm-line-break-syntax {
+  background-color: rgba(255, 255, 255, 0.06); /* Subtle background for dark mode */
+  /* border: 1px dotted rgba(255,255,255,0.1); */
+}
+
+/* HTML Tag Syntax (Live Mode) */
+.cm-html-tag-syntax {
+  color: #059669; /* A distinct green color for HTML tags */
+  background-color: rgba(5, 150, 105, 0.05); /* Very subtle background */
+  padding: 0 2px;
+  border-radius: 3px;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace; /* Ensure monospaced font */
+}
+
+/* Dark mode for HTML Tag Syntax */
+.dark .cm-html-tag-syntax {
+  color: #34d399; /* Lighter green for dark mode */
+  background-color: rgba(52, 211, 153, 0.1);
+}
+
+/* Live Mode Horizontal Rule Line */
+.cm-live-hr-line {
+  border-top: 1px solid #d0d0d0; /* A light grey line */
+  /* margin-top: 0.5em; */ /* Optional: space above the line if needed */
+  /* margin-bottom: 0.5em; */ /* Optional: space below the line if needed */
+  /* You might need to adjust padding/margin on .cm-line itself if there are overlaps */
+}
+
+/* Dark mode for Live Horizontal Rule Line */
+.dark .cm-live-hr-line {
+  border-top: 1px solid #505050; /* A darker grey line for dark mode */
+}
+
+/* Inline HTML Preview Widget Styles */
+.cm-html-preview-widget {
+  display: inline-block; /* Changed to inline-block for better vertical-align control */
+  vertical-align: bottom; /* Align widget itself to bottom */
+}
+
+.cm-html-preview-widget iframe {
+  display: inline-block; /* Allows setting width/height but flows inline */
+  vertical-align: bottom; /* Align iframe to bottom */
+  border: none; /* Remove default iframe border if not desired */
+  /* Consider adding max-width/max-height for very large inline iframes */
+  /* max-width: 400px; */
+  /* max-height: 250px; */
+}
+
+/* Ensure that the raw HTML tag syntax also behaves inline */
+.cm-html-tag-syntax {
+  display: inline-block; /* Or inline, ensure it doesn't break flow */
+  vertical-align: baseline;
+}

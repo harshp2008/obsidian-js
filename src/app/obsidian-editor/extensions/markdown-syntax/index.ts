@@ -1,0 +1,170 @@
+import { EditorView, Decoration, DecorationSet } from '@codemirror/view';
+import { RangeSetBuilder, StateField, StateEffect, EditorState, Extension } from '@codemirror/state';
+import { SyntaxRule, SyntaxRuleContext } from './types';
+import { HeadingDecorator } from './rules/headingDecorator';
+import { BoldDecorator } from './rules/boldDecorator';
+import { ItalicDecorator } from './rules/italicDecorator';
+import { StrikethroughDecorator } from './rules/strikethroughDecorator';
+import { CodeDecorator } from './rules/codeDecorator';
+import { HighlightDecorator } from './rules/highlightDecorator';
+import { OldBoldDecorator } from './rules/oldBoldDecorator';
+import { OldItalicDecorator } from './rules/oldItalicDecorator';
+import { ListDecorator } from './rules/listDecorator';
+import { FencedCodeBlockDecorator } from './rules/FencedCodeBlockDecorator';
+import { HorizontalRuleDecorator } from './rules/horizontalRuleDecorator';
+import { LineBreakDecorator } from './rules/lineBreakDecorator';
+import { HTMLTagDecorator } from './rules/htmlTagDecorator';
+
+interface DecorationItem {
+  from: number;
+  to: number;
+  decoration: Decoration;
+}
+
+const syntaxRules: SyntaxRule[] = [
+  new HeadingDecorator(),
+  new BoldDecorator(),
+  new ItalicDecorator(),
+  new StrikethroughDecorator(),
+  new CodeDecorator(),
+  new HighlightDecorator(),
+  new OldBoldDecorator(),
+  new OldItalicDecorator(),
+  new ListDecorator(),
+  new FencedCodeBlockDecorator(),
+  // HorizontalRuleDecorator is now a ViewPlugin and managed separately
+];
+
+// StateEffect to change the rendering mode (live/preview)
+export const setMarkdownSyntaxMode = StateEffect.define<'live' | 'preview'>();
+
+// Helper function to build decorations for legacy syntax rules
+function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'preview', view?: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  const allDecorations: DecorationItem[] = []; // DecorationItem interface is defined above
+
+  const cursorPositions: number[] = [];
+  for (const range of state.selection.ranges) {
+    cursorPositions.push(range.head);
+  }
+  
+  const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
+
+  for (const { from, to } of rangesToProcess) {
+    const docTextSlice = state.doc.sliceString(from, to);
+    
+    const context: SyntaxRuleContext = {
+      builder, // Add the builder instance here
+      docText: docTextSlice,
+      textSliceFrom: from,
+      cursorPositions,
+      state: state,
+      view: view,
+      decorations: allDecorations, // Rules will push DecorationItem objects here
+      currentMode: currentMode
+    };
+
+    for (const rule of syntaxRules) { // syntaxRules array contains legacy decorators
+      try {
+        if (typeof rule.process === 'function') {
+          rule.process(context);
+        } else {
+          console.warn(`Rule ${rule.constructor.name} does not have a process method.`);
+        }
+      } catch (error) {
+        console.error('Error processing legacy rule:', rule.constructor.name, error);
+      }
+    }
+  }
+
+  // Sort and add decorations to the builder to handle overlaps correctly
+  const groupedDecorations = new Map<number, DecorationItem[]>();
+  for (const item of allDecorations) {
+    if (!groupedDecorations.has(item.from)) {
+      groupedDecorations.set(item.from, []);
+    }
+    if (item.decoration) { // Ensure decoration is not undefined
+        groupedDecorations.get(item.from)!.push(item);
+    } else {
+        console.warn("Encountered an item with undefined decoration during legacy build:", item);
+    }
+  }
+  
+  const sortedFromPositions = [...groupedDecorations.keys()].sort((a, b) => a - b);
+  for (const fromPos of sortedFromPositions) {
+    const group = groupedDecorations.get(fromPos)!;
+    group.sort((a, b) => a.to - b.to); // Sort by 'to' within each 'from' group
+    for (const item of group) {
+      builder.add(item.from, item.to, item.decoration);
+    }
+  }
+  
+  return builder.finish();
+}
+
+// StateField to manage markdown syntax decorations
+export const markdownSyntaxStateField = StateField.define<{
+  decorations: DecorationSet;
+  currentMode: 'live' | 'preview';
+}>({
+  create(state) {
+    const initialMode = 'live'; 
+    return {
+      decorations: buildLegacyDecorations(state, initialMode, undefined), // Pass undefined for view
+      currentMode: initialMode,
+    };
+  },
+  update(value, tr) {
+    let newMode = value.currentMode;
+    let needsRebuild = false;
+
+    for (const effect of tr.effects) {
+      if (effect.is(setMarkdownSyntaxMode)) {
+        newMode = effect.value;
+        needsRebuild = true;
+      }
+    }
+
+    let modeChangedByEffect = false;
+    for (const effect of tr.effects) {
+      if (effect.is(setMarkdownSyntaxMode)) {
+        if (newMode !== effect.value) { // Check if mode actually changes
+            newMode = effect.value;
+            modeChangedByEffect = true;
+        }
+      }
+    }
+
+    if (tr.docChanged || 
+        (tr.selection && !tr.startState.selection.eq(tr.selection)) || 
+        modeChangedByEffect ) {
+      // Pass undefined for view, buildLegacyDecorations will process the whole document.
+      return {
+        decorations: buildLegacyDecorations(tr.state, newMode, undefined),
+        currentMode: newMode,
+      };
+    }
+    
+    // If mode changed without other triggers (e.g. initial load with a different mode)
+    if (value.currentMode !== newMode) {
+        return {
+            decorations: buildLegacyDecorations(tr.state, newMode, undefined),
+            currentMode: newMode,
+        };
+    }
+
+    return value; // No change to decorations or mode
+  },
+  provide: f => EditorView.decorations.from(f, value => value.decorations)
+});
+
+// The main plugin export now includes the StateField and other ViewPlugins
+export function createMarkdownSyntaxPlugin(): Extension {
+  return [
+    markdownSyntaxStateField,
+    LineBreakDecorator,
+    HTMLTagDecorator,
+    HorizontalRuleDecorator // Add the refactored ViewPlugin
+  ];
+}
+
