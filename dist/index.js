@@ -33,6 +33,8 @@ __export(index_exports, {
   CodeMirrorEditor: () => CodeMirrorEditor_default,
   ThemeProvider: () => ThemeProvider,
   ThemeToggle: () => ThemeToggle,
+  createFileSystem: () => createFileSystem,
+  createFileSystemExtension: () => createFileSystemExtension,
   useTheme: () => useTheme
 });
 module.exports = __toCommonJS(index_exports);
@@ -8812,10 +8814,95 @@ function ThemeToggle() {
     }
   );
 }
+
+// src/app/obsidian-editor/utils/filesystem.ts
+var import_view23 = require("@codemirror/view");
+var FileSystemError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "FileSystemError";
+  }
+};
+var createFileSystem = (options = {}) => {
+  const { basePath = "", onError } = options;
+  const handleError = (error) => {
+    if (onError) {
+      onError(error);
+    } else {
+      console.error("FileSystem Error:", error);
+    }
+    throw error;
+  };
+  return {
+    async readFile(path) {
+      try {
+        const response = await fetch(`${basePath}/${encodeURIComponent(path)}`);
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to read file: ${path}`);
+        }
+        return await response.text();
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async writeFile(path, content) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: content
+        });
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to write file: ${path}`);
+        }
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async deleteFile(path) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`, {
+          method: "DELETE"
+        });
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to delete file: ${path}`);
+        }
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async listFiles(path) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`);
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to list files in: ${path}`);
+        }
+        return await response.json();
+      } catch (error) {
+        return handleError(error);
+      }
+    }
+  };
+};
+var createFileSystemExtension = (fileSystem) => {
+  return import_view23.EditorView.domEventHandlers({
+    keydown: (event, view) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        return true;
+      }
+      return false;
+    }
+  });
+};
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CodeMirrorEditor,
   ThemeProvider,
   ThemeToggle,
+  createFileSystem,
+  createFileSystemExtension,
   useTheme
 });

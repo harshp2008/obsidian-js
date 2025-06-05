@@ -131,6 +131,13 @@ MIT
 
 This library supports embedding and managing files (images, videos, markdown, etc.) via a pluggable filesystem interface. You can use any backend (Firebase, MongoDB, local filesystem, etc.) by implementing the `Filesystem` interface.
 
+### Setup Guides
+
+We provide detailed setup guides for different filesystem implementations:
+
+- [Firebase Setup Guide](docs/firebase-setup.md) - Learn how to set up Firebase as your filesystem backend
+- [Local Filesystem Setup Guide](docs/local-filesystem-setup.md) - Learn how to use the local filesystem as your backend
+
 ### 1. Implement the Filesystem Interface
 
 Create your own implementation of the `Filesystem` interface:

@@ -1,6 +1,7 @@
 import React from 'react';
 import { EditorView } from '@codemirror/view';
 import * as react_jsx_runtime from 'react/jsx-runtime';
+import * as _codemirror_state from '@codemirror/state';
 
 /**
  * Props for the CodeMirrorEditor component
@@ -60,4 +61,20 @@ declare function useTheme(): ThemeContextType;
  */
 declare function ThemeToggle(): react_jsx_runtime.JSX.Element;
 
-export { CodeMirrorEditor, type CodeMirrorEditorProps, type Theme, type ThemeContextType, ThemeProvider, ThemeToggle, useTheme };
+interface FileSystemOptions {
+    basePath?: string;
+    onError?: (error: Error) => void;
+}
+interface FileSystem {
+    readFile: (path: string) => Promise<string>;
+    writeFile: (path: string, content: string) => Promise<void>;
+    deleteFile: (path: string) => Promise<void>;
+    listFiles: (path: string) => Promise<any>;
+}
+declare class FileSystemError extends Error {
+    constructor(message: string);
+}
+declare const createFileSystem: (options?: FileSystemOptions) => FileSystem;
+declare const createFileSystemExtension: (fileSystem: FileSystem) => _codemirror_state.Extension;
+
+export { CodeMirrorEditor, type CodeMirrorEditorProps, type FileSystem, FileSystemError, type FileSystemOptions, type Theme, type ThemeContextType, ThemeProvider, ThemeToggle, createFileSystem, createFileSystemExtension, useTheme };

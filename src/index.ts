@@ -11,6 +11,10 @@ export type { ThemeContextType, Theme } from './contexts/ThemeContext'; // Expor
 // UI Components
 export { ThemeToggle } from './components/ThemeToggle';
 
+// FileSystem Utilities
+export { createFileSystem, createFileSystemExtension } from './app/obsidian-editor/utils/filesystem';
+export type { FileSystem, FileSystemOptions, FileSystemError } from './app/obsidian-editor/utils/filesystem';
+
 // Utility Functions (if any are intended for public use, export them here)
 // For example:
 // export * from './app/obsidian-editor/utils/FormattingFunctions';
