@@ -57,47 +57,46 @@ class EmptyWidget extends WidgetType {
   ignoreEvent() { return true; }
 }
 
+class BlockquoteBarWidget extends WidgetType {
+  constructor(readonly level: number) {
+    super();
+  }
+  toDOM() {
+    const span = document.createElement('span');
+    for (let i = 0; i < this.level; i++) {
+      const bar = document.createElement('span');
+      bar.className = 'cm-blockquote-bar';
+      span.appendChild(bar);
+    }
+    return span;
+  }
+  ignoreEvent() { return true; }
+}
+
 export class BlockquoteDecorator implements SyntaxRule {
   process(context: SyntaxRuleContext): void {
     const { docText, textSliceFrom, decorations, currentMode, cursorPositions, view } = context;
     if (!decorations) return;
     const lines = docText.split('\n');
     if (currentMode === 'preview') {
-      // Group blockquote lines for preview mode
-      let i = 0;
-      while (i < lines.length) {
-        const [level, content] = stripBlockquoteMarkers(lines[i]);
-        const blockLevel = typeof level === 'number' ? level : parseInt(level as string, 10) || 0;
-        if (blockLevel > 0) {
-          let blockStart = i;
-          let blockLines: string[] = [typeof content === 'string' ? content : String(content)];
-          let blockEnd = i + 1;
-          while (blockEnd < lines.length) {
-            const [nextLevel] = stripBlockquoteMarkers(lines[blockEnd]);
-            const nextLevelNum = typeof nextLevel === 'number' ? nextLevel : parseInt(nextLevel as string, 10) || 0;
-            if (nextLevelNum > 0) {
-              blockLines.push(lines[blockEnd].replace(/^\s*>+\s?/, ''));
-              blockEnd++;
-            } else {
-              break;
-            }
-          }
-          let charStart = 0;
-          for (let k = 0; k < blockStart; k++) charStart += lines[k].length + 1;
-          let charEnd = charStart;
-          for (let k = blockStart; k < blockEnd; k++) charEnd += lines[k].length + 1;
-          if (charEnd > charStart) {
-            const widget = new BlockquoteWidget(blockLines.join('\n'), blockLevel);
-            decorations.push({
-              from: textSliceFrom + charStart,
-              to: textSliceFrom + charEnd,
-              decoration: Decoration.replace({ widget, block: true })
-            });
-          }
-          i = blockEnd;
-        } else {
-          i++;
+      // Render each blockquote line with uniform bars (no space between bars)
+      let charPos = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
+        if (match && lineText.length > 0) {
+          const markerStr = String(match[2]);
+          const barCount = (markerStr.match(/>/g) || []).length;
+          const lineStartInDoc = charPos;
+          const markerStart = lineStartInDoc + match[1].length;
+          // Replace the entire marker region with a widget of bars
+          decorations.push({
+            from: markerStart,
+            to: markerStart + markerStr.length,
+            decoration: Decoration.replace({ widget: new BlockquoteBarWidget(barCount) })
+          });
         }
+        charPos += lineText.length + 1;
       }
     } else {
       // LIVE MODE: For each blockquote line, hide '>' markers, apply nesting class and calculated padding.
