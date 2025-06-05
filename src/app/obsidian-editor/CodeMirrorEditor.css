@@ -2,7 +2,7 @@
 
 /* Base editor styles */
 .cm-content {
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   line-height: 1.5;
   font-size: 16px;
 }
@@ -13,7 +13,7 @@
   height: 1px; /* The HR element itself is the 1px line */
   width: 100%;
   background-color: var(--hr-color, #ccc); /* Color of the HR line */
-  margin-top: 11.8px;    /* (25.6px total - 1px HR height) / 2 */
+  margin-top: 11.8px; /* (25.6px total - 1px HR height) / 2 */
   margin-bottom: 11.8px; /* (25.6px total - 1px HR height) / 2 */
   box-sizing: border-box;
   display: block; /* Ensure it takes up its own line and respects margins */
@@ -33,7 +33,7 @@
   padding: 0 !important;
   border: none !important;
   visibility: hidden !important; /* Strongest way to hide and remove from layout */
-  content: '' !important; /* For pseudo-elements, but sometimes helps with img replacement */
+  content: "" !important; /* For pseudo-elements, but sometimes helps with img replacement */
   font-size: 0 !important; /* Just in case */
   line-height: 0 !important; /* Just in case */
 }
@@ -176,7 +176,7 @@
 
 /* Code styles */
 .markdown-code-dim {
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   background-color: rgba(0, 0, 0, 0.05);
   padding: 0.1em 0.2em;
   border-radius: 3px;
@@ -185,8 +185,9 @@
 }
 
 /* Code block styles */
-.markdown-codeblock-dim, .markdown-codeblock-line-dim {
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+.markdown-codeblock-dim,
+.markdown-codeblock-line-dim {
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   background-color: rgba(0, 0, 0, 0.05);
   border-radius: 3px;
   font-size: 0.9em;
@@ -233,22 +234,22 @@
   .markdown-heading3-dim {
     color: #e5e7eb;
   }
-  
+
   .markdown-code-dim,
   .markdown-codeblock-dim,
   .markdown-codeblock-line-dim {
     background-color: rgba(255, 255, 255, 0.1);
     color: #34d399;
   }
-  
+
   .markdown-link-text-dim {
     color: #60a5fa;
   }
-  
+
   .markdown-link-url-dim {
     color: #34d399;
   }
-  
+
   .markdown-blockquote-dim,
   .markdown-blockquote-content-dim {
     color: #9ca3af;
@@ -412,12 +413,12 @@
   margin: 8px 0;
   border-radius: 8px;
   position: relative; /* For copy button positioning */
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   font-size: 15px; /* Slightly smaller than base editor */
   line-height: 1.6;
   color: #5c5248; /* Default text color inside code block */
   overflow-x: auto;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.02), 0 1px 1px rgba(0,0,0,0.01); /* Softer shadow */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02), 0 1px 1px rgba(0, 0, 0, 0.01); /* Softer shadow */
 }
 
 .cm-fenced-code-block-preview pre {
@@ -425,7 +426,7 @@
   padding: 0;
   background: transparent !important; /* Ensure no other pre background interferes */
   border: none;
-  white-space: pre-wrap;   /* Wrap lines */
+  white-space: pre-wrap; /* Wrap lines */
   word-break: break-all; /* Break long words if necessary */
 }
 
@@ -440,14 +441,28 @@
 
 /* Placeholder Syntax Highlighting for Preview */
 /* These would be applied by a syntax highlighting library */
-.cm-fenced-code-block-preview .token.keyword { color: #a37acc; } /* Muted purple/magenta */
-.cm-fenced-code-block-preview .token.number { color: #6c98d9; } /* Muted blue */
-.cm-fenced-code-block-preview .token.string { color: #8f9c6c; } /* Muted green */
-.cm-fenced-code-block-preview .token.comment { color: #ab9f91; font-style: italic; } /* Brownish gray */
-.cm-fenced-code-block-preview .token.punctuation { color: #5c5248; }
-.cm-fenced-code-block-preview .token.operator { color: #a37acc; } /* Often same as keyword */
-.cm-fenced-code-block-preview .token.function { color: #d98e73; } /* Muted orange */
-
+.cm-fenced-code-block-preview .token.keyword {
+  color: #a37acc;
+} /* Muted purple/magenta */
+.cm-fenced-code-block-preview .token.number {
+  color: #6c98d9;
+} /* Muted blue */
+.cm-fenced-code-block-preview .token.string {
+  color: #8f9c6c;
+} /* Muted green */
+.cm-fenced-code-block-preview .token.comment {
+  color: #ab9f91;
+  font-style: italic;
+} /* Brownish gray */
+.cm-fenced-code-block-preview .token.punctuation {
+  color: #5c5248;
+}
+.cm-fenced-code-block-preview .token.operator {
+  color: #a37acc;
+} /* Often same as keyword */
+.cm-fenced-code-block-preview .token.function {
+  color: #d98e73;
+} /* Muted orange */
 
 /* Adjustments for the copy button within Fenced Code Blocks */
 .cm-fenced-code-block-preview .cm-indent-copy-button {
@@ -462,7 +477,7 @@
 }
 
 .cm-fenced-code-block-preview .cm-indent-copy-button:hover {
-  background-color: rgba(0,0,0,0.05); /* Subtle hover */
+  background-color: rgba(0, 0, 0, 0.05); /* Subtle hover */
   color: #5c5248;
 }
 
@@ -470,36 +485,49 @@
 .dark .cm-fenced-code-block-preview {
   background-color: #2a2722; /* Dark warm gray/brown */
   color: #d4cdc4; /* Light beige/gray text */
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1), 0 1px 1px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), 0 1px 1px rgba(0, 0, 0, 0.08);
 }
 
-.dark .cm-fenced-code-block-preview .token.keyword { color: #c792ea; }
-.dark .cm-fenced-code-block-preview .token.number { color: #82aaff; }
-.dark .cm-fenced-code-block-preview .token.string { color: #c3e88d; }
-.dark .cm-fenced-code-block-preview .token.comment { color: #6c675f; font-style: italic; }
-.dark .cm-fenced-code-block-preview .token.punctuation { color: #d4cdc4; }
-.dark .cm-fenced-code-block-preview .token.operator { color: #c792ea; }
-.dark .cm-fenced-code-block-preview .token.function { color: #ffcb8b; }
-
+.dark .cm-fenced-code-block-preview .token.keyword {
+  color: #c792ea;
+}
+.dark .cm-fenced-code-block-preview .token.number {
+  color: #82aaff;
+}
+.dark .cm-fenced-code-block-preview .token.string {
+  color: #c3e88d;
+}
+.dark .cm-fenced-code-block-preview .token.comment {
+  color: #6c675f;
+  font-style: italic;
+}
+.dark .cm-fenced-code-block-preview .token.punctuation {
+  color: #d4cdc4;
+}
+.dark .cm-fenced-code-block-preview .token.operator {
+  color: #c792ea;
+}
+.dark .cm-fenced-code-block-preview .token.function {
+  color: #ffcb8b;
+}
 
 .dark .cm-fenced-code-block-preview .cm-indent-copy-button {
   color: #a0958a; /* Lighter icon color for dark mode */
 }
 
 .dark .cm-fenced-code-block-preview .cm-indent-copy-button:hover {
-  background-color: rgba(255,255,255,0.08);
+  background-color: rgba(255, 255, 255, 0.08);
   color: #d4cdc4;
 }
-
 
 /* === Fenced Code Block Live Editor Styles === */
 
 .cm-live-fenced-code-fence-line {
   display: block; /* Ensure block display */
-  width: 100%;    /* Ensure full width */
+  width: 100%; /* Ensure full width */
   background-color: #fbf5eb;
   color: #9ca3af;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   font-size: 15px;
   line-height: 1.6;
   box-sizing: border-box; /* Include padding/border in element's total width/height */
@@ -514,10 +542,10 @@
 }
 
 .cm-live-fenced-code-content-line {
-  display: block; 
-  width: 100%;    
+  display: block;
+  width: 100%;
   background-color: #fbf5eb;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
   font-size: 15px;
   line-height: 1.6;
   color: #5c5248 !important; /* MODIFIED: Make base color !important */
@@ -525,7 +553,7 @@
   font-style: normal !important;
   text-decoration: none !important;
   box-sizing: border-box;
-  padding: 0; 
+  padding: 0;
 }
 
 /* MODIFIED: Aggressively neutralize styling on child elements and common Markdown classes */
@@ -534,15 +562,14 @@
 .cm-live-fenced-code-content-line .cm-em,
 .cm-live-fenced-code-content-line .cm-link,
 .cm-live-fenced-code-content-line .cm-strikethrough,
-.cm-live-fenced-code-content-line .obsidian-search-match-highlight /* Example of another potential interfering class */
- {
+.cm-live-fenced-code-content-line .obsidian-search-match-highlight /* Example of another potential interfering class */ {
   font-weight: normal !important;
   font-style: normal !important;
   text-decoration: none !important;
   color: inherit !important; /* Inherit from .cm-live-fenced-code-content-line's color */
   background: none !important;
   /* Reset any other potentially interfering properties */
-  border: none !important; 
+  border: none !important;
   padding: 0 !important;
   margin: 0 !important;
   vertical-align: baseline !important;
@@ -557,17 +584,16 @@
 .cm-live-fenced-code-content-line .cm-md-delimiter, /* Generic delimiter */
 .cm-live-fenced-code-content-line .cm-md-strongDelim, /* Specific to ** in some modes */
 .cm-live-fenced-code-content-line .cm-md-emphasisDelim, /* Specific to _ or * in some modes */
-.cm-live-fenced-code-content-line .markdown-syntax-dim /* ADDED: Target the specific class */
- {
+.cm-live-fenced-code-content-line .markdown-syntax-dim /* ADDED: Target the specific class */ {
   display: inline !important;
   font-size: inherit !important;
-  color: inherit !important; 
+  color: inherit !important;
   background-color: transparent !important;
   text-decoration: none !important;
   font-weight: normal !important;
   font-style: normal !important;
-  padding: 0 !important; 
-  margin: 0 !important;  
+  padding: 0 !important;
+  margin: 0 !important;
   /* ADDED: Attempt to override other hiding mechanisms */
   opacity: 1 !important;
   visibility: visible !important;
@@ -597,8 +623,6 @@
 /* The aggressive neutralization rules above use 'inherit' for color and other properties,
    so they should adapt to dark mode correctly. */
 
-
-
 /* Override active line background for styled fenced code block lines */
 .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-fence-line,
 .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-content-line {
@@ -606,18 +630,23 @@
 }
 
 /* Override active line background for styled fenced code block lines in dark mode */
-.dark .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-fence-line,
-.dark .cm-editor .cm-content .cm-line.cm-activeLine.cm-live-fenced-code-content-line {
+.dark
+  .cm-editor
+  .cm-content
+  .cm-line.cm-activeLine.cm-live-fenced-code-fence-line,
+.dark
+  .cm-editor
+  .cm-content
+  .cm-line.cm-activeLine.cm-live-fenced-code-content-line {
   background-color: transparent !important; /* Ensure dark mode code block background persists */
 }
-
-
 
 /* Dark mode adjustments (optional, if your app supports it) */
 /* You might need to scope this with a dark mode class from your app's body/html tag */
 /* For example, if your dark mode class is '.dark-theme' on the body: */
 /* .dark-theme .cm-preview-indent-block { ... } */
-.dark .cm-preview-indent-block { /* Assuming a simple '.dark' class on a parent */
+.dark .cm-preview-indent-block {
+  /* Assuming a simple '.dark' class on a parent */
   background-color: rgba(200, 200, 200, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -673,7 +702,12 @@
 
 /* Line Break Syntax Indicator (Live Mode) */
 .cm-line-break-syntax {
-  background-color: rgba(0, 0, 0, 0.04); /* Very subtle background for the two spaces */
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.04
+  ); /* Very subtle background for the two spaces */
   border-radius: 3px;
   padding: 0 1px; /* Minimal padding to make it less intrusive */
   /* You could also use a faint border or a different text color */
@@ -682,7 +716,12 @@
 
 /* Dark mode for line break syntax */
 .dark .cm-line-break-syntax {
-  background-color: rgba(255, 255, 255, 0.06); /* Subtle background for dark mode */
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.06
+  ); /* Subtle background for dark mode */
   /* border: 1px dotted rgba(255,255,255,0.1); */
 }
 
@@ -692,7 +731,7 @@
   background-color: rgba(5, 150, 105, 0.05); /* Very subtle background */
   padding: 0 2px;
   border-radius: 3px;
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace; /* Ensure monospaced font */
+  font-family: "Menlo", "Monaco", "Courier New", monospace; /* Ensure monospaced font */
 }
 
 /* Dark mode for HTML Tag Syntax */
@@ -733,4 +772,115 @@
 .cm-html-tag-syntax {
   display: inline-block; /* Or inline, ensure it doesn't break flow */
   vertical-align: baseline;
+}
+
+/* Blockquote Styles - KEEP THESE for preview mode */
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  color: #6b7280;
+  margin: 1em 0;
+}
+
+.dark .ProseMirror blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+
+/* NEW Blockquote Content Level Styling for Live Edit Mode */
+/* These styles apply to the <span> created by Decoration.mark around the blockquote content */
+
+.cm-line {
+  position: relative; /* Might still be useful for parent context */
+}
+
+/* Base style for the span containing blockquote content and lines */
+[class*="cm-blockquote-content-level-"] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  background-color: #fcfaf7;
+  color: #6b5c3e;
+  line-height: inherit;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+/* Individual level styling for quote lines (strokes) */
+/* LineWidth=2px; GapBetweenStrokes=4px; EffectiveWidthPerLevel=6px; TextPadding=0.4em */
+
+.cm-blockquote-content-level-1 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 2px 100%;
+  padding-left: calc(2px + 0.4em); /* (1*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-content-level-2 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0;
+  background-size: 2px 100%, 2px 100%;
+  padding-left: calc(8px + 0.4em); /* (2*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-content-level-3 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0, 12px 0;
+  background-size: 2px 100%, 2px 100%, 2px 100%;
+  padding-left: calc(14px + 0.4em); /* (3*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-content-level-4 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0, 12px 0, 18px 0;
+  background-size: 2px 100%, 2px 100%, 2px 100%, 2px 100%;
+  padding-left: calc(20px + 0.4em); /* (4*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-content-level-5 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0, 12px 0, 18px 0, 24px 0;
+  background-size: 2px 100%, 2px 100%, 2px 100%, 2px 100%, 2px 100%;
+  padding-left: calc(26px + 0.4em); /* (5*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-content-level-6 {
+  background-image: linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px),
+    linear-gradient(to right, #e0d9ce 2px, transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0, 12px 0, 18px 0, 24px 0, 30px 0;
+  background-size: 2px 100%, 2px 100%, 2px 100%, 2px 100%, 2px 100%, 2px 100%;
+  padding-left: calc(32px + 0.4em); /* (6*6 - 4)px + 0.4em */
+}
+
+.cm-blockquote-bar {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background: #e0d9ce;
+  margin-right: 4px;
+  vertical-align: middle;
+  border-radius: 0;
 }

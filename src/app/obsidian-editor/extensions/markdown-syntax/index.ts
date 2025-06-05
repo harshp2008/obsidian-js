@@ -14,6 +14,7 @@ import { FencedCodeBlockDecorator } from './rules/FencedCodeBlockDecorator';
 import { HorizontalRuleDecorator } from './rules/horizontalRuleDecorator';
 import { LineBreakDecorator } from './rules/lineBreakDecorator';
 import { HTMLTagDecorator } from './rules/htmlTagDecorator';
+import { BlockquoteDecorator } from './rules/blockquoteDecorator';
 
 interface DecorationItem {
   from: number;
@@ -31,6 +32,7 @@ const syntaxRules: SyntaxRule[] = [
   new OldBoldDecorator(),
   new OldItalicDecorator(),
   new ListDecorator(),
+  new BlockquoteDecorator(),
   new FencedCodeBlockDecorator(),
   // HorizontalRuleDecorator is now a ViewPlugin and managed separately
 ];
