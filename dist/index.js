@@ -42,11 +42,15 @@ var import_react = __toESM(require("react"));
 var import_state11 = require("@codemirror/state");
 var import_view21 = require("@codemirror/view");
 var import_commands = require("@codemirror/commands");
+var import_language6 = require("@codemirror/language");
+var import_search = require("@codemirror/search");
+var import_autocomplete3 = require("@codemirror/autocomplete");
+var import_lint = require("@codemirror/lint");
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
 var import_state3 = require("@codemirror/state");
-var import_view3 = require("@codemirror/view");
-var import_language4 = require("@codemirror/language");
+var import_view4 = require("@codemirror/view");
+var import_language5 = require("@codemirror/language");
 var import_autocomplete2 = require("@codemirror/autocomplete");
 var import_markdown = require("@lezer/markdown");
 
@@ -3838,7 +3842,7 @@ function getSpecializer(spec) {
 }
 
 // node_modules/@lezer/html/dist/index.js
-var import_highlight = require("@lezer/highlight");
+var import_highlight2 = require("@lezer/highlight");
 var scriptText = 54;
 var StartCloseScriptTag = 1;
 var styleText = 55;
@@ -4087,18 +4091,18 @@ function contentTokenizer(tag, textToken, endToken) {
 var scriptTokens = contentTokenizer("script", scriptText, StartCloseScriptTag);
 var styleTokens = contentTokenizer("style", styleText, StartCloseStyleTag);
 var textareaTokens = contentTokenizer("textarea", textareaText, StartCloseTextareaTag);
-var htmlHighlighting = (0, import_highlight.styleTags)({
-  "Text RawText": import_highlight.tags.content,
-  "StartTag StartCloseTag SelfClosingEndTag EndTag": import_highlight.tags.angleBracket,
-  TagName: import_highlight.tags.tagName,
-  "MismatchedCloseTag/TagName": [import_highlight.tags.tagName, import_highlight.tags.invalid],
-  AttributeName: import_highlight.tags.attributeName,
-  "AttributeValue UnquotedAttributeValue": import_highlight.tags.attributeValue,
-  Is: import_highlight.tags.definitionOperator,
-  "EntityReference CharacterReference": import_highlight.tags.character,
-  Comment: import_highlight.tags.blockComment,
-  ProcessingInst: import_highlight.tags.processingInstruction,
-  DoctypeDecl: import_highlight.tags.documentMeta
+var htmlHighlighting = (0, import_highlight2.styleTags)({
+  "Text RawText": import_highlight2.tags.content,
+  "StartTag StartCloseTag SelfClosingEndTag EndTag": import_highlight2.tags.angleBracket,
+  TagName: import_highlight2.tags.tagName,
+  "MismatchedCloseTag/TagName": [import_highlight2.tags.tagName, import_highlight2.tags.invalid],
+  AttributeName: import_highlight2.tags.attributeName,
+  "AttributeValue UnquotedAttributeValue": import_highlight2.tags.attributeValue,
+  Is: import_highlight2.tags.definitionOperator,
+  "EntityReference CharacterReference": import_highlight2.tags.character,
+  Comment: import_highlight2.tags.blockComment,
+  ProcessingInst: import_highlight2.tags.processingInstruction,
+  DoctypeDecl: import_highlight2.tags.documentMeta
 });
 var parser = LRParser.deserialize({
   version: 14,
@@ -4189,7 +4193,7 @@ function configureNesting(tags6 = [], attributes = []) {
 }
 
 // node_modules/@lezer/css/dist/index.js
-var import_highlight2 = require("@lezer/highlight");
+var import_highlight3 = require("@lezer/highlight");
 var descendantOp = 107;
 var Unit = 1;
 var callee = 108;
@@ -4282,39 +4286,39 @@ var unitToken = new ExternalTokenizer((input) => {
     }
   }
 });
-var cssHighlighting = (0, import_highlight2.styleTags)({
-  "AtKeyword import charset namespace keyframes media supports": import_highlight2.tags.definitionKeyword,
-  "from to selector": import_highlight2.tags.keyword,
-  NamespaceName: import_highlight2.tags.namespace,
-  KeyframeName: import_highlight2.tags.labelName,
-  KeyframeRangeName: import_highlight2.tags.operatorKeyword,
-  TagName: import_highlight2.tags.tagName,
-  ClassName: import_highlight2.tags.className,
-  PseudoClassName: import_highlight2.tags.constant(import_highlight2.tags.className),
-  IdName: import_highlight2.tags.labelName,
-  "FeatureName PropertyName": import_highlight2.tags.propertyName,
-  AttributeName: import_highlight2.tags.attributeName,
-  NumberLiteral: import_highlight2.tags.number,
-  KeywordQuery: import_highlight2.tags.keyword,
-  UnaryQueryOp: import_highlight2.tags.operatorKeyword,
-  "CallTag ValueName": import_highlight2.tags.atom,
-  VariableName: import_highlight2.tags.variableName,
-  Callee: import_highlight2.tags.operatorKeyword,
-  Unit: import_highlight2.tags.unit,
-  "UniversalSelector NestingSelector": import_highlight2.tags.definitionOperator,
-  "MatchOp CompareOp": import_highlight2.tags.compareOperator,
-  "ChildOp SiblingOp, LogicOp": import_highlight2.tags.logicOperator,
-  BinOp: import_highlight2.tags.arithmeticOperator,
-  Important: import_highlight2.tags.modifier,
-  Comment: import_highlight2.tags.blockComment,
-  ColorLiteral: import_highlight2.tags.color,
-  "ParenthesizedContent StringLiteral": import_highlight2.tags.string,
-  ":": import_highlight2.tags.punctuation,
-  "PseudoOp #": import_highlight2.tags.derefOperator,
-  "; ,": import_highlight2.tags.separator,
-  "( )": import_highlight2.tags.paren,
-  "[ ]": import_highlight2.tags.squareBracket,
-  "{ }": import_highlight2.tags.brace
+var cssHighlighting = (0, import_highlight3.styleTags)({
+  "AtKeyword import charset namespace keyframes media supports": import_highlight3.tags.definitionKeyword,
+  "from to selector": import_highlight3.tags.keyword,
+  NamespaceName: import_highlight3.tags.namespace,
+  KeyframeName: import_highlight3.tags.labelName,
+  KeyframeRangeName: import_highlight3.tags.operatorKeyword,
+  TagName: import_highlight3.tags.tagName,
+  ClassName: import_highlight3.tags.className,
+  PseudoClassName: import_highlight3.tags.constant(import_highlight3.tags.className),
+  IdName: import_highlight3.tags.labelName,
+  "FeatureName PropertyName": import_highlight3.tags.propertyName,
+  AttributeName: import_highlight3.tags.attributeName,
+  NumberLiteral: import_highlight3.tags.number,
+  KeywordQuery: import_highlight3.tags.keyword,
+  UnaryQueryOp: import_highlight3.tags.operatorKeyword,
+  "CallTag ValueName": import_highlight3.tags.atom,
+  VariableName: import_highlight3.tags.variableName,
+  Callee: import_highlight3.tags.operatorKeyword,
+  Unit: import_highlight3.tags.unit,
+  "UniversalSelector NestingSelector": import_highlight3.tags.definitionOperator,
+  "MatchOp CompareOp": import_highlight3.tags.compareOperator,
+  "ChildOp SiblingOp, LogicOp": import_highlight3.tags.logicOperator,
+  BinOp: import_highlight3.tags.arithmeticOperator,
+  Important: import_highlight3.tags.modifier,
+  Comment: import_highlight3.tags.blockComment,
+  ColorLiteral: import_highlight3.tags.color,
+  "ParenthesizedContent StringLiteral": import_highlight3.tags.string,
+  ":": import_highlight3.tags.punctuation,
+  "PseudoOp #": import_highlight3.tags.derefOperator,
+  "; ,": import_highlight3.tags.separator,
+  "( )": import_highlight3.tags.paren,
+  "[ ]": import_highlight3.tags.squareBracket,
+  "{ }": import_highlight3.tags.brace
 });
 var spec_callee = { __proto__: null, lang: 34, "nth-child": 34, "nth-last-child": 34, "nth-of-type": 34, "nth-last-of-type": 34, dir: 34, "host-context": 34, url: 62, "url-prefix": 62, domain: 62, regexp: 62 };
 var spec_AtKeyword = { __proto__: null, "@import": 120, "@media": 154, "@charset": 158, "@namespace": 162, "@keyframes": 168, "@supports": 180 };
@@ -4342,7 +4346,7 @@ var parser2 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-css/dist/index.js
-var import_language = require("@codemirror/language");
+var import_language2 = require("@codemirror/language");
 var _properties = null;
 function properties() {
   if (!_properties && typeof document == "object" && document.body) {
@@ -4991,7 +4995,7 @@ var values = /* @__PURE__ */ [
   "yellow",
   "yellowgreen"
 ].map((name) => ({ type: "constant", label: name })));
-var tags3 = /* @__PURE__ */ [
+var tags4 = /* @__PURE__ */ [
   "a",
   "abbr",
   "address",
@@ -5147,7 +5151,7 @@ function variableNames(doc, node, isVariable) {
   }
 }
 var defineCSSCompletionSource = (isVariable) => (context) => {
-  let { state, pos } = context, node = (0, import_language.syntaxTree)(state).resolveInner(pos, -1);
+  let { state, pos } = context, node = (0, import_language2.syntaxTree)(state).resolveInner(pos, -1);
   let isDash = node.type.isError && node.from == node.to - 1 && state.doc.sliceString(node.from, node.to) == "-";
   if (node.name == "PropertyName" || (isDash || node.name == "TagName") && /^(Block|Styles)$/.test(node.resolve(node.to).name))
     return { from: node.from, options: properties(), validFor: identifier2 };
@@ -5165,7 +5169,7 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
     for (let { parent } = node; parent; parent = parent.parent)
       if (parent.name == "Block")
         return { from: node.from, options: properties(), validFor: identifier2 };
-    return { from: node.from, options: tags3, validFor: identifier2 };
+    return { from: node.from, options: tags4, validFor: identifier2 };
   }
   if (node.name == "AtKeyword")
     return { from: node.from, options: atRules, validFor: identifier2 };
@@ -5181,15 +5185,15 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
   return null;
 };
 var cssCompletionSource = /* @__PURE__ */ defineCSSCompletionSource((n) => n.name == "VariableName");
-var cssLanguage = /* @__PURE__ */ import_language.LRLanguage.define({
+var cssLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
   name: "css",
   parser: /* @__PURE__ */ parser2.configure({
     props: [
-      /* @__PURE__ */ import_language.indentNodeProp.add({
-        Declaration: /* @__PURE__ */ (0, import_language.continuedIndent)()
+      /* @__PURE__ */ import_language2.indentNodeProp.add({
+        Declaration: /* @__PURE__ */ (0, import_language2.continuedIndent)()
       }),
-      /* @__PURE__ */ import_language.foldNodeProp.add({
-        "Block KeyframeList": import_language.foldInside
+      /* @__PURE__ */ import_language2.foldNodeProp.add({
+        "Block KeyframeList": import_language2.foldInside
       })
     ]
   }),
@@ -5200,11 +5204,11 @@ var cssLanguage = /* @__PURE__ */ import_language.LRLanguage.define({
   }
 });
 function css() {
-  return new import_language.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
+  return new import_language2.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 }
 
 // node_modules/@lezer/javascript/dist/index.js
-var import_highlight3 = require("@lezer/highlight");
+var import_highlight4 = require("@lezer/highlight");
 var noSemi = 315;
 var noSemiType = 316;
 var incdec = 1;
@@ -5329,63 +5333,63 @@ var jsx = new ExternalTokenizer((input, stack) => {
   }
   input.acceptToken(JSXStartTag, -back);
 });
-var jsHighlight = (0, import_highlight3.styleTags)({
-  "get set async static": import_highlight3.tags.modifier,
-  "for while do if else switch try catch finally return throw break continue default case": import_highlight3.tags.controlKeyword,
-  "in of await yield void typeof delete instanceof as satisfies": import_highlight3.tags.operatorKeyword,
-  "let var const using function class extends": import_highlight3.tags.definitionKeyword,
-  "import export from": import_highlight3.tags.moduleKeyword,
-  "with debugger new": import_highlight3.tags.keyword,
-  TemplateString: import_highlight3.tags.special(import_highlight3.tags.string),
-  super: import_highlight3.tags.atom,
-  BooleanLiteral: import_highlight3.tags.bool,
-  this: import_highlight3.tags.self,
-  null: import_highlight3.tags.null,
-  Star: import_highlight3.tags.modifier,
-  VariableName: import_highlight3.tags.variableName,
-  "CallExpression/VariableName TaggedTemplateExpression/VariableName": import_highlight3.tags.function(import_highlight3.tags.variableName),
-  VariableDefinition: import_highlight3.tags.definition(import_highlight3.tags.variableName),
-  Label: import_highlight3.tags.labelName,
-  PropertyName: import_highlight3.tags.propertyName,
-  PrivatePropertyName: import_highlight3.tags.special(import_highlight3.tags.propertyName),
-  "CallExpression/MemberExpression/PropertyName": import_highlight3.tags.function(import_highlight3.tags.propertyName),
-  "FunctionDeclaration/VariableDefinition": import_highlight3.tags.function(import_highlight3.tags.definition(import_highlight3.tags.variableName)),
-  "ClassDeclaration/VariableDefinition": import_highlight3.tags.definition(import_highlight3.tags.className),
-  "NewExpression/VariableName": import_highlight3.tags.className,
-  PropertyDefinition: import_highlight3.tags.definition(import_highlight3.tags.propertyName),
-  PrivatePropertyDefinition: import_highlight3.tags.definition(import_highlight3.tags.special(import_highlight3.tags.propertyName)),
-  UpdateOp: import_highlight3.tags.updateOperator,
-  "LineComment Hashbang": import_highlight3.tags.lineComment,
-  BlockComment: import_highlight3.tags.blockComment,
-  Number: import_highlight3.tags.number,
-  String: import_highlight3.tags.string,
-  Escape: import_highlight3.tags.escape,
-  ArithOp: import_highlight3.tags.arithmeticOperator,
-  LogicOp: import_highlight3.tags.logicOperator,
-  BitOp: import_highlight3.tags.bitwiseOperator,
-  CompareOp: import_highlight3.tags.compareOperator,
-  RegExp: import_highlight3.tags.regexp,
-  Equals: import_highlight3.tags.definitionOperator,
-  Arrow: import_highlight3.tags.function(import_highlight3.tags.punctuation),
-  ": Spread": import_highlight3.tags.punctuation,
-  "( )": import_highlight3.tags.paren,
-  "[ ]": import_highlight3.tags.squareBracket,
-  "{ }": import_highlight3.tags.brace,
-  "InterpolationStart InterpolationEnd": import_highlight3.tags.special(import_highlight3.tags.brace),
-  ".": import_highlight3.tags.derefOperator,
-  ", ;": import_highlight3.tags.separator,
-  "@": import_highlight3.tags.meta,
-  TypeName: import_highlight3.tags.typeName,
-  TypeDefinition: import_highlight3.tags.definition(import_highlight3.tags.typeName),
-  "type enum interface implements namespace module declare": import_highlight3.tags.definitionKeyword,
-  "abstract global Privacy readonly override": import_highlight3.tags.modifier,
-  "is keyof unique infer asserts": import_highlight3.tags.operatorKeyword,
-  JSXAttributeValue: import_highlight3.tags.attributeValue,
-  JSXText: import_highlight3.tags.content,
-  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": import_highlight3.tags.angleBracket,
-  "JSXIdentifier JSXNameSpacedName": import_highlight3.tags.tagName,
-  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": import_highlight3.tags.attributeName,
-  "JSXBuiltin/JSXIdentifier": import_highlight3.tags.standard(import_highlight3.tags.tagName)
+var jsHighlight = (0, import_highlight4.styleTags)({
+  "get set async static": import_highlight4.tags.modifier,
+  "for while do if else switch try catch finally return throw break continue default case": import_highlight4.tags.controlKeyword,
+  "in of await yield void typeof delete instanceof as satisfies": import_highlight4.tags.operatorKeyword,
+  "let var const using function class extends": import_highlight4.tags.definitionKeyword,
+  "import export from": import_highlight4.tags.moduleKeyword,
+  "with debugger new": import_highlight4.tags.keyword,
+  TemplateString: import_highlight4.tags.special(import_highlight4.tags.string),
+  super: import_highlight4.tags.atom,
+  BooleanLiteral: import_highlight4.tags.bool,
+  this: import_highlight4.tags.self,
+  null: import_highlight4.tags.null,
+  Star: import_highlight4.tags.modifier,
+  VariableName: import_highlight4.tags.variableName,
+  "CallExpression/VariableName TaggedTemplateExpression/VariableName": import_highlight4.tags.function(import_highlight4.tags.variableName),
+  VariableDefinition: import_highlight4.tags.definition(import_highlight4.tags.variableName),
+  Label: import_highlight4.tags.labelName,
+  PropertyName: import_highlight4.tags.propertyName,
+  PrivatePropertyName: import_highlight4.tags.special(import_highlight4.tags.propertyName),
+  "CallExpression/MemberExpression/PropertyName": import_highlight4.tags.function(import_highlight4.tags.propertyName),
+  "FunctionDeclaration/VariableDefinition": import_highlight4.tags.function(import_highlight4.tags.definition(import_highlight4.tags.variableName)),
+  "ClassDeclaration/VariableDefinition": import_highlight4.tags.definition(import_highlight4.tags.className),
+  "NewExpression/VariableName": import_highlight4.tags.className,
+  PropertyDefinition: import_highlight4.tags.definition(import_highlight4.tags.propertyName),
+  PrivatePropertyDefinition: import_highlight4.tags.definition(import_highlight4.tags.special(import_highlight4.tags.propertyName)),
+  UpdateOp: import_highlight4.tags.updateOperator,
+  "LineComment Hashbang": import_highlight4.tags.lineComment,
+  BlockComment: import_highlight4.tags.blockComment,
+  Number: import_highlight4.tags.number,
+  String: import_highlight4.tags.string,
+  Escape: import_highlight4.tags.escape,
+  ArithOp: import_highlight4.tags.arithmeticOperator,
+  LogicOp: import_highlight4.tags.logicOperator,
+  BitOp: import_highlight4.tags.bitwiseOperator,
+  CompareOp: import_highlight4.tags.compareOperator,
+  RegExp: import_highlight4.tags.regexp,
+  Equals: import_highlight4.tags.definitionOperator,
+  Arrow: import_highlight4.tags.function(import_highlight4.tags.punctuation),
+  ": Spread": import_highlight4.tags.punctuation,
+  "( )": import_highlight4.tags.paren,
+  "[ ]": import_highlight4.tags.squareBracket,
+  "{ }": import_highlight4.tags.brace,
+  "InterpolationStart InterpolationEnd": import_highlight4.tags.special(import_highlight4.tags.brace),
+  ".": import_highlight4.tags.derefOperator,
+  ", ;": import_highlight4.tags.separator,
+  "@": import_highlight4.tags.meta,
+  TypeName: import_highlight4.tags.typeName,
+  TypeDefinition: import_highlight4.tags.definition(import_highlight4.tags.typeName),
+  "type enum interface implements namespace module declare": import_highlight4.tags.definitionKeyword,
+  "abstract global Privacy readonly override": import_highlight4.tags.modifier,
+  "is keyof unique infer asserts": import_highlight4.tags.operatorKeyword,
+  JSXAttributeValue: import_highlight4.tags.attributeValue,
+  JSXText: import_highlight4.tags.content,
+  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": import_highlight4.tags.angleBracket,
+  "JSXIdentifier JSXNameSpacedName": import_highlight4.tags.tagName,
+  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": import_highlight4.tags.attributeName,
+  "JSXBuiltin/JSXIdentifier": import_highlight4.tags.standard(import_highlight4.tags.tagName)
 });
 var spec_identifier = { __proto__: null, export: 20, as: 25, from: 33, default: 36, async: 41, function: 42, in: 52, out: 55, const: 56, extends: 60, this: 64, true: 72, false: 72, null: 84, void: 88, typeof: 92, super: 108, new: 142, delete: 154, yield: 163, await: 167, class: 172, public: 235, private: 235, protected: 235, readonly: 237, instanceof: 256, satisfies: 259, import: 292, keyof: 349, unique: 353, infer: 359, asserts: 395, is: 397, abstract: 417, implements: 419, type: 421, let: 424, var: 426, using: 429, interface: 435, enum: 439, namespace: 445, module: 447, declare: 451, global: 455, for: 474, of: 483, while: 486, with: 490, do: 494, if: 498, else: 500, switch: 504, case: 510, try: 516, catch: 520, finally: 524, return: 528, throw: 532, break: 536, continue: 540, debugger: 544 };
 var spec_word = { __proto__: null, async: 129, get: 131, set: 133, declare: 195, public: 197, private: 197, protected: 197, static: 199, abstract: 201, override: 203, readonly: 209, accessor: 211, new: 401 };
@@ -5417,9 +5421,9 @@ var parser3 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-javascript/dist/index.js
-var import_language2 = require("@codemirror/language");
+var import_language3 = require("@codemirror/language");
 var import_state = require("@codemirror/state");
-var import_view = require("@codemirror/view");
+var import_view2 = require("@codemirror/view");
 var import_autocomplete = require("@codemirror/autocomplete");
 var snippets = [
   /* @__PURE__ */ (0, import_autocomplete.snippetCompletion)("function ${name}(${params}) {\n	${}\n}", {
@@ -5578,7 +5582,7 @@ var dontComplete = [
   "?."
 ];
 function localCompletionSource(context) {
-  let inner = (0, import_language2.syntaxTree)(context.state).resolveInner(context.pos, -1);
+  let inner = (0, import_language3.syntaxTree)(context.state).resolveInner(context.pos, -1);
   if (dontComplete.indexOf(inner.name) > -1)
     return null;
   let isWord = inner.name == "VariableName" || inner.to - inner.from < 20 && Identifier.test(context.state.sliceDoc(inner.from, inner.to));
@@ -5595,22 +5599,22 @@ function localCompletionSource(context) {
     validFor: Identifier
   };
 }
-var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
+var javascriptLanguage = /* @__PURE__ */ import_language3.LRLanguage.define({
   name: "javascript",
   parser: /* @__PURE__ */ parser3.configure({
     props: [
-      /* @__PURE__ */ import_language2.indentNodeProp.add({
-        IfStatement: /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*({|else\b)/ }),
-        TryStatement: /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
-        LabeledStatement: import_language2.flatIndent,
+      /* @__PURE__ */ import_language3.indentNodeProp.add({
+        IfStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|else\b)/ }),
+        TryStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
+        LabeledStatement: import_language3.flatIndent,
         SwitchBody: (context) => {
           let after = context.textAfter, closed = /^\s*\}/.test(after), isCase = /^\s*(case|default)\b/.test(after);
           return context.baseIndent + (closed ? 0 : isCase ? 1 : 2) * context.unit;
         },
-        Block: /* @__PURE__ */ (0, import_language2.delimitedIndent)({ closing: "}" }),
+        Block: /* @__PURE__ */ (0, import_language3.delimitedIndent)({ closing: "}" }),
         ArrowFunction: (cx) => cx.baseIndent + cx.unit,
         "TemplateString BlockComment": () => null,
-        "Statement Property": /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*{/ }),
+        "Statement Property": /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*{/ }),
         JSXElement(context) {
           let closed = /^\s*<\//.test(context.textAfter);
           return context.lineIndent(context.node.from) + (closed ? 0 : context.unit);
@@ -5623,8 +5627,8 @@ var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
           return context.column(context.node.from) + context.unit;
         }
       }),
-      /* @__PURE__ */ import_language2.foldNodeProp.add({
-        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language2.foldInside,
+      /* @__PURE__ */ import_language3.foldNodeProp.add({
+        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language3.foldInside,
         BlockComment(tree) {
           return { from: tree.from + 2, to: tree.to - 2 };
         }
@@ -5640,16 +5644,16 @@ var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
 });
 var jsxSublanguage = {
   test: (node) => /^JSX/.test(node.name),
-  facet: /* @__PURE__ */ (0, import_language2.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
+  facet: /* @__PURE__ */ (0, import_language3.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
 };
 var typescriptLanguage = /* @__PURE__ */ javascriptLanguage.configure({ dialect: "ts" }, "typescript");
 var jsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx",
-  props: [/* @__PURE__ */ import_language2.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 });
 var tsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx ts",
-  props: [/* @__PURE__ */ import_language2.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 }, "typescript");
 var kwCompletion = (name) => ({ label: name, type: "keyword" });
 var keywords = /* @__PURE__ */ "break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion);
@@ -5657,7 +5661,7 @@ var typescriptKeywords = /* @__PURE__ */ keywords.concat(/* @__PURE__ */ ["decla
 function javascript(config = {}) {
   let lang = config.jsx ? config.typescript ? tsxLanguage : jsxLanguage : config.typescript ? typescriptLanguage : javascriptLanguage;
   let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords);
-  return new import_language2.LanguageSupport(lang, [
+  return new import_language3.LanguageSupport(lang, [
     javascriptLanguage.data.of({
       autocomplete: (0, import_autocomplete.ifNotIn)(dontComplete, (0, import_autocomplete.completeFromList)(completions))
     }),
@@ -5684,13 +5688,13 @@ function elementName(doc, tree, max = doc.length) {
   return "";
 }
 var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
-var autoCloseTags = /* @__PURE__ */ import_view.EditorView.inputHandler.of((view, from, to, text, defaultInsert) => {
+var autoCloseTags = /* @__PURE__ */ import_view2.EditorView.inputHandler.of((view, from, to, text, defaultInsert) => {
   if ((android ? view.composing : view.compositionStarted) || view.state.readOnly || from != to || text != ">" && text != "/" || !javascriptLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = defaultInsert(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a;
-    let { head } = range, around = (0, import_language2.syntaxTree)(state).resolveInner(head - 1, -1), name;
+    let { head } = range, around = (0, import_language3.syntaxTree)(state).resolveInner(head - 1, -1), name;
     if (around.name == "JSXStartTag")
       around = around.parent;
     if (state.doc.sliceString(head - 1, head) != text || around.name == "JSXAttributeValue" && around.to > head) ;
@@ -5719,9 +5723,9 @@ var autoCloseTags = /* @__PURE__ */ import_view.EditorView.inputHandler.of((view
 });
 
 // node_modules/@codemirror/lang-html/dist/index.js
-var import_view2 = require("@codemirror/view");
+var import_view3 = require("@codemirror/view");
 var import_state2 = require("@codemirror/state");
-var import_language3 = require("@codemirror/language");
+var import_language4 = require("@codemirror/language");
 var Targets = ["_blank", "_self", "_top", "_parent"];
 var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
 var Methods = ["get", "post", "put", "delete"];
@@ -6265,7 +6269,7 @@ function completeAttrValue(state, schema, tree, from, to) {
   return { from, to, options, validFor: token };
 }
 function htmlCompletionFor(schema, context) {
-  let { state, pos } = context, tree = (0, import_language3.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
+  let { state, pos } = context, tree = (0, import_language4.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
   for (let scan = pos, before; around == tree && (before = tree.childBefore(scan)); ) {
     let last = before.lastChild;
     if (!last || !last.type.isError || last.from < last.to)
@@ -6342,11 +6346,11 @@ var defaultAttrs = /* @__PURE__ */ [
     parser: /* @__PURE__ */ cssLanguage.parser.configure({ top: "Styles" })
   }
 ].concat(/* @__PURE__ */ eventAttributes.map((name) => ({ name, parser: javascriptLanguage.parser })));
-var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
+var htmlPlain = /* @__PURE__ */ import_language4.LRLanguage.define({
   name: "html",
   parser: /* @__PURE__ */ parser.configure({
     props: [
-      /* @__PURE__ */ import_language3.indentNodeProp.add({
+      /* @__PURE__ */ import_language4.indentNodeProp.add({
         Element(context) {
           let after = /^(\s*)(<\/)?/.exec(context.textAfter);
           if (context.node.to <= context.pos + after[0].length)
@@ -6371,7 +6375,7 @@ var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
           return null;
         }
       }),
-      /* @__PURE__ */ import_language3.foldNodeProp.add({
+      /* @__PURE__ */ import_language4.foldNodeProp.add({
         Element(node) {
           let first = node.firstChild, last = node.lastChild;
           if (!first || first.name != "OpenTag")
@@ -6379,7 +6383,7 @@ var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
           return { from: first.to, to: last.name == "CloseTag" ? last.from : node.to };
         }
       }),
-      /* @__PURE__ */ import_language3.bracketMatchingHandle.add({
+      /* @__PURE__ */ import_language4.bracketMatchingHandle.add({
         "OpenTag CloseTag": (node) => node.getChild("TagName")
       })
     ]
@@ -6402,7 +6406,7 @@ function html(config = {}) {
   if (config.nestedLanguages && config.nestedLanguages.length || config.nestedAttributes && config.nestedAttributes.length)
     wrap = configureNesting((config.nestedLanguages || []).concat(defaultNesting), (config.nestedAttributes || []).concat(defaultAttrs));
   let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
-  return new import_language3.LanguageSupport(lang, [
+  return new import_language4.LanguageSupport(lang, [
     htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config) }),
     config.autoCloseTags !== false ? autoCloseTags2 : [],
     javascript().support,
@@ -6410,14 +6414,14 @@ function html(config = {}) {
   ]);
 }
 var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
-var autoCloseTags2 = /* @__PURE__ */ import_view2.EditorView.inputHandler.of((view, from, to, text, insertTransaction) => {
+var autoCloseTags2 = /* @__PURE__ */ import_view3.EditorView.inputHandler.of((view, from, to, text, insertTransaction) => {
   if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = insertTransaction(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a, _b, _c;
     let didType = state.doc.sliceString(range.from - 1, range.to) == text;
-    let { head } = range, after = (0, import_language3.syntaxTree)(state).resolveInner(head, -1), name;
+    let { head } = range, after = (0, import_language4.syntaxTree)(state).resolveInner(head, -1), name;
     if (didType && text == ">" && after.name == "EndTag") {
       let tag = after.parent;
       if (((_b = (_a = tag.parent) === null || _a === void 0 ? void 0 : _a.lastChild) === null || _b === void 0 ? void 0 : _b.name) != "CloseTag" && (name = elementName2(state.doc, tag.parent, head)) && !selfClosers2.has(name)) {
@@ -6451,18 +6455,18 @@ var autoCloseTags2 = /* @__PURE__ */ import_view2.EditorView.inputHandler.of((vi
 });
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
-var data = /* @__PURE__ */ (0, import_language4.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
+var data = /* @__PURE__ */ (0, import_language5.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
 var headingProp = /* @__PURE__ */ new NodeProp();
 var commonmark = /* @__PURE__ */ import_markdown.parser.configure({
   props: [
-    /* @__PURE__ */ import_language4.foldNodeProp.add((type) => {
+    /* @__PURE__ */ import_language5.foldNodeProp.add((type) => {
       return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to });
     }),
     /* @__PURE__ */ headingProp.add(isHeading),
-    /* @__PURE__ */ import_language4.indentNodeProp.add({
+    /* @__PURE__ */ import_language5.indentNodeProp.add({
       Document: () => null
     }),
-    /* @__PURE__ */ import_language4.languageDataProp.add({
+    /* @__PURE__ */ import_language5.languageDataProp.add({
       Document: data
     })
   ]
@@ -6484,8 +6488,8 @@ function findSectionEnd(headerNode, level) {
   }
   return last.to;
 }
-var headerIndent = /* @__PURE__ */ import_language4.foldService.of((state, start, end) => {
-  for (let node = (0, import_language4.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
+var headerIndent = /* @__PURE__ */ import_language5.foldService.of((state, start, end) => {
+  for (let node = (0, import_language5.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
     if (node.from < start)
       break;
     let heading = node.type.prop(headingProp);
@@ -6498,28 +6502,28 @@ var headerIndent = /* @__PURE__ */ import_language4.foldService.of((state, start
   return null;
 });
 function mkLang(parser5) {
-  return new import_language4.Language(data, parser5, [headerIndent], "markdown");
+  return new import_language5.Language(data, parser5, [headerIndent], "markdown");
 }
 var commonmarkLanguage = /* @__PURE__ */ mkLang(commonmark);
 var extended = /* @__PURE__ */ commonmark.configure([import_markdown.GFM, import_markdown.Subscript, import_markdown.Superscript, import_markdown.Emoji, {
   props: [
-    /* @__PURE__ */ import_language4.foldNodeProp.add({
+    /* @__PURE__ */ import_language5.foldNodeProp.add({
       Table: (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to })
     })
   ]
 }]);
 var markdownLanguage = /* @__PURE__ */ mkLang(extended);
-function getCodeParser(languages2, defaultLanguage) {
+function getCodeParser(languages, defaultLanguage) {
   return (info) => {
-    if (info && languages2) {
+    if (info && languages) {
       let found = null;
       info = /\S*/.exec(info)[0];
-      if (typeof languages2 == "function")
-        found = languages2(info);
+      if (typeof languages == "function")
+        found = languages(info);
       else
-        found = import_language4.LanguageDescription.matchLanguageName(languages2, info, true);
-      if (found instanceof import_language4.LanguageDescription)
-        return found.support ? found.support.language.parser : import_language4.ParseContext.getSkippingParser(found.load());
+        found = import_language5.LanguageDescription.matchLanguageName(languages, info, true);
+      if (found instanceof import_language5.LanguageDescription)
+        return found.support ? found.support.language.parser : import_language5.ParseContext.getSkippingParser(found.load());
       else if (found)
         return found.parser;
     }
@@ -6610,7 +6614,7 @@ function renumberList(after, doc, changes, offset = 0) {
 }
 function normalizeIndent(content, state) {
   let blank = /^[ \t]*/.exec(content)[0].length;
-  if (!blank || state.facet(import_language4.indentUnit) != "	")
+  if (!blank || state.facet(import_language5.indentUnit) != "	")
     return content;
   let col = (0, import_state3.countColumn)(content, 4, blank);
   let space3 = "";
@@ -6626,7 +6630,7 @@ function normalizeIndent(content, state) {
   return space3 + content.slice(blank);
 }
 var insertNewlineContinueMarkup = ({ state, dispatch }) => {
-  let tree = (0, import_language4.syntaxTree)(state), { doc } = state;
+  let tree = (0, import_language5.syntaxTree)(state), { doc } = state;
   let dont = null, changes = state.changeByRange((range) => {
     if (!range.empty || !markdownLanguage.isActiveAt(state, range.from, 0))
       return dont = { range };
@@ -6738,7 +6742,7 @@ function contextNodeForDelete(tree, pos) {
   return node;
 }
 var deleteMarkupBackward = ({ state, dispatch }) => {
-  let tree = (0, import_language4.syntaxTree)(state);
+  let tree = (0, import_language5.syntaxTree)(state);
   let dont = null, changes = state.changeByRange((range) => {
     let pos = range.from, { doc } = state;
     if (range.empty && markdownLanguage.isActiveAt(state, range.from)) {
@@ -6789,7 +6793,7 @@ function markdown(config = {}) {
     throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
   let extensions = config.extensions ? [config.extensions] : [];
   let support = [htmlTagLanguage.support], defaultCode;
-  if (defaultCodeLanguage instanceof import_language4.LanguageSupport) {
+  if (defaultCodeLanguage instanceof import_language5.LanguageSupport) {
     support.push(defaultCodeLanguage.support);
     defaultCode = defaultCodeLanguage.language;
   } else if (defaultCodeLanguage) {
@@ -6798,17 +6802,17 @@ function markdown(config = {}) {
   let codeParser = codeLanguages || defaultCode ? getCodeParser(codeLanguages, defaultCode) : void 0;
   extensions.push((0, import_markdown.parseCode)({ codeParser, htmlParser: htmlTagLanguage.language.parser }));
   if (addKeymap)
-    support.push(import_state3.Prec.high(import_view3.keymap.of(markdownKeymap)));
+    support.push(import_state3.Prec.high(import_view4.keymap.of(markdownKeymap)));
   let lang = mkLang(parser5.configure(extensions));
   if (completeHTMLTags)
     support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
-  return new import_language4.LanguageSupport(lang, support);
+  return new import_language5.LanguageSupport(lang, support);
 }
 function htmlTagCompletion(context) {
   let { state, pos } = context, m = /<[:\-\.\w\u00b7-\uffff]*$/.exec(state.sliceDoc(pos - 25, pos));
   if (!m)
     return null;
-  let tree = (0, import_language4.syntaxTree)(state).resolveInner(pos, -1);
+  let tree = (0, import_language5.syntaxTree)(state).resolveInner(pos, -1);
   while (tree && !tree.type.isTop) {
     if (tree.name == "CodeBlock" || tree.name == "FencedCode" || tree.name == "ProcessingInstructionBlock" || tree.name == "CommentBlock" || tree.name == "Link" || tree.name == "Image")
       return null;
@@ -6829,17 +6833,60 @@ function htmlTagCompletions() {
   return _tagCompletions = result ? result.options : [];
 }
 
-// src/app/obsidian-editor/CodeMirrorEditor.tsx
-var import_language_data = require("@codemirror/language-data");
-var import_language5 = require("@codemirror/language");
-var import_highlight4 = require("@lezer/highlight");
+// src/app/obsidian-editor/extensions/keymaps/obsidianKeymap.ts
+var obsidianKeymap = [
+  // Add Obsidian-specific keybindings here
+  // For now, we'll just return an empty array
+];
+
+// src/app/obsidian-editor/extensions/themes/obsidianTheme.ts
+var import_view5 = require("@codemirror/view");
+var obsidianTheme = import_view5.EditorView.theme({
+  "&": {
+    height: "100%",
+    fontSize: "16px",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-scroller": {
+    overflow: "auto",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-content": {
+    padding: "1rem 0",
+    minHeight: "100%",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-line": {
+    padding: "0 1rem",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    border: "none",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "transparent",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary)",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-selectionBackground": {
+    backgroundColor: "var(--text-selection)"
+  },
+  ".cm-cursor": {
+    borderLeft: "2px solid var(--cursor-color, #3b82f6)"
+  }
+});
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 var import_view18 = require("@codemirror/view");
 var import_state7 = require("@codemirror/state");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
-var import_view4 = require("@codemirror/view");
+var import_view6 = require("@codemirror/view");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/utils.ts
 function isCursorNearRange(cursorPositions, rangeFrom, rangeTo, proximity = 0) {
@@ -6881,22 +6928,22 @@ var HeadingDecorator = class {
         decorations.push({
           from: hashStartInDoc,
           to: spaceAfterHashInDoc,
-          decoration: import_view4.Decoration.mark({ class: syntaxClass })
+          decoration: import_view6.Decoration.mark({ class: syntaxClass })
         });
         if (headingTextContent.trim().length > 0) {
           decorations.push({
             from: headingTextStartInDoc,
             to: headingTextEndInDoc,
-            decoration: import_view4.Decoration.mark({ class: `markdown-heading-${hashCount}` })
+            decoration: import_view6.Decoration.mark({ class: `markdown-heading-${hashCount}` })
           });
         }
       } else {
-        builder.add(hashStartInDoc, spaceAfterHashInDoc, import_view4.Decoration.mark({ class: syntaxClass }));
+        builder.add(hashStartInDoc, spaceAfterHashInDoc, import_view6.Decoration.mark({ class: syntaxClass }));
         if (headingTextContent.trim().length > 0) {
           builder.add(
             headingTextStartInDoc,
             headingTextEndInDoc,
-            import_view4.Decoration.mark({ class: `markdown-heading-${hashCount}` })
+            import_view6.Decoration.mark({ class: `markdown-heading-${hashCount}` })
           );
         }
       }
@@ -6905,7 +6952,7 @@ var HeadingDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
-var import_view5 = require("@codemirror/view");
+var import_view7 = require("@codemirror/view");
 var BoldDecorator = class {
   constructor() {
     // Regex for **bold** and __bold__
@@ -6914,9 +6961,9 @@ var BoldDecorator = class {
     // is not the marker character itself, to avoid matching parts of ***italicbold*** or similar.
     // And it avoids matching if the content is empty, e.g. **** or ____
     this.boldPatterns = [
-      { marker: "**", regex: new RegExp("(?<!\\*)\\*\\*(?!\\s)([^\\*]+?)(?<!\\s)\\*\\*(?!\\*)", "g") },
+      { marker: "**", regex: /(?<!\*)\*\*(?!\s)([^\*]+?)(?<!\s)\*\*(?!\*)/g },
       // **bold**
-      { marker: "__", regex: new RegExp("(?<!_)_{2}(?!\\s)([^_]+?)(?<!\\s)_{2}(?!_)", "g") }
+      { marker: "__", regex: /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g }
       // __bold__
     ];
   }
@@ -6949,26 +6996,26 @@ var BoldDecorator = class {
           decorations.push({
             from: openMarkerStartInDoc,
             to: openMarkerEndInDoc,
-            decoration: import_view5.Decoration.mark({ class: syntaxClass })
+            decoration: import_view7.Decoration.mark({ class: syntaxClass })
           });
           if (contentStartInDoc < contentEndInDoc) {
             decorations.push({
               from: contentStartInDoc,
               to: contentEndInDoc,
-              decoration: import_view5.Decoration.mark({ class: "markdown-bold-active" })
+              decoration: import_view7.Decoration.mark({ class: "markdown-bold-active" })
             });
           }
           decorations.push({
             from: closeMarkerStartInDoc,
             to: closeMarkerEndInDoc,
-            decoration: import_view5.Decoration.mark({ class: syntaxClass })
+            decoration: import_view7.Decoration.mark({ class: syntaxClass })
           });
         } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view5.Decoration.mark({ class: syntaxClass }));
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
           if (contentStartInDoc < contentEndInDoc) {
-            builder.add(contentStartInDoc, contentEndInDoc, import_view5.Decoration.mark({ class: "markdown-bold-active" }));
+            builder.add(contentStartInDoc, contentEndInDoc, import_view7.Decoration.mark({ class: "markdown-bold-active" }));
           }
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view5.Decoration.mark({ class: syntaxClass }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
         }
       }
     });
@@ -6976,7 +7023,7 @@ var BoldDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/italicDecorator.ts
-var import_view6 = require("@codemirror/view");
+var import_view8 = require("@codemirror/view");
 var ItalicDecorator = class {
   constructor() {
     // Regex for *italic* and _italic_
@@ -6985,9 +7032,9 @@ var ItalicDecorator = class {
     // It also ensures the content is not empty, e.g. ** or __
     this.italicPatterns = [
       // Matches *italic* but not **bold** or ***italicbold*** components directly
-      { marker: "*", regex: new RegExp("(?<!\\*\\*|\\*)(?:^|[^\\*])\\*(?!\\s|\\*\\*)([^\\*\\n]+?)(?<!\\s)\\*(?!\\*)", "g") },
+      { marker: "*", regex: /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g },
       // Matches _italic_ but not __bold__ or ___italicbold___ components directly
-      { marker: "_", regex: new RegExp("(?<!__|_)(?:^|[^_])_(?!\\s|__)([^_\\n]+?)(?<!\\s)_(?!_)", "g") }
+      { marker: "_", regex: /(?<!__|_)(?:^|[^_])_(?!\s|__)([^_\n]+?)(?<!\s)_(?!_)/g }
     ];
   }
   process(context) {
@@ -7032,22 +7079,22 @@ var ItalicDecorator = class {
           decorations.push({
             from: openMarkerStartInDoc,
             to: openMarkerEndInDoc,
-            decoration: import_view6.Decoration.mark({ class: syntaxClass })
+            decoration: import_view8.Decoration.mark({ class: syntaxClass })
           });
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view6.Decoration.mark({ class: "markdown-italic-active" })
+            decoration: import_view8.Decoration.mark({ class: "markdown-italic-active" })
           });
           decorations.push({
             from: closeMarkerStartInDoc,
             to: closeMarkerEndInDoc,
-            decoration: import_view6.Decoration.mark({ class: syntaxClass })
+            decoration: import_view8.Decoration.mark({ class: syntaxClass })
           });
         } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view6.Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, import_view6.Decoration.mark({ class: "markdown-italic-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view6.Decoration.mark({ class: syntaxClass }));
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, import_view8.Decoration.mark({ class: "markdown-italic-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
         }
       }
     });
@@ -7055,11 +7102,11 @@ var ItalicDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/strikethroughDecorator.ts
-var import_view7 = require("@codemirror/view");
+var import_view9 = require("@codemirror/view");
 var StrikethroughDecorator = class {
   constructor() {
     // Improved regex for ~~strikethrough~~ with proper boundary conditions
-    this.strikethroughRegex = new RegExp("(?<!\\\\|~)(~~)(?!\\s|~)([^~\\n]+?)(?<!\\s)(~~)(?!~)", "g");
+    this.strikethroughRegex = /(?<!\\|~)(~~)(?!\s|~)([^~\n]+?)(?<!\s)(~~)(?!~)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7090,36 +7137,36 @@ var StrikethroughDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view7.Decoration.mark({ class: syntaxClass })
+          decoration: import_view9.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view7.Decoration.mark({ class: contentClass })
+          decoration: import_view9.Decoration.mark({ class: contentClass })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view7.Decoration.mark({ class: syntaxClass })
+          decoration: import_view9.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, import_view7.Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, import_view9.Decoration.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/codeDecorator.ts
-var import_view8 = require("@codemirror/view");
+var import_view10 = require("@codemirror/view");
 var CodeDecorator = class {
   constructor() {
     // Regex for `code`
     // It looks for non-greedy content between single backticks.
     // It also tries to avoid matching parts of code blocks (```) by not allowing backticks right next to the content ones,
     // though full code block handling is typically a separate, more complex parser.
-    this.codeRegex = new RegExp("(?<!\\\\)(?<!`)`(?=\\S)([^`\\n]+?)(?<=\\S)`(?!`)", "g");
+    this.codeRegex = /(?<!\\)(?<!`)`(?=\S)([^`\n]+?)(?<=\S)`(?!`)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7150,22 +7197,22 @@ var CodeDecorator = class {
           decorations.push({
             from: openMarkerStartInDoc,
             to: openMarkerEndInDoc,
-            decoration: import_view8.Decoration.mark({ class: syntaxClass })
+            decoration: import_view10.Decoration.mark({ class: syntaxClass })
           });
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view8.Decoration.mark({ class: "markdown-code-active" })
+            decoration: import_view10.Decoration.mark({ class: "markdown-code-active" })
           });
           decorations.push({
             from: closeMarkerStartInDoc,
             to: closeMarkerEndInDoc,
-            decoration: import_view8.Decoration.mark({ class: syntaxClass })
+            decoration: import_view10.Decoration.mark({ class: syntaxClass })
           });
         } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, import_view8.Decoration.mark({ class: "markdown-code-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, import_view10.Decoration.mark({ class: "markdown-code-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
         }
       }
     } catch (error) {
@@ -7176,11 +7223,11 @@ var CodeDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/highlightDecorator.ts
-var import_view9 = require("@codemirror/view");
+var import_view11 = require("@codemirror/view");
 var HighlightDecorator = class {
   constructor() {
     // Regex for ==highlight== with proper boundary conditions
-    this.highlightRegex = new RegExp("(?<![\\\\=])(==)(?!\\s|=)([^=\\n]+?)(?<!\\s)(==)(?!=)", "g");
+    this.highlightRegex = /(?<![\\=])(==)(?!\s|=)([^=\n]+?)(?<!\s)(==)(?!=)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7211,33 +7258,33 @@ var HighlightDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view9.Decoration.mark({ class: syntaxClass })
+          decoration: import_view11.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view9.Decoration.mark({ class: contentClass })
+          decoration: import_view11.Decoration.mark({ class: contentClass })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view9.Decoration.mark({ class: syntaxClass })
+          decoration: import_view11.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, import_view9.Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, import_view11.Decoration.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/oldBoldDecorator.ts
-var import_view10 = require("@codemirror/view");
+var import_view12 = require("@codemirror/view");
 var OldBoldDecorator = class {
   constructor() {
     // Regex for __bold__ (old style markdown)
-    this.oldBoldRegex = new RegExp("(?<!_)_{2}(?!\\s)([^_]+?)(?<!\\s)_{2}(?!_)", "g");
+    this.oldBoldRegex = /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7264,13 +7311,13 @@ var OldBoldDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view10.Decoration.mark({ class: syntaxClass })
+          decoration: import_view12.Decoration.mark({ class: syntaxClass })
         });
         if (contentStartInDoc < contentEndInDoc) {
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view10.Decoration.mark({
+            decoration: import_view12.Decoration.mark({
               class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
             })
           });
@@ -7278,31 +7325,31 @@ var OldBoldDecorator = class {
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view10.Decoration.mark({ class: syntaxClass })
+          decoration: import_view12.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view12.Decoration.mark({ class: syntaxClass }));
         if (contentStartInDoc < contentEndInDoc) {
           builder.add(
             contentStartInDoc,
             contentEndInDoc,
-            import_view10.Decoration.mark({
+            import_view12.Decoration.mark({
               class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
             })
           );
         }
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view12.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/oldItalicDecorator.ts
-var import_view11 = require("@codemirror/view");
+var import_view13 = require("@codemirror/view");
 var OldItalicDecorator = class {
   constructor() {
     // Regex for *italic* (old style markdown)
-    this.oldItalicRegex = new RegExp("(?<!\\*\\*|\\*)(?:^|[^\\*])\\*(?!\\s|\\*\\*)([^\\*\\n]+?)(?<!\\s)\\*(?!\\*)", "g");
+    this.oldItalicRegex = /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7345,37 +7392,37 @@ var OldItalicDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view11.Decoration.mark({ class: syntaxClass })
+          decoration: import_view13.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view11.Decoration.mark({
+          decoration: import_view13.Decoration.mark({
             class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
           })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view11.Decoration.mark({ class: syntaxClass })
+          decoration: import_view13.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view13.Decoration.mark({ class: syntaxClass }));
         builder.add(
           contentStartInDoc,
           contentEndInDoc,
-          import_view11.Decoration.mark({
+          import_view13.Decoration.mark({
             class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
           })
         );
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view13.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/listDecorator.ts
-var import_view12 = require("@codemirror/view");
+var import_view14 = require("@codemirror/view");
 var ListDecorator = class {
   constructor() {
     // Regex to match list items at the beginning of a line
@@ -7405,7 +7452,7 @@ var ListDecorator = class {
         (cursor) => cursor === markerStartInDoc || cursor === markerEndInDoc
       );
       if (isNumberedList) {
-        const decoration = import_view12.Decoration.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
+        const decoration = import_view14.Decoration.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
         if (decorations) {
           decorations.push({
             from: markerStartInDoc,
@@ -7416,7 +7463,7 @@ var ListDecorator = class {
           builder.add(markerStartInDoc, markerEndInDoc, decoration);
         }
       } else if (isAdjacentToMarker) {
-        const decoration = import_view12.Decoration.mark({ class: "markdown-syntax-active" });
+        const decoration = import_view14.Decoration.mark({ class: "markdown-syntax-active" });
         if (decorations) {
           decorations.push({
             from: markerStartInDoc,
@@ -7431,13 +7478,13 @@ var ListDecorator = class {
           decorations.push({
             from: markerStartInDoc,
             to: markerEndInDoc,
-            decoration: import_view12.Decoration.replace({
+            decoration: import_view14.Decoration.replace({
               widget: new ListBulletWidget(marker),
               class: "markdown-list-dim"
             })
           });
         } else {
-          builder.add(markerStartInDoc, markerEndInDoc, import_view12.Decoration.replace({
+          builder.add(markerStartInDoc, markerEndInDoc, import_view14.Decoration.replace({
             widget: new ListBulletWidget(marker),
             class: "markdown-list-dim"
           }));
@@ -7446,7 +7493,7 @@ var ListDecorator = class {
     }
   }
 };
-var ListBulletWidget = class extends import_view12.WidgetType {
+var ListBulletWidget = class extends import_view14.WidgetType {
   constructor(originalMarker = "\u2022", isOrdered = false) {
     super();
     this.originalMarker = originalMarker;
@@ -7467,7 +7514,7 @@ var ListBulletWidget = class extends import_view12.WidgetType {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/FencedCodeBlockDecorator.ts
-var import_view13 = require("@codemirror/view");
+var import_view15 = require("@codemirror/view");
 function createCopyButton(textToCopy) {
   const button = document.createElement("button");
   button.className = "cm-indent-copy-button";
@@ -7487,7 +7534,7 @@ function createCopyButton(textToCopy) {
   });
   return button;
 }
-var CodeBlockWidget = class extends import_view13.WidgetType {
+var CodeBlockWidget = class extends import_view15.WidgetType {
   constructor(codeLines, language, fullBlockRawText) {
     super();
     this.codeLines = codeLines;
@@ -7562,7 +7609,7 @@ var FencedCodeBlockDecorator = class {
               decorations.push({
                 from: blockStartPosInDoc,
                 to: blockEndPosInDoc,
-                decoration: import_view13.Decoration.replace({ widget, block: true })
+                decoration: import_view15.Decoration.replace({ widget, block: true })
               });
               break;
             } else {
@@ -7596,14 +7643,14 @@ var FencedCodeBlockDecorator = class {
             from: currentLineActualStartInDoc,
             to: currentLineActualStartInDoc,
             // For Decoration.line
-            decoration: import_view13.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+            decoration: import_view15.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
           });
           if (langSpecifierRaw) {
             const langSpecOffsetInLine = leadingWhitespace.length + fenceType.length;
             decorations.push({
               from: currentLineActualStartInDoc + langSpecOffsetInLine,
               to: currentLineActualStartInDoc + langSpecOffsetInLine + langSpecifierRaw.length,
-              decoration: import_view13.Decoration.mark({ class: "cm-live-fenced-code-lang" })
+              decoration: import_view15.Decoration.mark({ class: "cm-live-fenced-code-lang" })
             });
           }
           let nextLineStartInSliceForInnerLoop = lineStartIndexInSlice + lineText.length + 1;
@@ -7618,7 +7665,7 @@ var FencedCodeBlockDecorator = class {
                 from: innerLineActualStartInDoc,
                 to: innerLineActualStartInDoc,
                 // For Decoration.line
-                decoration: import_view13.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+                decoration: import_view15.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
               });
               lineStartIndexInSlice = nextLineStartInSliceForInnerLoop + innerLineText.length + 1;
               i = j + 1;
@@ -7629,7 +7676,7 @@ var FencedCodeBlockDecorator = class {
                 from: innerLineActualStartInDoc,
                 to: innerLineActualStartInDoc,
                 // For Decoration.line, 'to' is same as 'from'
-                decoration: import_view13.Decoration.line({
+                decoration: import_view15.Decoration.line({
                   attributes: { class: "cm-live-fenced-code-content-line" },
                   atomic: true
                   // Prevent other Markdown rules from processing inside
@@ -7652,10 +7699,10 @@ var FencedCodeBlockDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/horizontalRuleDecorator.ts
-var import_view14 = require("@codemirror/view");
+var import_view16 = require("@codemirror/view");
 var import_state4 = require("@codemirror/state");
 var HR_REGEX = /^(?:---|___|\*\*\*)\s*$/;
-var HorizontalRuleWidget = class extends import_view14.WidgetType {
+var HorizontalRuleWidget = class extends import_view16.WidgetType {
   get estimatedHeight() {
     return 26;
   }
@@ -7668,7 +7715,7 @@ var HorizontalRuleWidget = class extends import_view14.WidgetType {
     return false;
   }
 };
-var HorizontalRuleDecorator = import_view14.ViewPlugin.fromClass(
+var HorizontalRuleDecorator = import_view16.ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.decorations = this.buildDecorations(view);
@@ -7708,9 +7755,9 @@ var HorizontalRuleDecorator = import_view14.ViewPlugin.fromClass(
                 }
               }
               if (showSyntaxAsText) {
-                builder.add(lineStart, lineEnd, import_view14.Decoration.mark({ class: "cm-hr-syntax-active" }));
+                builder.add(lineStart, lineEnd, import_view16.Decoration.mark({ class: "cm-hr-syntax-active" }));
               } else {
-                builder.add(lineStart, lineEnd, import_view14.Decoration.replace({ widget: new HorizontalRuleWidget() }));
+                builder.add(lineStart, lineEnd, import_view16.Decoration.replace({ widget: new HorizontalRuleWidget() }));
               }
             }
             pos = line.to + 1;
@@ -7726,7 +7773,7 @@ var HorizontalRuleDecorator = import_view14.ViewPlugin.fromClass(
             }
             const match = HR_REGEX.exec(line.text);
             if (match) {
-              builder.add(line.from, line.to, import_view14.Decoration.replace({ widget: new HorizontalRuleWidget() }));
+              builder.add(line.from, line.to, import_view16.Decoration.replace({ widget: new HorizontalRuleWidget() }));
             }
             pos = line.to + 1;
           }
@@ -7741,19 +7788,10 @@ var HorizontalRuleDecorator = import_view14.ViewPlugin.fromClass(
 );
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/lineBreakDecorator.ts
-var import_view15 = require("@codemirror/view");
+var import_view17 = require("@codemirror/view");
 var import_state5 = require("@codemirror/state");
 var LINE_BREAK_REGEX = /\s{2,}$/m;
-var LineBreakPreviewWidget = class extends import_view15.WidgetType {
-  toDOM() {
-    const br = document.createElement("br");
-    return br;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-var liveLineBreakMark = import_view15.Decoration.mark({
+var liveLineBreakMark = import_view17.Decoration.mark({
   class: "cm-line-break-syntax"
   // attributes: { 'data-two-spaces': 'true' } // Optional: for debugging or more specific styling
 });
@@ -7774,7 +7812,7 @@ function buildLineBreakDecorations(view) {
             // Position of the first space
             lineBreakEnd,
             // Position after the second space
-            import_view15.Decoration.replace({ widget: new LineBreakPreviewWidget() })
+            import_view17.Decoration.mark({ class: "cm-line-break-preview" })
           );
         } else {
           builder.add(
@@ -7791,14 +7829,13 @@ function buildLineBreakDecorations(view) {
   }
   return builder.finish();
 }
-var LineBreakDecorator = import_view15.ViewPlugin.fromClass(
+var LineBreakDecorator = import_view17.ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.decorations = buildLineBreakDecorations(view);
     }
     update(update) {
-      var _a, _b;
-      const modeStateChanged = ((_a = update.startState.field(markdownSyntaxStateField, false)) == null ? void 0 : _a.currentMode) !== ((_b = update.state.field(markdownSyntaxStateField, false)) == null ? void 0 : _b.currentMode);
+      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
       if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
         this.decorations = buildLineBreakDecorations(update.view);
       }
@@ -7810,7 +7847,7 @@ var LineBreakDecorator = import_view15.ViewPlugin.fromClass(
 );
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/htmlTagDecorator.ts
-var import_view16 = require("@codemirror/view");
+var import_view18 = require("@codemirror/view");
 var import_state6 = require("@codemirror/state");
 var import_dompurify = __toESM(require("dompurify"));
 if (typeof window !== "undefined") {
@@ -7825,7 +7862,7 @@ if (typeof window !== "undefined") {
   });
 }
 var HTML_ELEMENT_REGEX = /<([a-zA-Z0-9]+)(?:[^>]*)>([\s\S]*?)<\/\1>/g;
-var HTMLPreviewWidget = class extends import_view16.WidgetType {
+var HTMLPreviewWidget = class extends import_view18.WidgetType {
   constructor(htmlString) {
     super();
     this.htmlString = htmlString;
@@ -7835,27 +7872,19 @@ var HTMLPreviewWidget = class extends import_view16.WidgetType {
     span.className = "cm-html-preview-widget";
     const cleanHTML = import_dompurify.default.sanitize(this.htmlString, {
       USE_PROFILES: { html: true },
-      // Allow all standard HTML elements
-      ADD_TAGS: ["iframe"],
-      // Explicitly allow iframes
+      ADD_TAGS: ["iframe", "audio", "source"],
       ADD_ATTR: [
         "target",
-        // for <a> tags
         "allow",
-        // for iframes (e.g. allow='fullscreen')
         "allowfullscreen",
-        // for iframes
         "frameborder",
-        // for iframes
         "scrolling",
-        // for iframes
         "sandbox",
-        // for iframes (though we set it with a hook)
-        "srcdoc"
-        // for iframes
+        "srcdoc",
+        "controls",
+        "src",
+        "type"
       ]
-      // FORBID_TAGS: ['style'], // Example: if you want to forbid style tags
-      // FORBID_ATTR: ['onerror'],    // Example: forbid onerror attributes to prevent XSS
     });
     span.innerHTML = cleanHTML;
     return span;
@@ -7867,7 +7896,7 @@ var HTMLPreviewWidget = class extends import_view16.WidgetType {
     return false;
   }
 };
-var liveHTMLTagMark = import_view16.Decoration.mark({
+var liveHTMLTagMark = import_view18.Decoration.mark({
   class: "cm-html-tag-syntax"
 });
 function buildHTMLTagDecorations(view) {
@@ -7877,26 +7906,43 @@ function buildHTMLTagDecorations(view) {
   for (const { from, to } of view.visibleRanges) {
     const text = state.doc.sliceString(from, to);
     let match;
-    while (match = HTML_ELEMENT_REGEX.exec(text)) {
+    const localRegex = new RegExp(HTML_ELEMENT_REGEX.source, "g");
+    while (match = localRegex.exec(text)) {
       const tagStart2 = from + match.index;
       const tagEnd = from + match.index + match[0].length;
-      const selectionFrom = selection.from;
-      const selectionTo = selection.to;
-      const isAdjacent = Math.max(selectionFrom, tagStart2) <= Math.min(selectionTo, tagEnd);
+      const isAdjacent = Math.max(selection.from, tagStart2) <= Math.min(selection.to, tagEnd);
       if (isAdjacent) {
         builder.add(tagStart2, tagEnd, liveHTMLTagMark);
       } else {
-        builder.add(
-          tagStart2,
-          tagEnd,
-          import_view16.Decoration.replace({ widget: new HTMLPreviewWidget(match[0]) })
-        );
+        const lines = match[0].split("\n");
+        let currentPos = tagStart2;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const lineEnd = currentPos + line.length;
+          if (i === 0) {
+            builder.add(
+              currentPos,
+              lineEnd,
+              import_view18.Decoration.replace({
+                widget: new HTMLPreviewWidget(match[0]),
+                side: 1
+              })
+            );
+          } else {
+            builder.add(
+              currentPos,
+              lineEnd,
+              import_view18.Decoration.mark({ class: "cm-hidden" })
+            );
+          }
+          currentPos = lineEnd + 1;
+        }
       }
     }
   }
   return builder.finish();
 }
-var HTMLTagDecorator = import_view16.ViewPlugin.fromClass(
+var HTMLTagDecorator = import_view18.ViewPlugin.fromClass(
   class {
     constructor(view) {
       this.decorations = buildHTMLTagDecorations(view);
@@ -8528,58 +8574,21 @@ var CodeMirrorEditor = ({
   content,
   onChange,
   onSave,
-  editable = true
+  editable = true,
+  onViewChange
 }) => {
-  const themeCompartment = (0, import_react.useRef)(new import_state11.Compartment()).current;
-  const getCurrentDocumentTheme = () => {
-    if (typeof window === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  };
-  const onSaveRef = (0, import_react.useRef)(onSave);
-  const onChangeRef = (0, import_react.useRef)(onChange);
   const editorRef = (0, import_react.useRef)(null);
   const [editorView, setEditorView] = (0, import_react.useState)(null);
-  const [currentMode, setCurrentMode] = (0, import_react.useState)("live");
-  const editableCompartment = (0, import_react.useRef)(new import_state11.Compartment()).current;
-  (0, import_react.useEffect)(() => {
-    onSaveRef.current = onSave;
-  }, [onSave]);
+  const onChangeRef = (0, import_react.useRef)(onChange);
   (0, import_react.useEffect)(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
   (0, import_react.useEffect)(() => {
-    if (!editorView) return;
-    const currentDocTheme = getCurrentDocumentTheme();
-    editorView.dispatch({
-      effects: themeCompartment.reconfigure(currentDocTheme === "dark" ? darkTheme : lightTheme)
-    });
-    const observer = new MutationObserver(() => {
-      const newDocTheme = getCurrentDocumentTheme();
-      editorView.dispatch({
-        effects: themeCompartment.reconfigure(newDocTheme === "dark" ? darkTheme : lightTheme)
-      });
-    });
-    if (typeof window !== "undefined") {
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    }
-    return () => {
-      observer.disconnect();
-    };
-  }, [editorView, themeCompartment]);
-  (0, import_react.useEffect)(() => {
     if (!editorRef.current) return;
-    const customHighlightStyle = import_language5.HighlightStyle.define([
-      { tag: import_highlight4.tags.heading1, fontSize: "1.6em", fontWeight: "bold" },
-      { tag: import_highlight4.tags.heading2, fontSize: "1.4em", fontWeight: "bold" },
-      { tag: import_highlight4.tags.heading3, fontSize: "1.2em", fontWeight: "bold" },
-      { tag: import_highlight4.tags.heading4, fontSize: "1.1em", fontWeight: "bold" },
-      { tag: import_highlight4.tags.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-      { tag: import_highlight4.tags.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-      { tag: import_highlight4.tags.strong, fontWeight: "bold" },
-      { tag: import_highlight4.tags.emphasis, fontStyle: "italic" },
-      { tag: import_highlight4.tags.link, color: "#2563eb", textDecoration: "underline" },
-      { tag: import_highlight4.tags.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" }
-    ]);
+    if (editorView) return;
+    const getCurrentDocumentTheme = () => {
+      return "light";
+    };
     const initialDocTheme = getCurrentDocumentTheme();
     const extensions = [
       themeCompartment.of(initialDocTheme === "dark" ? darkTheme : lightTheme),
@@ -8699,7 +8708,7 @@ var CodeMirrorEditor = ({
         }
       })
     ];
-    const state = import_state11.EditorState.create({
+    const state = import_state8.EditorState.create({
       doc: content,
       extensions
     });
@@ -8708,30 +8717,18 @@ var CodeMirrorEditor = ({
       parent: editorRef.current
     });
     setEditorView(view);
-    if (view) {
-      view.dispatch({
-        effects: [
-          setMarkdownSyntaxMode.of(currentMode)
-        ]
-      });
-    }
+    onViewChange?.(view);
     return () => {
       view.destroy();
       setEditorView(null);
+      onViewChange?.(null);
     };
-  }, [editable]);
+  }, []);
   (0, import_react.useEffect)(() => {
-    if (!editorView) return;
-    const currentContent = editorView.state.doc.toString();
-    if (currentContent !== content) {
-      const transaction = editorView.state.update({
-        changes: {
-          from: 0,
-          to: currentContent.length,
-          insert: content
-        }
+    if (editorView && content !== editorView.state.doc.toString()) {
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: content }
       });
-      editorView.dispatch(transaction);
     }
   }, [content, editorView]);
   (0, import_react.useEffect)(() => {
@@ -8748,63 +8745,49 @@ var CodeMirrorEditor = ({
         });
       }
     }
-  }, [currentMode, editable, editorView, editableCompartment]);
-  return /* @__PURE__ */ import_react.default.createElement("div", { className: "flex flex-col h-full border rounded-md overflow-hidden" }, /* @__PURE__ */ import_react.default.createElement("div", { className: "p-2 border-b shrink-0 bg-slate-50 dark:bg-slate-800" }, /* @__PURE__ */ import_react.default.createElement(
-    "button",
-    {
-      onClick: () => setCurrentMode((prev) => prev === "live" ? "preview" : "live"),
-      className: "px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 text-sm transition-colors duration-150"
-    },
-    currentMode === "live" ? "View Preview" : "Edit Content"
-  )), /* @__PURE__ */ import_react.default.createElement("div", { className: "flex-grow overflow-auto" }, /* @__PURE__ */ import_react.default.createElement(
-    "div",
-    {
-      className: "h-full",
-      "data-testid": "codemirror-editor"
-    },
-    /* @__PURE__ */ import_react.default.createElement("div", { ref: editorRef, className: "h-full" })
-  )));
+  }, [editable, editorView]);
+  (0, import_react.useEffect)(() => {
+    const handleSave = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        onSave?.();
+      }
+    };
+    editorRef.current?.addEventListener("keydown", handleSave);
+    return () => {
+      editorRef.current?.removeEventListener("keydown", handleSave);
+    };
+  }, [onSave]);
+  return (
+    // Added a wrapper div here
+    /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "editor-container", children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { ref: editorRef, className: "codemirror-editor" }) })
+  );
 };
 var CodeMirrorEditor_default = CodeMirrorEditor;
 
 // src/contexts/ThemeContext.tsx
-var import_react2 = __toESM(require("react"));
+var import_react2 = require("react");
+var import_jsx_runtime2 = require("react/jsx-runtime");
 var ThemeContext = (0, import_react2.createContext)(void 0);
 function ThemeProvider({ children }) {
   const [theme, setTheme] = (0, import_react2.useState)("light");
-  const [mounted, setMounted] = (0, import_react2.useState)(false);
   (0, import_react2.useEffect)(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-      setTheme(initialTheme);
-      setMounted(true);
-      if (initialTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
     }
   }, []);
+  (0, import_react2.useEffect)(() => {
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
   const toggleTheme = () => {
-    setTheme((prevTheme) => {
-      const newTheme = prevTheme === "light" ? "dark" : "light";
-      if (typeof window !== "undefined") {
-        localStorage.setItem("theme", newTheme);
-        if (newTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      }
-      return newTheme;
-    });
+    setTheme((prevTheme) => prevTheme === "light" ? "dark" : "light");
   };
-  if (!mounted) {
-    return null;
-  }
-  return /* @__PURE__ */ import_react2.default.createElement(ThemeContext.Provider, { value: { theme, toggleTheme } }, children);
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(ThemeContext.Provider, { value: { theme, toggleTheme }, children });
 }
 function useTheme() {
   const context = (0, import_react2.useContext)(ThemeContext);
@@ -8816,16 +8799,17 @@ function useTheme() {
 
 // src/components/ThemeToggle.tsx
 var import_lucide_react = require("lucide-react");
+var import_jsx_runtime3 = require("react/jsx-runtime");
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  return /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
     "button",
     {
       onClick: toggleTheme,
       className: "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors",
-      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`
-    },
-    theme === "light" ? /* @__PURE__ */ React.createElement(import_lucide_react.Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ React.createElement(import_lucide_react.Sun, { className: "w-5 h-5 text-yellow-300" })
+      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
+      children: theme === "light" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_lucide_react.Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_lucide_react.Sun, { className: "w-5 h-5 text-yellow-300" })
+    }
   );
 }
 // Annotate the CommonJS export names for ESM import in node:

@@ -1,27 +1,23 @@
-import * as React from 'react';
-import React__default from 'react';
+import React from 'react';
+import { EditorView } from '@codemirror/view';
+import * as react_jsx_runtime from 'react/jsx-runtime';
 
 /**
- * Props for the CodeMirrorEditor component.
+ * Props for the CodeMirrorEditor component
  */
 interface CodeMirrorEditorProps {
-    /** The initial markdown content of the editor. */
+    /** The initial markdown content of the editor */
     content: string;
-    /** Callback function triggered when the editor content changes. */
+    /** Callback function triggered when the editor content changes */
     onChange: (markdown: string) => void;
-    /** Optional callback function triggered when a save action is requested (e.g., Ctrl+S). */
+    /** Optional callback function triggered when a save action is requested (e.g., Ctrl+S) */
     onSave?: () => void;
-    /** Optional flag to make the editor read-only. Defaults to true. */
+    /** Optional flag to make the editor read-only. Defaults to true */
     editable?: boolean;
+    /** Optional callback to get the current editor view instance */
+    onViewChange?: (view: EditorView | null) => void;
 }
-/**
- * A React component that wraps a CodeMirror 6 editor instance,
- * configured for an Obsidian-like Markdown editing experience.
- *
- * @param {CodeMirrorEditorProps} props - The props for the component.
- * @returns {JSX.Element} The CodeMirror editor component.
- */
-declare const CodeMirrorEditor: React__default.FC<CodeMirrorEditorProps>;
+declare const CodeMirrorEditor: React.FC<CodeMirrorEditorProps>;
 
 /**
  * Represents the possible theme states.
@@ -45,8 +41,8 @@ type ThemeContextType = {
  * @returns {JSX.Element | null} The ThemeProvider component or null if not mounted yet.
  */
 declare function ThemeProvider({ children }: {
-    children: React__default.ReactNode;
-}): React__default.JSX.Element | null;
+    children: React.ReactNode;
+}): react_jsx_runtime.JSX.Element;
 /**
  * Custom hook to access the theme context (theme state and toggle function).
  * This hook must be used within a component wrapped by `ThemeProvider`.
@@ -62,6 +58,6 @@ declare function useTheme(): ThemeContextType;
  *
  * @returns {JSX.Element} The theme toggle button.
  */
-declare function ThemeToggle(): React.JSX.Element;
+declare function ThemeToggle(): react_jsx_runtime.JSX.Element;
 
 export { CodeMirrorEditor, type CodeMirrorEditorProps, type Theme, type ThemeContextType, ThemeProvider, ThemeToggle, useTheme };

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "es2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -9,20 +9,19 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "declarationDir": "./dist",
+    "noEmit": true,
     "esModuleInterop": true,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
+    "incremental": false,
     "plugins": [
       {
         "name": "next"
       }
-    ], // This plugin might not be relevant for the library build, consider removing if it causes issues for 'build:package'
+    ],
     "paths": {
       "@/*": [
         "./src/*"
@@ -35,11 +34,9 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "src/types/*.d.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "dist"
+    "node_modules"
   ]
 }

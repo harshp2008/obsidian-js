@@ -3799,7 +3799,7 @@ function getSpecializer(spec) {
 }
 
 // node_modules/@lezer/html/dist/index.js
-import { styleTags, tags } from "@lezer/highlight";
+import { styleTags, tags as tags2 } from "@lezer/highlight";
 var scriptText = 54;
 var StartCloseScriptTag = 1;
 var styleText = 55;
@@ -4049,17 +4049,17 @@ var scriptTokens = contentTokenizer("script", scriptText, StartCloseScriptTag);
 var styleTokens = contentTokenizer("style", styleText, StartCloseStyleTag);
 var textareaTokens = contentTokenizer("textarea", textareaText, StartCloseTextareaTag);
 var htmlHighlighting = styleTags({
-  "Text RawText": tags.content,
-  "StartTag StartCloseTag SelfClosingEndTag EndTag": tags.angleBracket,
-  TagName: tags.tagName,
-  "MismatchedCloseTag/TagName": [tags.tagName, tags.invalid],
-  AttributeName: tags.attributeName,
-  "AttributeValue UnquotedAttributeValue": tags.attributeValue,
-  Is: tags.definitionOperator,
-  "EntityReference CharacterReference": tags.character,
-  Comment: tags.blockComment,
-  ProcessingInst: tags.processingInstruction,
-  DoctypeDecl: tags.documentMeta
+  "Text RawText": tags2.content,
+  "StartTag StartCloseTag SelfClosingEndTag EndTag": tags2.angleBracket,
+  TagName: tags2.tagName,
+  "MismatchedCloseTag/TagName": [tags2.tagName, tags2.invalid],
+  AttributeName: tags2.attributeName,
+  "AttributeValue UnquotedAttributeValue": tags2.attributeValue,
+  Is: tags2.definitionOperator,
+  "EntityReference CharacterReference": tags2.character,
+  Comment: tags2.blockComment,
+  ProcessingInst: tags2.processingInstruction,
+  DoctypeDecl: tags2.documentMeta
 });
 var parser = LRParser.deserialize({
   version: 14,
@@ -4150,7 +4150,7 @@ function configureNesting(tags6 = [], attributes = []) {
 }
 
 // node_modules/@lezer/css/dist/index.js
-import { styleTags as styleTags2, tags as tags2 } from "@lezer/highlight";
+import { styleTags as styleTags2, tags as tags3 } from "@lezer/highlight";
 var descendantOp = 107;
 var Unit = 1;
 var callee = 108;
@@ -4244,38 +4244,38 @@ var unitToken = new ExternalTokenizer((input) => {
   }
 });
 var cssHighlighting = styleTags2({
-  "AtKeyword import charset namespace keyframes media supports": tags2.definitionKeyword,
-  "from to selector": tags2.keyword,
-  NamespaceName: tags2.namespace,
-  KeyframeName: tags2.labelName,
-  KeyframeRangeName: tags2.operatorKeyword,
-  TagName: tags2.tagName,
-  ClassName: tags2.className,
-  PseudoClassName: tags2.constant(tags2.className),
-  IdName: tags2.labelName,
-  "FeatureName PropertyName": tags2.propertyName,
-  AttributeName: tags2.attributeName,
-  NumberLiteral: tags2.number,
-  KeywordQuery: tags2.keyword,
-  UnaryQueryOp: tags2.operatorKeyword,
-  "CallTag ValueName": tags2.atom,
-  VariableName: tags2.variableName,
-  Callee: tags2.operatorKeyword,
-  Unit: tags2.unit,
-  "UniversalSelector NestingSelector": tags2.definitionOperator,
-  "MatchOp CompareOp": tags2.compareOperator,
-  "ChildOp SiblingOp, LogicOp": tags2.logicOperator,
-  BinOp: tags2.arithmeticOperator,
-  Important: tags2.modifier,
-  Comment: tags2.blockComment,
-  ColorLiteral: tags2.color,
-  "ParenthesizedContent StringLiteral": tags2.string,
-  ":": tags2.punctuation,
-  "PseudoOp #": tags2.derefOperator,
-  "; ,": tags2.separator,
-  "( )": tags2.paren,
-  "[ ]": tags2.squareBracket,
-  "{ }": tags2.brace
+  "AtKeyword import charset namespace keyframes media supports": tags3.definitionKeyword,
+  "from to selector": tags3.keyword,
+  NamespaceName: tags3.namespace,
+  KeyframeName: tags3.labelName,
+  KeyframeRangeName: tags3.operatorKeyword,
+  TagName: tags3.tagName,
+  ClassName: tags3.className,
+  PseudoClassName: tags3.constant(tags3.className),
+  IdName: tags3.labelName,
+  "FeatureName PropertyName": tags3.propertyName,
+  AttributeName: tags3.attributeName,
+  NumberLiteral: tags3.number,
+  KeywordQuery: tags3.keyword,
+  UnaryQueryOp: tags3.operatorKeyword,
+  "CallTag ValueName": tags3.atom,
+  VariableName: tags3.variableName,
+  Callee: tags3.operatorKeyword,
+  Unit: tags3.unit,
+  "UniversalSelector NestingSelector": tags3.definitionOperator,
+  "MatchOp CompareOp": tags3.compareOperator,
+  "ChildOp SiblingOp, LogicOp": tags3.logicOperator,
+  BinOp: tags3.arithmeticOperator,
+  Important: tags3.modifier,
+  Comment: tags3.blockComment,
+  ColorLiteral: tags3.color,
+  "ParenthesizedContent StringLiteral": tags3.string,
+  ":": tags3.punctuation,
+  "PseudoOp #": tags3.derefOperator,
+  "; ,": tags3.separator,
+  "( )": tags3.paren,
+  "[ ]": tags3.squareBracket,
+  "{ }": tags3.brace
 });
 var spec_callee = { __proto__: null, lang: 34, "nth-child": 34, "nth-last-child": 34, "nth-of-type": 34, "nth-last-of-type": 34, dir: 34, "host-context": 34, url: 62, "url-prefix": 62, domain: 62, regexp: 62 };
 var spec_AtKeyword = { __proto__: null, "@import": 120, "@media": 154, "@charset": 158, "@namespace": 162, "@keyframes": 168, "@supports": 180 };
@@ -4952,7 +4952,7 @@ var values = /* @__PURE__ */ [
   "yellow",
   "yellowgreen"
 ].map((name) => ({ type: "constant", label: name })));
-var tags3 = /* @__PURE__ */ [
+var tags4 = /* @__PURE__ */ [
   "a",
   "abbr",
   "address",
@@ -5126,7 +5126,7 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
     for (let { parent } = node; parent; parent = parent.parent)
       if (parent.name == "Block")
         return { from: node.from, options: properties(), validFor: identifier2 };
-    return { from: node.from, options: tags3, validFor: identifier2 };
+    return { from: node.from, options: tags4, validFor: identifier2 };
   }
   if (node.name == "AtKeyword")
     return { from: node.from, options: atRules, validFor: identifier2 };
@@ -5165,7 +5165,7 @@ function css() {
 }
 
 // node_modules/@lezer/javascript/dist/index.js
-import { styleTags as styleTags3, tags as tags4 } from "@lezer/highlight";
+import { styleTags as styleTags3, tags as tags5 } from "@lezer/highlight";
 var noSemi = 315;
 var noSemiType = 316;
 var incdec = 1;
@@ -5291,62 +5291,62 @@ var jsx = new ExternalTokenizer((input, stack) => {
   input.acceptToken(JSXStartTag, -back);
 });
 var jsHighlight = styleTags3({
-  "get set async static": tags4.modifier,
-  "for while do if else switch try catch finally return throw break continue default case": tags4.controlKeyword,
-  "in of await yield void typeof delete instanceof as satisfies": tags4.operatorKeyword,
-  "let var const using function class extends": tags4.definitionKeyword,
-  "import export from": tags4.moduleKeyword,
-  "with debugger new": tags4.keyword,
-  TemplateString: tags4.special(tags4.string),
-  super: tags4.atom,
-  BooleanLiteral: tags4.bool,
-  this: tags4.self,
-  null: tags4.null,
-  Star: tags4.modifier,
-  VariableName: tags4.variableName,
-  "CallExpression/VariableName TaggedTemplateExpression/VariableName": tags4.function(tags4.variableName),
-  VariableDefinition: tags4.definition(tags4.variableName),
-  Label: tags4.labelName,
-  PropertyName: tags4.propertyName,
-  PrivatePropertyName: tags4.special(tags4.propertyName),
-  "CallExpression/MemberExpression/PropertyName": tags4.function(tags4.propertyName),
-  "FunctionDeclaration/VariableDefinition": tags4.function(tags4.definition(tags4.variableName)),
-  "ClassDeclaration/VariableDefinition": tags4.definition(tags4.className),
-  "NewExpression/VariableName": tags4.className,
-  PropertyDefinition: tags4.definition(tags4.propertyName),
-  PrivatePropertyDefinition: tags4.definition(tags4.special(tags4.propertyName)),
-  UpdateOp: tags4.updateOperator,
-  "LineComment Hashbang": tags4.lineComment,
-  BlockComment: tags4.blockComment,
-  Number: tags4.number,
-  String: tags4.string,
-  Escape: tags4.escape,
-  ArithOp: tags4.arithmeticOperator,
-  LogicOp: tags4.logicOperator,
-  BitOp: tags4.bitwiseOperator,
-  CompareOp: tags4.compareOperator,
-  RegExp: tags4.regexp,
-  Equals: tags4.definitionOperator,
-  Arrow: tags4.function(tags4.punctuation),
-  ": Spread": tags4.punctuation,
-  "( )": tags4.paren,
-  "[ ]": tags4.squareBracket,
-  "{ }": tags4.brace,
-  "InterpolationStart InterpolationEnd": tags4.special(tags4.brace),
-  ".": tags4.derefOperator,
-  ", ;": tags4.separator,
-  "@": tags4.meta,
-  TypeName: tags4.typeName,
-  TypeDefinition: tags4.definition(tags4.typeName),
-  "type enum interface implements namespace module declare": tags4.definitionKeyword,
-  "abstract global Privacy readonly override": tags4.modifier,
-  "is keyof unique infer asserts": tags4.operatorKeyword,
-  JSXAttributeValue: tags4.attributeValue,
-  JSXText: tags4.content,
-  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": tags4.angleBracket,
-  "JSXIdentifier JSXNameSpacedName": tags4.tagName,
-  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": tags4.attributeName,
-  "JSXBuiltin/JSXIdentifier": tags4.standard(tags4.tagName)
+  "get set async static": tags5.modifier,
+  "for while do if else switch try catch finally return throw break continue default case": tags5.controlKeyword,
+  "in of await yield void typeof delete instanceof as satisfies": tags5.operatorKeyword,
+  "let var const using function class extends": tags5.definitionKeyword,
+  "import export from": tags5.moduleKeyword,
+  "with debugger new": tags5.keyword,
+  TemplateString: tags5.special(tags5.string),
+  super: tags5.atom,
+  BooleanLiteral: tags5.bool,
+  this: tags5.self,
+  null: tags5.null,
+  Star: tags5.modifier,
+  VariableName: tags5.variableName,
+  "CallExpression/VariableName TaggedTemplateExpression/VariableName": tags5.function(tags5.variableName),
+  VariableDefinition: tags5.definition(tags5.variableName),
+  Label: tags5.labelName,
+  PropertyName: tags5.propertyName,
+  PrivatePropertyName: tags5.special(tags5.propertyName),
+  "CallExpression/MemberExpression/PropertyName": tags5.function(tags5.propertyName),
+  "FunctionDeclaration/VariableDefinition": tags5.function(tags5.definition(tags5.variableName)),
+  "ClassDeclaration/VariableDefinition": tags5.definition(tags5.className),
+  "NewExpression/VariableName": tags5.className,
+  PropertyDefinition: tags5.definition(tags5.propertyName),
+  PrivatePropertyDefinition: tags5.definition(tags5.special(tags5.propertyName)),
+  UpdateOp: tags5.updateOperator,
+  "LineComment Hashbang": tags5.lineComment,
+  BlockComment: tags5.blockComment,
+  Number: tags5.number,
+  String: tags5.string,
+  Escape: tags5.escape,
+  ArithOp: tags5.arithmeticOperator,
+  LogicOp: tags5.logicOperator,
+  BitOp: tags5.bitwiseOperator,
+  CompareOp: tags5.compareOperator,
+  RegExp: tags5.regexp,
+  Equals: tags5.definitionOperator,
+  Arrow: tags5.function(tags5.punctuation),
+  ": Spread": tags5.punctuation,
+  "( )": tags5.paren,
+  "[ ]": tags5.squareBracket,
+  "{ }": tags5.brace,
+  "InterpolationStart InterpolationEnd": tags5.special(tags5.brace),
+  ".": tags5.derefOperator,
+  ", ;": tags5.separator,
+  "@": tags5.meta,
+  TypeName: tags5.typeName,
+  TypeDefinition: tags5.definition(tags5.typeName),
+  "type enum interface implements namespace module declare": tags5.definitionKeyword,
+  "abstract global Privacy readonly override": tags5.modifier,
+  "is keyof unique infer asserts": tags5.operatorKeyword,
+  JSXAttributeValue: tags5.attributeValue,
+  JSXText: tags5.content,
+  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": tags5.angleBracket,
+  "JSXIdentifier JSXNameSpacedName": tags5.tagName,
+  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": tags5.attributeName,
+  "JSXBuiltin/JSXIdentifier": tags5.standard(tags5.tagName)
 });
 var spec_identifier = { __proto__: null, export: 20, as: 25, from: 33, default: 36, async: 41, function: 42, in: 52, out: 55, const: 56, extends: 60, this: 64, true: 72, false: 72, null: 84, void: 88, typeof: 92, super: 108, new: 142, delete: 154, yield: 163, await: 167, class: 172, public: 235, private: 235, protected: 235, readonly: 237, instanceof: 256, satisfies: 259, import: 292, keyof: 349, unique: 353, infer: 359, asserts: 395, is: 397, abstract: 417, implements: 419, type: 421, let: 424, var: 426, using: 429, interface: 435, enum: 439, namespace: 445, module: 447, declare: 451, global: 455, for: 474, of: 483, while: 486, with: 490, do: 494, if: 498, else: 500, switch: 504, case: 510, try: 516, catch: 520, finally: 524, return: 528, throw: 532, break: 536, continue: 540, debugger: 544 };
 var spec_word = { __proto__: null, async: 129, get: 131, set: 133, declare: 195, public: 197, private: 197, protected: 197, static: 199, abstract: 201, override: 203, readonly: 209, accessor: 211, new: 401 };
@@ -5380,7 +5380,7 @@ var parser3 = LRParser.deserialize({
 // node_modules/@codemirror/lang-javascript/dist/index.js
 import { syntaxTree as syntaxTree2, LRLanguage as LRLanguage2, indentNodeProp as indentNodeProp2, continuedIndent as continuedIndent2, flatIndent, delimitedIndent, foldNodeProp as foldNodeProp2, foldInside as foldInside2, defineLanguageFacet, sublanguageProp, LanguageSupport as LanguageSupport2 } from "@codemirror/language";
 import { EditorSelection } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView as EditorView2 } from "@codemirror/view";
 import { snippetCompletion, ifNotIn, completeFromList } from "@codemirror/autocomplete";
 var snippets = [
   /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
@@ -5645,7 +5645,7 @@ function elementName(doc, tree, max = doc.length) {
   return "";
 }
 var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
-var autoCloseTags = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, text, defaultInsert) => {
+var autoCloseTags = /* @__PURE__ */ EditorView2.inputHandler.of((view, from, to, text, defaultInsert) => {
   if ((android ? view.composing : view.compositionStarted) || view.state.readOnly || from != to || text != ">" && text != "/" || !javascriptLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = defaultInsert(), { state } = base;
@@ -5680,7 +5680,7 @@ var autoCloseTags = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, 
 });
 
 // node_modules/@codemirror/lang-html/dist/index.js
-import { EditorView as EditorView2 } from "@codemirror/view";
+import { EditorView as EditorView3 } from "@codemirror/view";
 import { EditorSelection as EditorSelection2 } from "@codemirror/state";
 import { syntaxTree as syntaxTree3, LRLanguage as LRLanguage3, indentNodeProp as indentNodeProp3, foldNodeProp as foldNodeProp3, bracketMatchingHandle, LanguageSupport as LanguageSupport3 } from "@codemirror/language";
 var Targets = ["_blank", "_self", "_top", "_parent"];
@@ -6371,7 +6371,7 @@ function html(config = {}) {
   ]);
 }
 var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
-var autoCloseTags2 = /* @__PURE__ */ EditorView2.inputHandler.of((view, from, to, text, insertTransaction) => {
+var autoCloseTags2 = /* @__PURE__ */ EditorView3.inputHandler.of((view, from, to, text, insertTransaction) => {
   if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = insertTransaction(), { state } = base;
@@ -6470,15 +6470,15 @@ var extended = /* @__PURE__ */ commonmark.configure([GFM, Subscript, Superscript
   ]
 }]);
 var markdownLanguage = /* @__PURE__ */ mkLang(extended);
-function getCodeParser(languages2, defaultLanguage) {
+function getCodeParser(languages, defaultLanguage) {
   return (info) => {
-    if (info && languages2) {
+    if (info && languages) {
       let found = null;
       info = /\S*/.exec(info)[0];
-      if (typeof languages2 == "function")
-        found = languages2(info);
+      if (typeof languages == "function")
+        found = languages(info);
       else
-        found = LanguageDescription.matchLanguageName(languages2, info, true);
+        found = LanguageDescription.matchLanguageName(languages, info, true);
       if (found instanceof LanguageDescription)
         return found.support ? found.support.language.parser : ParseContext.getSkippingParser(found.load());
       else if (found)
@@ -6790,10 +6790,53 @@ function htmlTagCompletions() {
   return _tagCompletions = result ? result.options : [];
 }
 
-// src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { languages } from "@codemirror/language-data";
-import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
-import { tags as tags5 } from "@lezer/highlight";
+// src/app/obsidian-editor/extensions/keymaps/obsidianKeymap.ts
+var obsidianKeymap = [
+  // Add Obsidian-specific keybindings here
+  // For now, we'll just return an empty array
+];
+
+// src/app/obsidian-editor/extensions/themes/obsidianTheme.ts
+import { EditorView as EditorView4 } from "@codemirror/view";
+var obsidianTheme = EditorView4.theme({
+  "&": {
+    height: "100%",
+    fontSize: "16px",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-scroller": {
+    overflow: "auto",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-content": {
+    padding: "1rem 0",
+    minHeight: "100%",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-line": {
+    padding: "0 1rem",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-gutters": {
+    backgroundColor: "transparent",
+    border: "none",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "transparent",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary)",
+    fontFamily: "var(--font-mono)"
+  },
+  ".cm-selectionBackground": {
+    backgroundColor: "var(--text-selection)"
+  },
+  ".cm-cursor": {
+    borderLeft: "2px solid var(--cursor-color, #3b82f6)"
+  }
+});
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 import { EditorView as EditorView8 } from "@codemirror/view";
@@ -6875,9 +6918,9 @@ var BoldDecorator = class {
     // is not the marker character itself, to avoid matching parts of ***italicbold*** or similar.
     // And it avoids matching if the content is empty, e.g. **** or ____
     this.boldPatterns = [
-      { marker: "**", regex: new RegExp("(?<!\\*)\\*\\*(?!\\s)([^\\*]+?)(?<!\\s)\\*\\*(?!\\*)", "g") },
+      { marker: "**", regex: /(?<!\*)\*\*(?!\s)([^\*]+?)(?<!\s)\*\*(?!\*)/g },
       // **bold**
-      { marker: "__", regex: new RegExp("(?<!_)_{2}(?!\\s)([^_]+?)(?<!\\s)_{2}(?!_)", "g") }
+      { marker: "__", regex: /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g }
       // __bold__
     ];
   }
@@ -6946,9 +6989,9 @@ var ItalicDecorator = class {
     // It also ensures the content is not empty, e.g. ** or __
     this.italicPatterns = [
       // Matches *italic* but not **bold** or ***italicbold*** components directly
-      { marker: "*", regex: new RegExp("(?<!\\*\\*|\\*)(?:^|[^\\*])\\*(?!\\s|\\*\\*)([^\\*\\n]+?)(?<!\\s)\\*(?!\\*)", "g") },
+      { marker: "*", regex: /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g },
       // Matches _italic_ but not __bold__ or ___italicbold___ components directly
-      { marker: "_", regex: new RegExp("(?<!__|_)(?:^|[^_])_(?!\\s|__)([^_\\n]+?)(?<!\\s)_(?!_)", "g") }
+      { marker: "_", regex: /(?<!__|_)(?:^|[^_])_(?!\s|__)([^_\n]+?)(?<!\s)_(?!_)/g }
     ];
   }
   process(context) {
@@ -7020,7 +7063,7 @@ import { Decoration as Decoration4 } from "@codemirror/view";
 var StrikethroughDecorator = class {
   constructor() {
     // Improved regex for ~~strikethrough~~ with proper boundary conditions
-    this.strikethroughRegex = new RegExp("(?<!\\\\|~)(~~)(?!\\s|~)([^~\\n]+?)(?<!\\s)(~~)(?!~)", "g");
+    this.strikethroughRegex = /(?<!\\|~)(~~)(?!\s|~)([^~\n]+?)(?<!\s)(~~)(?!~)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7080,7 +7123,7 @@ var CodeDecorator = class {
     // It looks for non-greedy content between single backticks.
     // It also tries to avoid matching parts of code blocks (```) by not allowing backticks right next to the content ones,
     // though full code block handling is typically a separate, more complex parser.
-    this.codeRegex = new RegExp("(?<!\\\\)(?<!`)`(?=\\S)([^`\\n]+?)(?<=\\S)`(?!`)", "g");
+    this.codeRegex = /(?<!\\)(?<!`)`(?=\S)([^`\n]+?)(?<=\S)`(?!`)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7141,7 +7184,7 @@ import { Decoration as Decoration6 } from "@codemirror/view";
 var HighlightDecorator = class {
   constructor() {
     // Regex for ==highlight== with proper boundary conditions
-    this.highlightRegex = new RegExp("(?<![\\\\=])(==)(?!\\s|=)([^=\\n]+?)(?<!\\s)(==)(?!=)", "g");
+    this.highlightRegex = /(?<![\\=])(==)(?!\s|=)([^=\n]+?)(?<!\s)(==)(?!=)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7198,7 +7241,7 @@ import { Decoration as Decoration7 } from "@codemirror/view";
 var OldBoldDecorator = class {
   constructor() {
     // Regex for __bold__ (old style markdown)
-    this.oldBoldRegex = new RegExp("(?<!_)_{2}(?!\\s)([^_]+?)(?<!\\s)_{2}(?!_)", "g");
+    this.oldBoldRegex = /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7263,7 +7306,7 @@ import { Decoration as Decoration8 } from "@codemirror/view";
 var OldItalicDecorator = class {
   constructor() {
     // Regex for *italic* (old style markdown)
-    this.oldItalicRegex = new RegExp("(?<!\\*\\*|\\*)(?:^|[^\\*])\\*(?!\\s|\\*\\*)([^\\*\\n]+?)(?<!\\s)\\*(?!\\*)", "g");
+    this.oldItalicRegex = /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g;
   }
   process(context) {
     const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
@@ -7705,15 +7748,6 @@ var HorizontalRuleDecorator = ViewPlugin.fromClass(
 import { Decoration as Decoration12, WidgetType as WidgetType4, ViewPlugin as ViewPlugin2 } from "@codemirror/view";
 import { RangeSetBuilder as RangeSetBuilder2 } from "@codemirror/state";
 var LINE_BREAK_REGEX = /\s{2,}$/m;
-var LineBreakPreviewWidget = class extends WidgetType4 {
-  toDOM() {
-    const br = document.createElement("br");
-    return br;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
 var liveLineBreakMark = Decoration12.mark({
   class: "cm-line-break-syntax"
   // attributes: { 'data-two-spaces': 'true' } // Optional: for debugging or more specific styling
@@ -7735,7 +7769,7 @@ function buildLineBreakDecorations(view) {
             // Position of the first space
             lineBreakEnd,
             // Position after the second space
-            Decoration12.replace({ widget: new LineBreakPreviewWidget() })
+            Decoration12.mark({ class: "cm-line-break-preview" })
           );
         } else {
           builder.add(
@@ -7758,8 +7792,7 @@ var LineBreakDecorator = ViewPlugin2.fromClass(
       this.decorations = buildLineBreakDecorations(view);
     }
     update(update) {
-      var _a, _b;
-      const modeStateChanged = ((_a = update.startState.field(markdownSyntaxStateField, false)) == null ? void 0 : _a.currentMode) !== ((_b = update.state.field(markdownSyntaxStateField, false)) == null ? void 0 : _b.currentMode);
+      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
       if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
         this.decorations = buildLineBreakDecorations(update.view);
       }
@@ -7796,27 +7829,19 @@ var HTMLPreviewWidget = class extends WidgetType5 {
     span.className = "cm-html-preview-widget";
     const cleanHTML = DOMPurify.sanitize(this.htmlString, {
       USE_PROFILES: { html: true },
-      // Allow all standard HTML elements
-      ADD_TAGS: ["iframe"],
-      // Explicitly allow iframes
+      ADD_TAGS: ["iframe", "audio", "source"],
       ADD_ATTR: [
         "target",
-        // for <a> tags
         "allow",
-        // for iframes (e.g. allow='fullscreen')
         "allowfullscreen",
-        // for iframes
         "frameborder",
-        // for iframes
         "scrolling",
-        // for iframes
         "sandbox",
-        // for iframes (though we set it with a hook)
-        "srcdoc"
-        // for iframes
+        "srcdoc",
+        "controls",
+        "src",
+        "type"
       ]
-      // FORBID_TAGS: ['style'], // Example: if you want to forbid style tags
-      // FORBID_ATTR: ['onerror'],    // Example: forbid onerror attributes to prevent XSS
     });
     span.innerHTML = cleanHTML;
     return span;
@@ -7838,20 +7863,37 @@ function buildHTMLTagDecorations(view) {
   for (const { from, to } of view.visibleRanges) {
     const text = state.doc.sliceString(from, to);
     let match;
-    while (match = HTML_ELEMENT_REGEX.exec(text)) {
+    const localRegex = new RegExp(HTML_ELEMENT_REGEX.source, "g");
+    while (match = localRegex.exec(text)) {
       const tagStart2 = from + match.index;
       const tagEnd = from + match.index + match[0].length;
-      const selectionFrom = selection.from;
-      const selectionTo = selection.to;
-      const isAdjacent = Math.max(selectionFrom, tagStart2) <= Math.min(selectionTo, tagEnd);
+      const isAdjacent = Math.max(selection.from, tagStart2) <= Math.min(selection.to, tagEnd);
       if (isAdjacent) {
         builder.add(tagStart2, tagEnd, liveHTMLTagMark);
       } else {
-        builder.add(
-          tagStart2,
-          tagEnd,
-          Decoration13.replace({ widget: new HTMLPreviewWidget(match[0]) })
-        );
+        const lines = match[0].split("\n");
+        let currentPos = tagStart2;
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          const lineEnd = currentPos + line.length;
+          if (i === 0) {
+            builder.add(
+              currentPos,
+              lineEnd,
+              Decoration13.replace({
+                widget: new HTMLPreviewWidget(match[0]),
+                side: 1
+              })
+            );
+          } else {
+            builder.add(
+              currentPos,
+              lineEnd,
+              Decoration13.mark({ class: "cm-hidden" })
+            );
+          }
+          currentPos = lineEnd + 1;
+        }
       }
     }
   }
@@ -8489,58 +8531,21 @@ var CodeMirrorEditor = ({
   content,
   onChange,
   onSave,
-  editable = true
+  editable = true,
+  onViewChange
 }) => {
-  const themeCompartment = useRef(new Compartment()).current;
-  const getCurrentDocumentTheme = () => {
-    if (typeof window === "undefined") return "light";
-    return document.documentElement.classList.contains("dark") ? "dark" : "light";
-  };
-  const onSaveRef = useRef(onSave);
-  const onChangeRef = useRef(onChange);
   const editorRef = useRef(null);
   const [editorView, setEditorView] = useState(null);
-  const [currentMode, setCurrentMode] = useState("live");
-  const editableCompartment = useRef(new Compartment()).current;
-  useEffect(() => {
-    onSaveRef.current = onSave;
-  }, [onSave]);
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
   useEffect(() => {
-    if (!editorView) return;
-    const currentDocTheme = getCurrentDocumentTheme();
-    editorView.dispatch({
-      effects: themeCompartment.reconfigure(currentDocTheme === "dark" ? darkTheme : lightTheme)
-    });
-    const observer = new MutationObserver(() => {
-      const newDocTheme = getCurrentDocumentTheme();
-      editorView.dispatch({
-        effects: themeCompartment.reconfigure(newDocTheme === "dark" ? darkTheme : lightTheme)
-      });
-    });
-    if (typeof window !== "undefined") {
-      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    }
-    return () => {
-      observer.disconnect();
-    };
-  }, [editorView, themeCompartment]);
-  useEffect(() => {
     if (!editorRef.current) return;
-    const customHighlightStyle = HighlightStyle.define([
-      { tag: tags5.heading1, fontSize: "1.6em", fontWeight: "bold" },
-      { tag: tags5.heading2, fontSize: "1.4em", fontWeight: "bold" },
-      { tag: tags5.heading3, fontSize: "1.2em", fontWeight: "bold" },
-      { tag: tags5.heading4, fontSize: "1.1em", fontWeight: "bold" },
-      { tag: tags5.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-      { tag: tags5.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-      { tag: tags5.strong, fontWeight: "bold" },
-      { tag: tags5.emphasis, fontStyle: "italic" },
-      { tag: tags5.link, color: "#2563eb", textDecoration: "underline" },
-      { tag: tags5.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" }
-    ]);
+    if (editorView) return;
+    const getCurrentDocumentTheme = () => {
+      return "light";
+    };
     const initialDocTheme = getCurrentDocumentTheme();
     const extensions = [
       themeCompartment.of(initialDocTheme === "dark" ? darkTheme : lightTheme),
@@ -8660,7 +8665,7 @@ var CodeMirrorEditor = ({
         }
       })
     ];
-    const state = EditorState6.create({
+    const state = EditorState5.create({
       doc: content,
       extensions
     });
@@ -8669,30 +8674,18 @@ var CodeMirrorEditor = ({
       parent: editorRef.current
     });
     setEditorView(view);
-    if (view) {
-      view.dispatch({
-        effects: [
-          setMarkdownSyntaxMode.of(currentMode)
-        ]
-      });
-    }
+    onViewChange?.(view);
     return () => {
       view.destroy();
       setEditorView(null);
+      onViewChange?.(null);
     };
-  }, [editable]);
+  }, []);
   useEffect(() => {
-    if (!editorView) return;
-    const currentContent = editorView.state.doc.toString();
-    if (currentContent !== content) {
-      const transaction = editorView.state.update({
-        changes: {
-          from: 0,
-          to: currentContent.length,
-          insert: content
-        }
+    if (editorView && content !== editorView.state.doc.toString()) {
+      editorView.dispatch({
+        changes: { from: 0, to: editorView.state.doc.length, insert: content }
       });
-      editorView.dispatch(transaction);
     }
   }, [content, editorView]);
   useEffect(() => {
@@ -8709,63 +8702,49 @@ var CodeMirrorEditor = ({
         });
       }
     }
-  }, [currentMode, editable, editorView, editableCompartment]);
-  return /* @__PURE__ */ React2.createElement("div", { className: "flex flex-col h-full border rounded-md overflow-hidden" }, /* @__PURE__ */ React2.createElement("div", { className: "p-2 border-b shrink-0 bg-slate-50 dark:bg-slate-800" }, /* @__PURE__ */ React2.createElement(
-    "button",
-    {
-      onClick: () => setCurrentMode((prev) => prev === "live" ? "preview" : "live"),
-      className: "px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 text-sm transition-colors duration-150"
-    },
-    currentMode === "live" ? "View Preview" : "Edit Content"
-  )), /* @__PURE__ */ React2.createElement("div", { className: "flex-grow overflow-auto" }, /* @__PURE__ */ React2.createElement(
-    "div",
-    {
-      className: "h-full",
-      "data-testid": "codemirror-editor"
-    },
-    /* @__PURE__ */ React2.createElement("div", { ref: editorRef, className: "h-full" })
-  )));
+  }, [editable, editorView]);
+  useEffect(() => {
+    const handleSave = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        onSave?.();
+      }
+    };
+    editorRef.current?.addEventListener("keydown", handleSave);
+    return () => {
+      editorRef.current?.removeEventListener("keydown", handleSave);
+    };
+  }, [onSave]);
+  return (
+    // Added a wrapper div here
+    /* @__PURE__ */ jsx2("div", { className: "editor-container", children: /* @__PURE__ */ jsx2("div", { ref: editorRef, className: "codemirror-editor" }) })
+  );
 };
 var CodeMirrorEditor_default = CodeMirrorEditor;
 
 // src/contexts/ThemeContext.tsx
-import React3, { createContext, useContext, useEffect as useEffect2, useState as useState2 } from "react";
+import { createContext, useContext, useEffect as useEffect2, useState as useState2 } from "react";
+import { jsx as jsx3 } from "react/jsx-runtime";
 var ThemeContext = createContext(void 0);
 function ThemeProvider({ children }) {
   const [theme, setTheme] = useState2("light");
-  const [mounted, setMounted] = useState2(false);
   useEffect2(() => {
-    if (typeof window !== "undefined") {
-      const savedTheme = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-      setTheme(initialTheme);
-      setMounted(true);
-      if (initialTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
     }
   }, []);
+  useEffect2(() => {
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
   const toggleTheme = () => {
-    setTheme((prevTheme) => {
-      const newTheme = prevTheme === "light" ? "dark" : "light";
-      if (typeof window !== "undefined") {
-        localStorage.setItem("theme", newTheme);
-        if (newTheme === "dark") {
-          document.documentElement.classList.add("dark");
-        } else {
-          document.documentElement.classList.remove("dark");
-        }
-      }
-      return newTheme;
-    });
+    setTheme((prevTheme) => prevTheme === "light" ? "dark" : "light");
   };
-  if (!mounted) {
-    return null;
-  }
-  return /* @__PURE__ */ React3.createElement(ThemeContext.Provider, { value: { theme, toggleTheme } }, children);
+  return /* @__PURE__ */ jsx3(ThemeContext.Provider, { value: { theme, toggleTheme }, children });
 }
 function useTheme() {
   const context = useContext(ThemeContext);
@@ -8777,16 +8756,17 @@ function useTheme() {
 
 // src/components/ThemeToggle.tsx
 import { Moon, Sun } from "lucide-react";
+import { jsx as jsx4 } from "react/jsx-runtime";
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  return /* @__PURE__ */ React.createElement(
+  return /* @__PURE__ */ jsx4(
     "button",
     {
       onClick: toggleTheme,
       className: "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors",
-      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`
-    },
-    theme === "light" ? /* @__PURE__ */ React.createElement(Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ React.createElement(Sun, { className: "w-5 h-5 text-yellow-300" })
+      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
+      children: theme === "light" ? /* @__PURE__ */ jsx4(Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ jsx4(Sun, { className: "w-5 h-5 text-yellow-300" })
+    }
   );
 }
 export {
