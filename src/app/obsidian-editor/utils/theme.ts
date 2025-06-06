@@ -60,8 +60,7 @@ const obsidianCssVariables = {
     '--hr-color': '#dcddde',
     '--tag-color': '#2991e3',
     '--selection-background': 'rgba(104, 134, 197, 0.3)',
-    '--code-background': 'rgba(0, 0, 0, 0.03)',
-    '--hr-color': '#ddd'
+    '--code-background': 'rgba(0, 0, 0, 0.03)'
   },
   dark: {
     '--background-primary': '#2b2b2b',
@@ -79,8 +78,7 @@ const obsidianCssVariables = {
     '--hr-color': '#444444',
     '--tag-color': '#4097e3',
     '--selection-background': 'rgba(104, 134, 197, 0.2)',
-    '--code-background': 'rgba(255, 255, 255, 0.05)',
-    '--hr-color': '#444'
+    '--code-background': 'rgba(255, 255, 255, 0.05)'
   }
 };
 

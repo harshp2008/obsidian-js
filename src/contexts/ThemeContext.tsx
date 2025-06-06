@@ -15,6 +15,8 @@ export type ThemeContextType = {
   theme: Theme;
   /** Function to toggle the current theme. */
   toggleTheme: () => void;
+  /** Whether the provider has mounted on the client */
+  mounted: boolean;
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -25,51 +27,46 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  *
  * @param {object} props - The component props.
  * @param {React.ReactNode} props.children - The child components to be wrapped by the provider.
- * @returns {JSX.Element | null} The ThemeProvider component or null if not mounted yet.
+ * @returns {JSX.Element} The ThemeProvider component (always renders children to avoid hydration issues).
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Start with a default theme that won't change during SSR
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
-  // Initialize theme from localStorage or system preference
+  // Initialize theme from localStorage or system preference ONLY on client-side
   useEffect(() => {
-    // Check for window object to avoid SSR issues
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('theme') as Theme | null;
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      
-      const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
-      setTheme(initialTheme);
-      setMounted(true);
-      
-      // Update the HTML class
-      applyThemeToHTML(initialTheme);
-    }
+    // This only runs on client, after hydration
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(initialTheme);
+    setMounted(true);
+    
+    // Apply theme to HTML only after mounting
+    applyThemeToHTML(initialTheme, true);
   }, []);
 
   const toggleTheme = () => {
+    // Only allow toggling after mounted
+    if (!mounted) return;
+    
     setTheme(prevTheme => {
       const newTheme = prevTheme === 'light' ? 'dark' : 'light';
       
       // Update localStorage
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('theme', newTheme);
-      }
+      localStorage.setItem('theme', newTheme);
       
       // Apply theme to HTML
-      applyThemeToHTML(newTheme);
+      applyThemeToHTML(newTheme, true);
       
       return newTheme;
     });
   };
 
-  // Prevent rendering the app until we know the theme to avoid flash of incorrect theme
-  if (!mounted) {
-    return null;
-  }
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, mounted }}>
       {children}
     </ThemeContext.Provider>
   );
@@ -93,7 +90,7 @@ export function useTheme() {
 /**
  * Apply the HTML theme class to document
  */
-function applyThemeToHTML(theme: Theme) {
+function applyThemeToHTML(theme: Theme, isMounted: boolean = false) {
   if (typeof document !== 'undefined') {
     // Add theme class to HTML element
     if (theme === 'dark') {
@@ -102,12 +99,28 @@ function applyThemeToHTML(theme: Theme) {
       
       document.body.classList.add('dark');
       document.body.classList.remove('light');
+      
+      // Only set CSS variables on client-side after mounting to avoid hydration mismatches
+      if (isMounted) {
+        // Set CSS variables for dark mode
+        document.documentElement.style.setProperty('--background-primary', '#1e1e1e');
+        document.documentElement.style.setProperty('--background-secondary', '#252525');
+        document.documentElement.style.setProperty('--text-normal', '#dcddde');
+      }
     } else {
       document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark');
       
       document.body.classList.add('light');
       document.body.classList.remove('dark');
+      
+      // Only set CSS variables on client-side after mounting to avoid hydration mismatches
+      if (isMounted) {
+        // Set CSS variables for light mode
+        document.documentElement.style.setProperty('--background-primary', '#ffffff');
+        document.documentElement.style.setProperty('--background-secondary', '#f5f5f5');
+        document.documentElement.style.setProperty('--text-normal', '#1e1e1e');
+      }
     }
   }
 }

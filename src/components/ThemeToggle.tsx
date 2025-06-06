@@ -6,11 +6,25 @@ import { Moon, Sun } from 'lucide-react';
 /**
  * A button component that allows the user to toggle between light and dark themes.
  * It uses the `useTheme` hook to access the current theme and the toggle function.
+ * This component is SSR-friendly and won't cause hydration mismatches.
  *
  * @returns {JSX.Element} The theme toggle button.
  */
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, mounted } = useTheme();
+  
+  // Render a placeholder with the same dimensions during SSR to prevent layout shifts
+  if (!mounted) {
+    return (
+      <button
+        className="p-2 rounded-full transition-colors"
+        aria-label="Theme toggle"
+        aria-hidden="true"
+      >
+        <div className="w-5 h-5" />
+      </button>
+    );
+  }
   
   return (
     <button

@@ -1,24 +1,25 @@
-import React from 'react';
-import { EditorView } from '@codemirror/view';
 import * as react_jsx_runtime from 'react/jsx-runtime';
+import React from 'react';
 import * as _codemirror_state from '@codemirror/state';
 
 /**
- * Props for the CodeMirrorEditor component
+ * Props for the CodeMirrorEditor component.
  */
 interface CodeMirrorEditorProps {
-    /** The initial markdown content of the editor */
-    content: string;
-    /** Callback function triggered when the editor content changes */
-    onChange: (markdown: string) => void;
-    /** Optional callback function triggered when a save action is requested (e.g., Ctrl+S) */
+    /** Initial markdown content for the editor */
+    initialValue?: string;
+    /** Whether the editor is read-only */
+    readOnly?: boolean;
+    /** Optional callback when content changes */
+    onChange?: (content: string) => void;
+    /** Optional callback for save actions (Ctrl+S) */
     onSave?: () => void;
-    /** Optional flag to make the editor read-only. Defaults to true */
-    editable?: boolean;
-    /** Optional callback to get the current editor view instance */
-    onViewChange?: (view: EditorView | null) => void;
 }
-declare const CodeMirrorEditor: React.FC<CodeMirrorEditorProps>;
+/**
+ * A CodeMirror editor component with Markdown syntax highlighting and preview mode.
+ * This component is client-side only and includes SSR-safety measures.
+ */
+declare const CodeMirrorEditor: ({ initialValue, readOnly, onChange, onSave }: CodeMirrorEditorProps) => react_jsx_runtime.JSX.Element;
 
 /**
  * Represents the possible theme states.
@@ -32,6 +33,8 @@ type ThemeContextType = {
     theme: Theme;
     /** Function to toggle the current theme. */
     toggleTheme: () => void;
+    /** Whether the provider has mounted on the client */
+    mounted: boolean;
 };
 /**
  * Provides the theme state and toggle function to its children components.
@@ -39,7 +42,7 @@ type ThemeContextType = {
  *
  * @param {object} props - The component props.
  * @param {React.ReactNode} props.children - The child components to be wrapped by the provider.
- * @returns {JSX.Element | null} The ThemeProvider component or null if not mounted yet.
+ * @returns {JSX.Element} The ThemeProvider component (always renders children to avoid hydration issues).
  */
 declare function ThemeProvider({ children }: {
     children: React.ReactNode;
@@ -56,6 +59,7 @@ declare function useTheme(): ThemeContextType;
 /**
  * A button component that allows the user to toggle between light and dark themes.
  * It uses the `useTheme` hook to access the current theme and the toggle function.
+ * This component is SSR-friendly and won't cause hydration mismatches.
  *
  * @returns {JSX.Element} The theme toggle button.
  */
