@@ -42,16 +42,17 @@ export const createCustomHighlightStyle = (): HighlightStyle | Extension[] => {
     // Build an array of valid tag styles
     const validStyles = [];
     
-    if (tags.heading1) validStyles.push({ tag: tags.heading1, fontSize: '1.6em', fontWeight: 'bold' });
-    if (tags.heading2) validStyles.push({ tag: tags.heading2, fontSize: '1.4em', fontWeight: 'bold' });
-    if (tags.heading3) validStyles.push({ tag: tags.heading3, fontSize: '1.2em', fontWeight: 'bold' });
-    if (tags.heading4) validStyles.push({ tag: tags.heading4, fontSize: '1.1em', fontWeight: 'bold' });
-    if (tags.heading5) validStyles.push({ tag: tags.heading5, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
-    if (tags.heading6) validStyles.push({ tag: tags.heading6, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
-    if (tags.strong) validStyles.push({ tag: tags.strong, fontWeight: 'bold' });
-    if (tags.emphasis) validStyles.push({ tag: tags.emphasis, fontStyle: 'italic' });
-    if (tags.link) validStyles.push({ tag: tags.link, color: '#2563eb', textDecoration: 'underline' });
-    if (tags.monospace) validStyles.push({ tag: tags.monospace, fontFamily: 'monospace', fontSize: '0.9em', color: '#10b981' });
+    // Ensure consistent handling of tags - always use array format for tag property
+    if (tags.heading1) validStyles.push({ tag: [tags.heading1], fontSize: '1.6em', fontWeight: 'bold' });
+    if (tags.heading2) validStyles.push({ tag: [tags.heading2], fontSize: '1.4em', fontWeight: 'bold' });
+    if (tags.heading3) validStyles.push({ tag: [tags.heading3], fontSize: '1.2em', fontWeight: 'bold' });
+    if (tags.heading4) validStyles.push({ tag: [tags.heading4], fontSize: '1.1em', fontWeight: 'bold' });
+    if (tags.heading5) validStyles.push({ tag: [tags.heading5], fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
+    if (tags.heading6) validStyles.push({ tag: [tags.heading6], fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
+    if (tags.strong) validStyles.push({ tag: [tags.strong], fontWeight: 'bold' });
+    if (tags.emphasis) validStyles.push({ tag: [tags.emphasis], fontStyle: 'italic' });
+    if (tags.link) validStyles.push({ tag: [tags.link], color: '#2563eb', textDecoration: 'underline' });
+    if (tags.monospace) validStyles.push({ tag: [tags.monospace], fontFamily: 'monospace', fontSize: '0.9em', color: '#10b981' });
     
     // Only create the highlight style if we have valid tags
     if (validStyles.length > 0) {

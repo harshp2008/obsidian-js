@@ -213,7 +213,7 @@ export const markdownSyntaxStateField = StateField.define<{
  * Creates the markdown syntax plugin with all necessary extensions
  * @returns An array of extensions for markdown syntax highlighting
  */
-export function createMarkdownSyntaxPlugin(): Extension {
+export function createMarkdownSyntaxPlugin(): Extension[] {
   return [
     markdownSyntaxStateField,
     LineBreakDecorator,

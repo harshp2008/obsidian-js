@@ -35,6 +35,18 @@ export function applyHighlightStyleFix(): void {
             if (!tags) return "";
             
             try {
+              // Fix for "Cannot read properties of undefined (reading 'some')"
+              // Make sure tags.some exists and is callable before using it
+              if (typeof tags.some !== 'function') {
+                if (Array.isArray(tags)) {
+                  // If tags is an array but somehow doesn't have .some
+                  return originalStyleFn.call(this, tags);
+                }
+                // If tags.some doesn't exist, return empty string instead of crashing
+                console.warn("Tags object doesn't have .some method", tags);
+                return "";
+              }
+              
               return originalStyleFn.call(this, tags);
             } catch (e) {
               console.warn("Error in highlight style:", e);
@@ -44,6 +56,24 @@ export function applyHighlightStyleFix(): void {
           writable: false,
           configurable: true
         });
+        
+        // Patch the matcher function as well for additional safety
+        if (style.match) {
+          const originalMatchFn = style.match;
+          Object.defineProperty(style, 'match', {
+            value: function(tag) {
+              try {
+                if (!tag) return false;
+                return originalMatchFn.call(this, tag);
+              } catch (e) {
+                console.warn("Error in highlight style match:", e);
+                return false;
+              }
+            },
+            writable: false,
+            configurable: true
+          });
+        }
         
         return style;
       } catch (error) {
@@ -84,6 +114,14 @@ export function safeHighlightStyleDefine(specs: any[]): any {
       value: function(tags: any) {
         // Handle undefined or non-iterable tags
         if (!tags) return "";
+        
+        // Fix for "Cannot read properties of undefined (reading 'some')"
+        if (tags && typeof tags.some !== 'function') {
+          if (Array.isArray(tags)) {
+            return originalStyleFn.call(style, tags);
+          }
+          return "";
+        }
         
         try {
           return originalStyleFn.call(style, tags);

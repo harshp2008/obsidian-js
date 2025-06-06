@@ -1299,3 +1299,70 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 3px;
   margin: 0.2em 0;
 }
+
+.obsidian-editor-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.obsidian-editor-content {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Make sure CodeMirror's scroller can scroll */
+.obsidian-editor-content .cm-scroller {
+  overflow: auto !important;
+  height: 100% !important;
+}
+
+/* Editor styles */
+.obsidian-editor-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px;
+  gap: 8px;
+  border-bottom: 1px solid var(--hr-color, #e1e1e1);
+  background-color: var(--background-secondary, #f8f8f8);
+}
+
+.obsidian-editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--interactive-normal, #f2f3f5);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-normal, #2e3338);
+  font-size: 14px;
+}
+
+.obsidian-editor-toolbar button:hover {
+  background-color: var(--interactive-hover, #e9e9e9);
+}
+
+.obsidian-editor-toolbar button.active {
+  background-color: var(--interactive-accent, #7b6cd9);
+  color: white;
+}
+
+.obsidian-editor-toolbar .separator {
+  width: 1px;
+  height: 24px;
+  background-color: var(--hr-color, #e1e1e1);
+  margin: 0 4px;
+}
+
+/* Editor core styles */
+.obsidian-editor-core {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}

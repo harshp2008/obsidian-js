@@ -12,6 +12,13 @@ function applyHighlightStyleFix() {
           value: function(tags6) {
             if (!tags6) return "";
             try {
+              if (typeof tags6.some !== "function") {
+                if (Array.isArray(tags6)) {
+                  return originalStyleFn.call(this, tags6);
+                }
+                console.warn("Tags object doesn't have .some method", tags6);
+                return "";
+              }
               return originalStyleFn.call(this, tags6);
             } catch (e) {
               console.warn("Error in highlight style:", e);
@@ -21,6 +28,22 @@ function applyHighlightStyleFix() {
           writable: false,
           configurable: true
         });
+        if (style.match) {
+          const originalMatchFn = style.match;
+          Object.defineProperty(style, "match", {
+            value: function(tag) {
+              try {
+                if (!tag) return false;
+                return originalMatchFn.call(this, tag);
+              } catch (e) {
+                console.warn("Error in highlight style match:", e);
+                return false;
+              }
+            },
+            writable: false,
+            configurable: true
+          });
+        }
         return style;
       } catch (error) {
         console.error("Error creating HighlightStyle:", error);
@@ -35,7 +58,69 @@ function applyHighlightStyleFix() {
 }
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { useEffect as useEffect2, useRef, useState as useState2 } from "react";
+import { useState as useState2 } from "react";
+
+// src/contexts/ThemeContext.tsx
+import { createContext, useContext, useEffect, useState } from "react";
+import { jsx } from "react/jsx-runtime";
+var ThemeContext = createContext(void 0);
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState("light");
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+    setTheme(initialTheme);
+    setMounted(true);
+    applyThemeToHTML(initialTheme, true);
+  }, []);
+  const toggleTheme = () => {
+    if (!mounted) return;
+    setTheme((prevTheme) => {
+      const newTheme = prevTheme === "light" ? "dark" : "light";
+      localStorage.setItem("theme", newTheme);
+      applyThemeToHTML(newTheme, true);
+      return newTheme;
+    });
+  };
+  return /* @__PURE__ */ jsx(ThemeContext.Provider, { value: { theme, toggleTheme, mounted }, children });
+}
+function useTheme() {
+  const context = useContext(ThemeContext);
+  if (context === void 0) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+}
+function applyThemeToHTML(theme, isMounted = false) {
+  if (typeof document !== "undefined") {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.body.classList.add("dark");
+      document.body.classList.remove("light");
+      if (isMounted) {
+        document.documentElement.style.setProperty("--background-primary", "#1e1e1e");
+        document.documentElement.style.setProperty("--background-secondary", "#252525");
+        document.documentElement.style.setProperty("--text-normal", "#dcddde");
+      }
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+      document.body.classList.add("light");
+      document.body.classList.remove("dark");
+      if (isMounted) {
+        document.documentElement.style.setProperty("--background-primary", "#ffffff");
+        document.documentElement.style.setProperty("--background-secondary", "#f5f5f5");
+        document.documentElement.style.setProperty("--text-normal", "#1e1e1e");
+      }
+    }
+  }
+}
+
+// src/app/obsidian-editor/components/EditorCore.tsx
+import { useEffect as useEffect2, useRef } from "react";
 import { EditorState as EditorState5, Compartment } from "@codemirror/state";
 import { EditorView as EditorView12 } from "@codemirror/view";
 
@@ -1032,20 +1117,6 @@ import DOMPurify2 from "dompurify";
 
 // src/app/obsidian-editor/utils/formatting/html-formatter.ts
 import DOMPurify from "dompurify";
-function formatHTML(html2) {
-  if (html2.toLowerCase().includes("<script")) {
-    return html2.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gi, (match, content) => {
-      const scriptOpen = match.substring(0, match.indexOf(">") + 1);
-      const scriptClose = "</script>";
-      return `<span class="script-tag">${scriptOpen}</span><span class="script-tag-content">${content}</span><span class="script-tag">${scriptClose}</span>`;
-    });
-  }
-  return DOMPurify.sanitize(html2, {
-    USE_PROFILES: { html: true },
-    ADD_ATTR: ["controls", "autoplay", "allowfullscreen", "allow"],
-    ADD_TAGS: ["iframe", "audio", "video", "source"]
-  });
-}
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/htmlTagDecorator.ts
 if (typeof window !== "undefined") {
@@ -1060,476 +1131,48 @@ if (typeof window !== "undefined") {
   });
 }
 var HTML_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*)>([\s\S]*?)<\/\1>/g;
-var HTML_VOID_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)(?:\s*\/)?>(?!\s*<\/\1>)/g;
-var VOID_TAGS = /* @__PURE__ */ new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr",
-  "command",
-  "keygen"
-]);
 var htmlTagMark = Decoration13.mark({
   class: "cm-html-tag-syntax"
 });
-var HTMLContentWidget = class extends WidgetType5 {
-  constructor(html2, inline = false) {
-    super();
-    this.html = html2;
-    this.inline = inline;
-  }
-  toDOM() {
-    const wrapper = document.createElement(this.inline ? "span" : "div");
-    wrapper.className = `cm-html-rendered ${this.inline ? "cm-html-inline" : "cm-html-block"}`;
-    try {
-      if (this.hasSpecialElement(this.html)) {
-        this.renderSpecialElement(wrapper, this.html);
-      } else {
-        wrapper.innerHTML = formatHTML(this.html);
-        this.enhanceEmbeddedElements(wrapper);
-      }
-    } catch (error) {
-      console.error("Error rendering HTML:", error);
-      wrapper.textContent = this.html;
-    }
-    return wrapper;
-  }
-  /**
-   * Check if HTML contains elements that need special handling
-   */
-  hasSpecialElement(html2) {
-    const lowerHtml = html2.toLowerCase();
-    if (lowerHtml.includes("<script")) return false;
-    return lowerHtml.includes("<iframe") || lowerHtml.includes("<audio") || lowerHtml.includes("<video");
-  }
-  /**
-   * Render special HTML elements with enhanced styling
-   */
-  renderSpecialElement(container, html2) {
-    if (html2.toLowerCase().includes("<script")) {
-      container.innerHTML = formatHTML(html2);
-      return;
-    }
-    const parser5 = new DOMParser();
-    const doc = parser5.parseFromString(html2, "text/html");
-    const rootElement = doc.body.firstElementChild;
-    if (!rootElement) {
-      container.innerHTML = formatHTML(html2);
-      return;
-    }
-    const tagName = rootElement.tagName.toLowerCase();
-    switch (tagName) {
-      case "iframe":
-        this.renderIframe(container, rootElement);
-        break;
-      case "audio":
-        this.renderAudio(container, rootElement);
-        break;
-      case "video":
-        this.renderVideo(container, rootElement);
-        break;
-      default:
-        container.innerHTML = formatHTML(html2);
-        break;
-    }
-  }
-  /**
-   * Render iframe with obsidian-like styling
-   */
-  renderIframe(container, iframeEl) {
-    container.classList.add("cm-html-iframe-container");
-    const iframe = document.createElement("iframe");
-    if (iframeEl.src) iframe.src = iframeEl.src;
-    if (iframeEl.width) iframe.width = iframeEl.width;
-    if (iframeEl.height) iframe.height = iframeEl.height;
-    if (!iframe.width) iframe.width = "100%";
-    if (!iframe.height) iframe.height = "300";
-    iframe.setAttribute("sandbox", "allow-scripts allow-same-origin allow-popups allow-forms");
-    iframe.setAttribute("loading", "lazy");
-    container.appendChild(iframe);
-    const loadingIndicator = document.createElement("div");
-    loadingIndicator.className = "cm-html-loading";
-    loadingIndicator.textContent = "Loading...";
-    container.appendChild(loadingIndicator);
-    iframe.addEventListener("load", () => {
-      if (loadingIndicator.parentNode) {
-        loadingIndicator.parentNode.removeChild(loadingIndicator);
-      }
-    });
-  }
-  /**
-   * Render audio with obsidian-like styling
-   */
-  renderAudio(container, audioEl) {
-    container.classList.add("cm-html-audio-container");
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    Array.from(audioEl.getElementsByTagName("source")).forEach((source) => {
-      const newSource = document.createElement("source");
-      if (source.src) newSource.src = source.src;
-      if (source.type) newSource.type = source.type;
-      audio.appendChild(newSource);
-    });
-    if (audioEl.src) {
-      audio.src = audioEl.src;
-    }
-    container.appendChild(audio);
-  }
-  /**
-   * Render video with obsidian-like styling
-   */
-  renderVideo(container, videoEl) {
-    container.classList.add("cm-html-video-container");
-    const video = document.createElement("video");
-    video.controls = true;
-    Array.from(videoEl.getElementsByTagName("source")).forEach((source) => {
-      const newSource = document.createElement("source");
-      if (source.src) newSource.src = source.src;
-      if (source.type) newSource.type = source.type;
-      video.appendChild(newSource);
-    });
-    if (videoEl.src) {
-      video.src = videoEl.src;
-    }
-    if (videoEl.poster) {
-      video.poster = videoEl.poster;
-    }
-    container.appendChild(video);
-  }
-  /**
-   * Adds enhanced styling to embedded elements
-   */
-  enhanceEmbeddedElements(container) {
-    const spans = container.querySelectorAll("span");
-    spans.forEach((span) => {
-      span.classList.add("cm-html-span");
-    });
-    const links = container.querySelectorAll("a");
-    links.forEach((link) => {
-      link.setAttribute("target", "_blank");
-      link.setAttribute("rel", "noopener noreferrer");
-    });
-  }
-  eq(other) {
-    return this.html === other.html && this.inline === other.inline;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-var MultiLineHtmlStartWidget = class extends WidgetType5 {
-  constructor(html2, fullHtml) {
-    super();
-    this.html = html2;
-    this.fullHtml = fullHtml;
-  }
-  toDOM() {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-html-multiline-start";
-    try {
-      const sanitizedHtml = DOMPurify2.sanitize(this.html);
-      wrapper.innerHTML = sanitizedHtml;
-    } catch (error) {
-      console.error("Error rendering HTML start:", error);
-      wrapper.textContent = this.html;
-    }
-    return wrapper;
-  }
-  eq(other) {
-    return this.html === other.html && this.fullHtml === other.fullHtml;
-  }
-};
-var MultiLineHtmlMiddleWidget = class extends WidgetType5 {
-  constructor(html2) {
-    super();
-    this.html = html2;
-  }
-  toDOM() {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-html-multiline-middle";
-    try {
-      const sanitizedHtml = DOMPurify2.sanitize(this.html);
-      wrapper.innerHTML = sanitizedHtml;
-    } catch (error) {
-      console.error("Error rendering HTML middle:", error);
-      wrapper.textContent = this.html;
-    }
-    return wrapper;
-  }
-  eq(other) {
-    return this.html === other.html;
-  }
-};
-var MultiLineHtmlEndWidget = class extends WidgetType5 {
-  constructor(html2) {
-    super();
-    this.html = html2;
-  }
-  toDOM() {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-html-multiline-end";
-    try {
-      const sanitizedHtml = DOMPurify2.sanitize(this.html);
-      wrapper.innerHTML = sanitizedHtml;
-    } catch (error) {
-      console.error("Error rendering HTML end:", error);
-      wrapper.textContent = this.html;
-    }
-    return wrapper;
-  }
-  eq(other) {
-    return this.html === other.html;
-  }
-};
-function identifyHtmlRegions(view) {
-  try {
-    const regions = [];
-    const { state } = view;
-    const doc = state.doc;
-    for (const { from, to } of view.visibleRanges) {
-      if (from >= to) continue;
-      let text;
-      try {
-        text = state.doc.sliceString(from, to);
-      } catch (e) {
-        console.error("Error getting text range:", e);
-        continue;
-      }
-      if (!text || text.length === 0) continue;
-      try {
-        HTML_TAG_REGEX.lastIndex = 0;
-        let match;
-        while (match = HTML_TAG_REGEX.exec(text)) {
-          const fullMatch = match[0];
-          const tagName = match[1];
-          const tagAttrs = match[2];
-          const tagContent = match[3];
-          if (!fullMatch || !tagName) continue;
-          const tagStart2 = from + match.index;
-          const tagEnd = tagStart2 + fullMatch.length;
-          if (tagEnd <= tagStart2 || tagStart2 < from || tagEnd > to) continue;
-          const openTagEnd = tagStart2 + `<${tagName}${tagAttrs}>`.length;
-          const closeTagStart = tagEnd - `</${tagName}>`.length;
-          if (openTagEnd >= closeTagStart) continue;
-          let startLine, endLine;
-          try {
-            startLine = doc.lineAt(tagStart2);
-            endLine = doc.lineAt(tagEnd - 1);
-          } catch (e) {
-            console.error("Error getting line info:", e);
-            continue;
-          }
-          const isMultiLine = startLine.number !== endLine.number;
-          regions.push({
-            from: tagStart2,
-            to: tagEnd,
-            isMultiLine,
-            content: fullMatch,
-            tagName,
-            openTagEnd,
-            closeTagStart,
-            isSelfClosing: false
-          });
-        }
-      } catch (e) {
-        console.error("Error processing HTML tags:", e);
-      }
-      try {
-        HTML_VOID_TAG_REGEX.lastIndex = 0;
-        let match;
-        while (match = HTML_VOID_TAG_REGEX.exec(text)) {
-          const fullMatch = match[0];
-          const tagName = match[1];
-          const tagAttrs = match[2];
-          if (!tagName || !VOID_TAGS.has(tagName.toLowerCase())) {
-            continue;
-          }
-          const tagStart2 = from + match.index;
-          const tagEnd = tagStart2 + fullMatch.length;
-          if (tagEnd <= tagStart2 || tagStart2 < from || tagEnd > to) continue;
-          let startLine, endLine;
-          try {
-            startLine = doc.lineAt(tagStart2);
-            endLine = doc.lineAt(tagEnd - 1);
-          } catch (e) {
-            console.error("Error getting line info:", e);
-            continue;
-          }
-          const isMultiLine = startLine.number !== endLine.number;
-          regions.push({
-            from: tagStart2,
-            to: tagEnd,
-            isMultiLine,
-            content: fullMatch,
-            tagName,
-            openTagEnd: tagEnd,
-            // Self-closing tags don't have a separate close tag
-            closeTagStart: tagEnd,
-            isSelfClosing: true
-          });
-        }
-      } catch (e) {
-        console.error("Error processing void HTML tags:", e);
-      }
-    }
-    return regions;
-  } catch (e) {
-    console.error("Error in identifyHtmlRegions:", e);
-    return [];
-  }
-}
-function isCursorNearRegion(view, region) {
-  const { state } = view;
-  const selection = state.selection.main;
-  const cursor = selection.head;
-  const doc = state.doc;
-  const cursorLine = doc.lineAt(cursor);
-  const startLine = doc.lineAt(region.from);
-  const endLine = doc.lineAt(region.to - 1);
-  return cursorLine.number >= startLine.number - 1 && cursorLine.number <= endLine.number + 1;
-}
-function buildHTMLTagDecorations(view) {
-  try {
-    const builder = new RangeSetBuilder3();
-    let htmlRegions = [];
-    try {
-      htmlRegions = identifyHtmlRegions(view);
-    } catch (e) {
-      console.error("Failed to identify HTML regions:", e);
-      return builder.finish();
-    }
-    if (htmlRegions.length === 0) {
-      return builder.finish();
-    }
-    htmlRegions.sort((a, b) => a.from - b.from);
-    const decorations = [];
-    for (const region of htmlRegions) {
-      try {
-        if (region.to <= region.from) continue;
-        const isCursorNear = isCursorNearRegion(view, region);
-        if (isCursorNear) {
-          if (region.isSelfClosing) {
-            decorations.push({
-              from: region.from,
-              to: region.to,
-              deco: htmlTagMark
-            });
-          } else {
-            if (region.openTagEnd > region.from) {
-              decorations.push({
-                from: region.from,
-                to: region.openTagEnd,
-                deco: htmlTagMark
-              });
-            }
-            if (region.closeTagStart < region.to) {
-              decorations.push({
-                from: region.closeTagStart,
-                to: region.to,
-                deco: htmlTagMark
-              });
-            }
-          }
-        } else if (!region.isMultiLine) {
-          decorations.push({
-            from: region.from,
-            to: region.to,
-            deco: Decoration13.replace({
-              widget: new HTMLContentWidget(region.content, true)
-            })
-          });
-        } else {
-          const doc = view.state.doc;
-          try {
-            const startLine = doc.lineAt(region.from);
-            const endLine = doc.lineAt(region.to - 1);
-            if (startLine.to > region.from) {
-              const firstLineContent = doc.sliceString(region.from, startLine.to);
-              decorations.push({
-                from: region.from,
-                to: startLine.to,
-                deco: Decoration13.replace({
-                  widget: new MultiLineHtmlStartWidget(firstLineContent, region.content)
-                })
-              });
-            }
-            for (let lineNum = startLine.number + 1; lineNum < endLine.number; lineNum++) {
-              try {
-                const line = doc.line(lineNum);
-                if (line.from < line.to) {
-                  const lineContent = line.text;
-                  decorations.push({
-                    from: line.from,
-                    to: line.to,
-                    deco: Decoration13.replace({
-                      widget: new MultiLineHtmlMiddleWidget(lineContent)
-                    })
-                  });
-                }
-              } catch (e) {
-                console.error(`Error processing middle line ${lineNum}:`, e);
-              }
-            }
-            if (startLine.number !== endLine.number && endLine.from < region.to) {
-              const lastLineContent = doc.sliceString(endLine.from, region.to);
-              decorations.push({
-                from: endLine.from,
-                to: region.to,
-                deco: Decoration13.replace({
-                  widget: new MultiLineHtmlEndWidget(lastLineContent)
-                })
-              });
-            }
-          } catch (e) {
-            console.error("Error processing multi-line HTML:", e);
-          }
-        }
-      } catch (e) {
-        console.error("Error processing HTML region:", e);
-      }
-    }
-    if (decorations.length === 0) {
-      return builder.finish();
-    }
-    decorations.sort((a, b) => {
-      if (a.from !== b.from) return a.from - b.from;
-      return a.to - b.to;
-    });
-    try {
-      for (const { from, to, deco } of decorations) {
-        if (from < to) {
-          builder.add(from, to, deco);
-        }
-      }
-    } catch (e) {
-      console.error("Error adding decorations to builder:", e);
-    }
-    return builder.finish();
-  } catch (e) {
-    console.error("Error in buildHTMLTagDecorations:", e);
-    return new RangeSetBuilder3().finish();
-  }
-}
 var HTMLTagDecorator = ViewPlugin3.fromClass(
   class {
     constructor(view) {
-      this.decorations = buildHTMLTagDecorations(view);
+      this.decorations = this.buildDecorations(view);
     }
     update(update) {
-      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
-      if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
-        this.decorations = buildHTMLTagDecorations(update.view);
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.buildDecorations(update.view);
       }
+    }
+    buildDecorations(view) {
+      const builder = new RangeSetBuilder3();
+      try {
+        for (const { from, to } of view.visibleRanges) {
+          const text = view.state.doc.sliceString(from, to);
+          let match;
+          HTML_TAG_REGEX.lastIndex = 0;
+          while ((match = HTML_TAG_REGEX.exec(text)) !== null) {
+            if (!match || !match.index) {
+              continue;
+            }
+            const tagStart2 = from + match.index;
+            const tagEnd = tagStart2 + match[0].length;
+            try {
+              const decoration = Decoration13.mark({
+                class: "cm-html-tag"
+              });
+              if (decoration) {
+                builder.add(tagStart2, tagEnd, decoration);
+              }
+            } catch (decorationError) {
+              console.warn("Error creating HTML tag decoration:", decorationError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error building HTML decorations:", error);
+      }
+      return builder.finish();
     }
   },
   {
@@ -1757,131 +1400,9 @@ function createMarkdownSyntaxPlugin() {
   ];
 }
 
-// src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { syntaxHighlighting as syntaxHighlighting2, HighlightStyle as HighlightStyle3 } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
-
-// src/app/obsidian-editor/utils/theme.ts
-import { EditorView as EditorView7 } from "@codemirror/view";
-var getCurrentDocumentTheme = () => {
-  if (typeof window !== "undefined") {
-    const storedTheme = localStorage.getItem("obsidian-theme");
-    if (storedTheme === "light" || storedTheme === "dark") {
-      return storedTheme;
-    }
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-  }
-  return "light";
-};
-var obsidianCssVariables = {
-  light: {
-    "--background-primary": "#ffffff",
-    "--background-secondary": "#f8f8f8",
-    "--text-normal": "#2e3338",
-    "--text-muted": "#888888",
-    "--text-faint": "#999999",
-    "--text-error": "#e75545",
-    "--text-accent": "#705dcf",
-    "--interactive-normal": "#f2f3f5",
-    "--interactive-hover": "#e9e9e9",
-    "--interactive-accent": "#7b6cd9",
-    "--interactive-accent-hover": "#8875ff",
-    "--link-color": "#5E81AC",
-    "--hr-color": "#dcddde",
-    "--tag-color": "#2991e3",
-    "--selection-background": "rgba(104, 134, 197, 0.3)",
-    "--code-background": "rgba(0, 0, 0, 0.03)"
-  },
-  dark: {
-    "--background-primary": "#2b2b2b",
-    "--background-secondary": "#363636",
-    "--text-normal": "#dcddde",
-    "--text-muted": "#999999",
-    "--text-faint": "#666666",
-    "--text-error": "#ff3333",
-    "--text-accent": "#a277ff",
-    "--interactive-normal": "#3f3f3f",
-    "--interactive-hover": "#4a4a4a",
-    "--interactive-accent": "#7b6cd9",
-    "--interactive-accent-hover": "#8875ff",
-    "--link-color": "#a8c0e0",
-    "--hr-color": "#444444",
-    "--tag-color": "#4097e3",
-    "--selection-background": "rgba(104, 134, 197, 0.2)",
-    "--code-background": "rgba(255, 255, 255, 0.05)"
-  }
-};
-var applyThemeVariables = (theme) => {
-  if (typeof document !== "undefined") {
-    const variables = obsidianCssVariables[theme];
-    const root = document.documentElement;
-    Object.entries(variables).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
-  }
-};
-var lightTheme = EditorView7.theme({
-  "&": {
-    backgroundColor: "var(--background-primary, #ffffff)",
-    color: "var(--text-normal, #2e3338)"
-  },
-  ".cm-content": {
-    caretColor: "var(--text-normal, #2e3338)"
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--text-normal, #2e3338)"
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.3))"
-  },
-  ".cm-activeLine": {
-    backgroundColor: "var(--background-secondary, #f5f6f8)"
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "var(--background-secondary, #f5f6f8)"
-  }
-}, { dark: false });
-var darkTheme = EditorView7.theme({
-  "&": {
-    backgroundColor: "var(--background-primary, #202020)",
-    color: "var(--text-normal, #dcddde)"
-  },
-  ".cm-content": {
-    caretColor: "var(--text-normal, #dcddde)"
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--text-normal, #dcddde)"
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.2))"
-  },
-  ".cm-activeLine": {
-    backgroundColor: "var(--background-secondary, #161616)"
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "var(--background-secondary, #161616)"
-  }
-}, { dark: true });
-if (typeof window !== "undefined") {
-  setTimeout(() => {
-    const initialTheme = getCurrentDocumentTheme();
-    applyThemeVariables(initialTheme);
-    if (window.matchMedia) {
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-        if (!localStorage.getItem("obsidian-theme")) {
-          const newTheme = e.matches ? "dark" : "light";
-          applyThemeVariables(newTheme);
-        }
-      });
-    }
-  }, 0);
-}
-
 // src/app/obsidian-editor/utils/editorExtensions.ts
 import { Prec as Prec3 } from "@codemirror/state";
-import { keymap as keymap2, highlightActiveLine, highlightActiveLineGutter, EditorView as EditorView11 } from "@codemirror/view";
+import { keymap as keymap2, highlightActiveLine, highlightActiveLineGutter, EditorView as EditorView10 } from "@codemirror/view";
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
 import { EditorSelection as EditorSelection3, countColumn, Prec, EditorState as EditorState4 } from "@codemirror/state";
@@ -5563,9 +5084,9 @@ var LRParser = class _LRParser extends Parser {
       copy.top = info;
     }
     if (config.tokenizers)
-      copy.tokenizers = this.tokenizers.map((t2) => {
-        let found = config.tokenizers.find((r) => r.from == t2);
-        return found ? found.to : t2;
+      copy.tokenizers = this.tokenizers.map((t) => {
+        let found = config.tokenizers.find((r) => r.from == t);
+        return found ? found.to : t;
       });
     if (config.specializers) {
       copy.specializers = this.specializers.slice();
@@ -7136,7 +6657,7 @@ var operatorToken = new ExternalTokenizer((input, stack) => {
 function identifierChar(ch, start) {
   return ch >= 65 && ch <= 90 || ch >= 97 && ch <= 122 || ch == 95 || ch >= 192 || !start && ch >= 48 && ch <= 57;
 }
-var jsx = new ExternalTokenizer((input, stack) => {
+var jsx2 = new ExternalTokenizer((input, stack) => {
   if (input.next != lt || !stack.dialectEnabled(Dialect_jsx)) return;
   input.advance();
   if (input.next == slash2) return;
@@ -7248,7 +6769,7 @@ var parser3 = LRParser.deserialize({
   skippedNodes: [0, 5, 6, 277],
   repeatNodeCount: 37,
   tokenData: "$Fq07[R!bOX%ZXY+gYZ-yZ[+g[]%Z]^.c^p%Zpq+gqr/mrs3cst:_tuEruvJSvwLkwx! Yxy!'iyz!(sz{!)}{|!,q|}!.O}!O!,q!O!P!/Y!P!Q!9j!Q!R#:O!R![#<_![!]#I_!]!^#Jk!^!_#Ku!_!`$![!`!a$$v!a!b$*T!b!c$,r!c!}Er!}#O$-|#O#P$/W#P#Q$4o#Q#R$5y#R#SEr#S#T$7W#T#o$8b#o#p$<r#p#q$=h#q#r$>x#r#s$@U#s$f%Z$f$g+g$g#BYEr#BY#BZ$A`#BZ$ISEr$IS$I_$A`$I_$I|Er$I|$I}$Dk$I}$JO$Dk$JO$JTEr$JT$JU$A`$JU$KVEr$KV$KW$A`$KW&FUEr&FU&FV$A`&FV;'SEr;'S;=`I|<%l?HTEr?HT?HU$A`?HUOEr(n%d_$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z&j&hT$i&jO!^&c!_#o&c#p;'S&c;'S;=`&w<%lO&c&j&zP;=`<%l&c'|'U]$i&j(Y!bOY&}YZ&cZw&}wx&cx!^&}!^!_'}!_#O&}#O#P&c#P#o&}#o#p'}#p;'S&};'S;=`(l<%lO&}!b(SU(Y!bOY'}Zw'}x#O'}#P;'S'};'S;=`(f<%lO'}!b(iP;=`<%l'}'|(oP;=`<%l&}'[(y]$i&j(VpOY(rYZ&cZr(rrs&cs!^(r!^!_)r!_#O(r#O#P&c#P#o(r#o#p)r#p;'S(r;'S;=`*a<%lO(rp)wU(VpOY)rZr)rs#O)r#P;'S)r;'S;=`*Z<%lO)rp*^P;=`<%l)r'[*dP;=`<%l(r#S*nX(Vp(Y!bOY*gZr*grs'}sw*gwx)rx#O*g#P;'S*g;'S;=`+Z<%lO*g#S+^P;=`<%l*g(n+dP;=`<%l%Z07[+rq$i&j(Vp(Y!b'{0/lOX%ZXY+gYZ&cZ[+g[p%Zpq+gqr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p$f%Z$f$g+g$g#BY%Z#BY#BZ+g#BZ$IS%Z$IS$I_+g$I_$JT%Z$JT$JU+g$JU$KV%Z$KV$KW+g$KW&FU%Z&FU&FV+g&FV;'S%Z;'S;=`+a<%l?HT%Z?HT?HU+g?HUO%Z07[.ST(W#S$i&j'|0/lO!^&c!_#o&c#p;'S&c;'S;=`&w<%lO&c07[.n_$i&j(Vp(Y!b'|0/lOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z)3p/x`$i&j!p),Q(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`0z!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW1V`#v(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`2X!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW2d_#v(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'At3l_(U':f$i&j(Y!bOY4kYZ5qZr4krs7nsw4kwx5qx!^4k!^!_8p!_#O4k#O#P5q#P#o4k#o#p8p#p;'S4k;'S;=`:X<%lO4k(^4r_$i&j(Y!bOY4kYZ5qZr4krs7nsw4kwx5qx!^4k!^!_8p!_#O4k#O#P5q#P#o4k#o#p8p#p;'S4k;'S;=`:X<%lO4k&z5vX$i&jOr5qrs6cs!^5q!^!_6y!_#o5q#o#p6y#p;'S5q;'S;=`7h<%lO5q&z6jT$d`$i&jO!^&c!_#o&c#p;'S&c;'S;=`&w<%lO&c`6|TOr6yrs7]s;'S6y;'S;=`7b<%lO6y`7bO$d``7eP;=`<%l6y&z7kP;=`<%l5q(^7w]$d`$i&j(Y!bOY&}YZ&cZw&}wx&cx!^&}!^!_'}!_#O&}#O#P&c#P#o&}#o#p'}#p;'S&};'S;=`(l<%lO&}!r8uZ(Y!bOY8pYZ6yZr8prs9hsw8pwx6yx#O8p#O#P6y#P;'S8p;'S;=`:R<%lO8p!r9oU$d`(Y!bOY'}Zw'}x#O'}#P;'S'};'S;=`(f<%lO'}!r:UP;=`<%l8p(^:[P;=`<%l4k%9[:hh$i&j(Vp(Y!bOY%ZYZ&cZq%Zqr<Srs&}st%ZtuCruw%Zwx(rx!^%Z!^!_*g!_!c%Z!c!}Cr!}#O%Z#O#P&c#P#R%Z#R#SCr#S#T%Z#T#oCr#o#p*g#p$g%Z$g;'SCr;'S;=`El<%lOCr(r<__WS$i&j(Vp(Y!bOY<SYZ&cZr<Srs=^sw<Swx@nx!^<S!^!_Bm!_#O<S#O#P>`#P#o<S#o#pBm#p;'S<S;'S;=`Cl<%lO<S(Q=g]WS$i&j(Y!bOY=^YZ&cZw=^wx>`x!^=^!^!_?q!_#O=^#O#P>`#P#o=^#o#p?q#p;'S=^;'S;=`@h<%lO=^&n>gXWS$i&jOY>`YZ&cZ!^>`!^!_?S!_#o>`#o#p?S#p;'S>`;'S;=`?k<%lO>`S?XSWSOY?SZ;'S?S;'S;=`?e<%lO?SS?hP;=`<%l?S&n?nP;=`<%l>`!f?xWWS(Y!bOY?qZw?qwx?Sx#O?q#O#P?S#P;'S?q;'S;=`@b<%lO?q!f@eP;=`<%l?q(Q@kP;=`<%l=^'`@w]WS$i&j(VpOY@nYZ&cZr@nrs>`s!^@n!^!_Ap!_#O@n#O#P>`#P#o@n#o#pAp#p;'S@n;'S;=`Bg<%lO@ntAwWWS(VpOYApZrAprs?Ss#OAp#O#P?S#P;'SAp;'S;=`Ba<%lOAptBdP;=`<%lAp'`BjP;=`<%l@n#WBvYWS(Vp(Y!bOYBmZrBmrs?qswBmwxApx#OBm#O#P?S#P;'SBm;'S;=`Cf<%lOBm#WCiP;=`<%lBm(rCoP;=`<%l<S%9[C}i$i&j(n%1l(Vp(Y!bOY%ZYZ&cZr%Zrs&}st%ZtuCruw%Zwx(rx!Q%Z!Q![Cr![!^%Z!^!_*g!_!c%Z!c!}Cr!}#O%Z#O#P&c#P#R%Z#R#SCr#S#T%Z#T#oCr#o#p*g#p$g%Z$g;'SCr;'S;=`El<%lOCr%9[EoP;=`<%lCr07[FRk$i&j(Vp(Y!b$]#t(S,2j(d$I[OY%ZYZ&cZr%Zrs&}st%ZtuEruw%Zwx(rx}%Z}!OGv!O!Q%Z!Q![Er![!^%Z!^!_*g!_!c%Z!c!}Er!}#O%Z#O#P&c#P#R%Z#R#SEr#S#T%Z#T#oEr#o#p*g#p$g%Z$g;'SEr;'S;=`I|<%lOEr+dHRk$i&j(Vp(Y!b$]#tOY%ZYZ&cZr%Zrs&}st%ZtuGvuw%Zwx(rx}%Z}!OGv!O!Q%Z!Q![Gv![!^%Z!^!_*g!_!c%Z!c!}Gv!}#O%Z#O#P&c#P#R%Z#R#SGv#S#T%Z#T#oGv#o#p*g#p$g%Z$g;'SGv;'S;=`Iv<%lOGv+dIyP;=`<%lGv07[JPP;=`<%lEr(KWJ_`$i&j(Vp(Y!b#p(ChOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KWKl_$i&j$Q(Ch(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z,#xLva(y+JY$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sv%ZvwM{wx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KWNW`$i&j#z(Ch(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'At! c_(X';W$i&j(VpOY!!bYZ!#hZr!!brs!#hsw!!bwx!$xx!^!!b!^!_!%z!_#O!!b#O#P!#h#P#o!!b#o#p!%z#p;'S!!b;'S;=`!'c<%lO!!b'l!!i_$i&j(VpOY!!bYZ!#hZr!!brs!#hsw!!bwx!$xx!^!!b!^!_!%z!_#O!!b#O#P!#h#P#o!!b#o#p!%z#p;'S!!b;'S;=`!'c<%lO!!b&z!#mX$i&jOw!#hwx6cx!^!#h!^!_!$Y!_#o!#h#o#p!$Y#p;'S!#h;'S;=`!$r<%lO!#h`!$]TOw!$Ywx7]x;'S!$Y;'S;=`!$l<%lO!$Y`!$oP;=`<%l!$Y&z!$uP;=`<%l!#h'l!%R]$d`$i&j(VpOY(rYZ&cZr(rrs&cs!^(r!^!_)r!_#O(r#O#P&c#P#o(r#o#p)r#p;'S(r;'S;=`*a<%lO(r!Q!&PZ(VpOY!%zYZ!$YZr!%zrs!$Ysw!%zwx!&rx#O!%z#O#P!$Y#P;'S!%z;'S;=`!']<%lO!%z!Q!&yU$d`(VpOY)rZr)rs#O)r#P;'S)r;'S;=`*Z<%lO)r!Q!'`P;=`<%l!%z'l!'fP;=`<%l!!b/5|!'t_!l/.^$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z#&U!)O_!k!Lf$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z-!n!*[b$i&j(Vp(Y!b(T%&f#q(ChOY%ZYZ&cZr%Zrs&}sw%Zwx(rxz%Zz{!+d{!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW!+o`$i&j(Vp(Y!b#n(ChOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z+;x!,|`$i&j(Vp(Y!br+4YOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z,$U!.Z_!]+Jf$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z07[!/ec$i&j(Vp(Y!b!Q.2^OY%ZYZ&cZr%Zrs&}sw%Zwx(rx!O%Z!O!P!0p!P!Q%Z!Q![!3Y![!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z#%|!0ya$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!O%Z!O!P!2O!P!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z#%|!2Z_![!L^$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad!3eg$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q![!3Y![!^%Z!^!_*g!_!g%Z!g!h!4|!h#O%Z#O#P&c#P#R%Z#R#S!3Y#S#X%Z#X#Y!4|#Y#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad!5Vg$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx{%Z{|!6n|}%Z}!O!6n!O!Q%Z!Q![!8S![!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S!8S#S#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad!6wc$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q![!8S![!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S!8S#S#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad!8_c$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q![!8S![!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S!8S#S#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z07[!9uf$i&j(Vp(Y!b#o(ChOY!;ZYZ&cZr!;Zrs!<nsw!;Zwx!Lcxz!;Zz{#-}{!P!;Z!P!Q#/d!Q!^!;Z!^!_#(i!_!`#7S!`!a#8i!a!}!;Z!}#O#,f#O#P!Dy#P#o!;Z#o#p#(i#p;'S!;Z;'S;=`#-w<%lO!;Z?O!;fb$i&j(Vp(Y!b!X7`OY!;ZYZ&cZr!;Zrs!<nsw!;Zwx!Lcx!P!;Z!P!Q#&`!Q!^!;Z!^!_#(i!_!}!;Z!}#O#,f#O#P!Dy#P#o!;Z#o#p#(i#p;'S!;Z;'S;=`#-w<%lO!;Z>^!<w`$i&j(Y!b!X7`OY!<nYZ&cZw!<nwx!=yx!P!<n!P!Q!Eq!Q!^!<n!^!_!Gr!_!}!<n!}#O!KS#O#P!Dy#P#o!<n#o#p!Gr#p;'S!<n;'S;=`!L]<%lO!<n<z!>Q^$i&j!X7`OY!=yYZ&cZ!P!=y!P!Q!>|!Q!^!=y!^!_!@c!_!}!=y!}#O!CW#O#P!Dy#P#o!=y#o#p!@c#p;'S!=y;'S;=`!Ek<%lO!=y<z!?Td$i&j!X7`O!^&c!_#W&c#W#X!>|#X#Z&c#Z#[!>|#[#]&c#]#^!>|#^#a&c#a#b!>|#b#g&c#g#h!>|#h#i&c#i#j!>|#j#k!>|#k#m&c#m#n!>|#n#o&c#p;'S&c;'S;=`&w<%lO&c7`!@hX!X7`OY!@cZ!P!@c!P!Q!AT!Q!}!@c!}#O!Ar#O#P!Bq#P;'S!@c;'S;=`!CQ<%lO!@c7`!AYW!X7`#W#X!AT#Z#[!AT#]#^!AT#a#b!AT#g#h!AT#i#j!AT#j#k!AT#m#n!AT7`!AuVOY!ArZ#O!Ar#O#P!B[#P#Q!@c#Q;'S!Ar;'S;=`!Bk<%lO!Ar7`!B_SOY!ArZ;'S!Ar;'S;=`!Bk<%lO!Ar7`!BnP;=`<%l!Ar7`!BtSOY!@cZ;'S!@c;'S;=`!CQ<%lO!@c7`!CTP;=`<%l!@c<z!C][$i&jOY!CWYZ&cZ!^!CW!^!_!Ar!_#O!CW#O#P!DR#P#Q!=y#Q#o!CW#o#p!Ar#p;'S!CW;'S;=`!Ds<%lO!CW<z!DWX$i&jOY!CWYZ&cZ!^!CW!^!_!Ar!_#o!CW#o#p!Ar#p;'S!CW;'S;=`!Ds<%lO!CW<z!DvP;=`<%l!CW<z!EOX$i&jOY!=yYZ&cZ!^!=y!^!_!@c!_#o!=y#o#p!@c#p;'S!=y;'S;=`!Ek<%lO!=y<z!EnP;=`<%l!=y>^!Ezl$i&j(Y!b!X7`OY&}YZ&cZw&}wx&cx!^&}!^!_'}!_#O&}#O#P&c#P#W&}#W#X!Eq#X#Z&}#Z#[!Eq#[#]&}#]#^!Eq#^#a&}#a#b!Eq#b#g&}#g#h!Eq#h#i&}#i#j!Eq#j#k!Eq#k#m&}#m#n!Eq#n#o&}#o#p'}#p;'S&};'S;=`(l<%lO&}8r!GyZ(Y!b!X7`OY!GrZw!Grwx!@cx!P!Gr!P!Q!Hl!Q!}!Gr!}#O!JU#O#P!Bq#P;'S!Gr;'S;=`!J|<%lO!Gr8r!Hse(Y!b!X7`OY'}Zw'}x#O'}#P#W'}#W#X!Hl#X#Z'}#Z#[!Hl#[#]'}#]#^!Hl#^#a'}#a#b!Hl#b#g'}#g#h!Hl#h#i'}#i#j!Hl#j#k!Hl#k#m'}#m#n!Hl#n;'S'};'S;=`(f<%lO'}8r!JZX(Y!bOY!JUZw!JUwx!Arx#O!JU#O#P!B[#P#Q!Gr#Q;'S!JU;'S;=`!Jv<%lO!JU8r!JyP;=`<%l!JU8r!KPP;=`<%l!Gr>^!KZ^$i&j(Y!bOY!KSYZ&cZw!KSwx!CWx!^!KS!^!_!JU!_#O!KS#O#P!DR#P#Q!<n#Q#o!KS#o#p!JU#p;'S!KS;'S;=`!LV<%lO!KS>^!LYP;=`<%l!KS>^!L`P;=`<%l!<n=l!Ll`$i&j(Vp!X7`OY!LcYZ&cZr!Lcrs!=ys!P!Lc!P!Q!Mn!Q!^!Lc!^!_# o!_!}!Lc!}#O#%P#O#P!Dy#P#o!Lc#o#p# o#p;'S!Lc;'S;=`#&Y<%lO!Lc=l!Mwl$i&j(Vp!X7`OY(rYZ&cZr(rrs&cs!^(r!^!_)r!_#O(r#O#P&c#P#W(r#W#X!Mn#X#Z(r#Z#[!Mn#[#](r#]#^!Mn#^#a(r#a#b!Mn#b#g(r#g#h!Mn#h#i(r#i#j!Mn#j#k!Mn#k#m(r#m#n!Mn#n#o(r#o#p)r#p;'S(r;'S;=`*a<%lO(r8Q# vZ(Vp!X7`OY# oZr# ors!@cs!P# o!P!Q#!i!Q!}# o!}#O#$R#O#P!Bq#P;'S# o;'S;=`#$y<%lO# o8Q#!pe(Vp!X7`OY)rZr)rs#O)r#P#W)r#W#X#!i#X#Z)r#Z#[#!i#[#])r#]#^#!i#^#a)r#a#b#!i#b#g)r#g#h#!i#h#i)r#i#j#!i#j#k#!i#k#m)r#m#n#!i#n;'S)r;'S;=`*Z<%lO)r8Q#$WX(VpOY#$RZr#$Rrs!Ars#O#$R#O#P!B[#P#Q# o#Q;'S#$R;'S;=`#$s<%lO#$R8Q#$vP;=`<%l#$R8Q#$|P;=`<%l# o=l#%W^$i&j(VpOY#%PYZ&cZr#%Prs!CWs!^#%P!^!_#$R!_#O#%P#O#P!DR#P#Q!Lc#Q#o#%P#o#p#$R#p;'S#%P;'S;=`#&S<%lO#%P=l#&VP;=`<%l#%P=l#&]P;=`<%l!Lc?O#&kn$i&j(Vp(Y!b!X7`OY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#W%Z#W#X#&`#X#Z%Z#Z#[#&`#[#]%Z#]#^#&`#^#a%Z#a#b#&`#b#g%Z#g#h#&`#h#i%Z#i#j#&`#j#k#&`#k#m%Z#m#n#&`#n#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z9d#(r](Vp(Y!b!X7`OY#(iZr#(irs!Grsw#(iwx# ox!P#(i!P!Q#)k!Q!}#(i!}#O#+`#O#P!Bq#P;'S#(i;'S;=`#,`<%lO#(i9d#)th(Vp(Y!b!X7`OY*gZr*grs'}sw*gwx)rx#O*g#P#W*g#W#X#)k#X#Z*g#Z#[#)k#[#]*g#]#^#)k#^#a*g#a#b#)k#b#g*g#g#h#)k#h#i*g#i#j#)k#j#k#)k#k#m*g#m#n#)k#n;'S*g;'S;=`+Z<%lO*g9d#+gZ(Vp(Y!bOY#+`Zr#+`rs!JUsw#+`wx#$Rx#O#+`#O#P!B[#P#Q#(i#Q;'S#+`;'S;=`#,Y<%lO#+`9d#,]P;=`<%l#+`9d#,cP;=`<%l#(i?O#,o`$i&j(Vp(Y!bOY#,fYZ&cZr#,frs!KSsw#,fwx#%Px!^#,f!^!_#+`!_#O#,f#O#P!DR#P#Q!;Z#Q#o#,f#o#p#+`#p;'S#,f;'S;=`#-q<%lO#,f?O#-tP;=`<%l#,f?O#-zP;=`<%l!;Z07[#.[b$i&j(Vp(Y!b'}0/l!X7`OY!;ZYZ&cZr!;Zrs!<nsw!;Zwx!Lcx!P!;Z!P!Q#&`!Q!^!;Z!^!_#(i!_!}!;Z!}#O#,f#O#P!Dy#P#o!;Z#o#p#(i#p;'S!;Z;'S;=`#-w<%lO!;Z07[#/o_$i&j(Vp(Y!bT0/lOY#/dYZ&cZr#/drs#0nsw#/dwx#4Ox!^#/d!^!_#5}!_#O#/d#O#P#1p#P#o#/d#o#p#5}#p;'S#/d;'S;=`#6|<%lO#/d06j#0w]$i&j(Y!bT0/lOY#0nYZ&cZw#0nwx#1px!^#0n!^!_#3R!_#O#0n#O#P#1p#P#o#0n#o#p#3R#p;'S#0n;'S;=`#3x<%lO#0n05W#1wX$i&jT0/lOY#1pYZ&cZ!^#1p!^!_#2d!_#o#1p#o#p#2d#p;'S#1p;'S;=`#2{<%lO#1p0/l#2iST0/lOY#2dZ;'S#2d;'S;=`#2u<%lO#2d0/l#2xP;=`<%l#2d05W#3OP;=`<%l#1p01O#3YW(Y!bT0/lOY#3RZw#3Rwx#2dx#O#3R#O#P#2d#P;'S#3R;'S;=`#3r<%lO#3R01O#3uP;=`<%l#3R06j#3{P;=`<%l#0n05x#4X]$i&j(VpT0/lOY#4OYZ&cZr#4Ors#1ps!^#4O!^!_#5Q!_#O#4O#O#P#1p#P#o#4O#o#p#5Q#p;'S#4O;'S;=`#5w<%lO#4O00^#5XW(VpT0/lOY#5QZr#5Qrs#2ds#O#5Q#O#P#2d#P;'S#5Q;'S;=`#5q<%lO#5Q00^#5tP;=`<%l#5Q05x#5zP;=`<%l#4O01p#6WY(Vp(Y!bT0/lOY#5}Zr#5}rs#3Rsw#5}wx#5Qx#O#5}#O#P#2d#P;'S#5};'S;=`#6v<%lO#5}01p#6yP;=`<%l#5}07[#7PP;=`<%l#/d)3h#7ab$i&j$Q(Ch(Vp(Y!b!X7`OY!;ZYZ&cZr!;Zrs!<nsw!;Zwx!Lcx!P!;Z!P!Q#&`!Q!^!;Z!^!_#(i!_!}!;Z!}#O#,f#O#P!Dy#P#o!;Z#o#p#(i#p;'S!;Z;'S;=`#-w<%lO!;ZAt#8vb$Z#t$i&j(Vp(Y!b!X7`OY!;ZYZ&cZr!;Zrs!<nsw!;Zwx!Lcx!P!;Z!P!Q#&`!Q!^!;Z!^!_#(i!_!}!;Z!}#O#,f#O#P!Dy#P#o!;Z#o#p#(i#p;'S!;Z;'S;=`#-w<%lO!;Z'Ad#:Zp$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!O%Z!O!P!3Y!P!Q%Z!Q![#<_![!^%Z!^!_*g!_!g%Z!g!h!4|!h#O%Z#O#P&c#P#R%Z#R#S#<_#S#U%Z#U#V#?i#V#X%Z#X#Y!4|#Y#b%Z#b#c#>_#c#d#Bq#d#l%Z#l#m#Es#m#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#<jk$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!O%Z!O!P!3Y!P!Q%Z!Q![#<_![!^%Z!^!_*g!_!g%Z!g!h!4|!h#O%Z#O#P&c#P#R%Z#R#S#<_#S#X%Z#X#Y!4|#Y#b%Z#b#c#>_#c#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#>j_$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#?rd$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q!R#AQ!R!S#AQ!S!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S#AQ#S#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#A]f$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q!R#AQ!R!S#AQ!S!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S#AQ#S#b%Z#b#c#>_#c#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#Bzc$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q!Y#DV!Y!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S#DV#S#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#Dbe$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q!Y#DV!Y!^%Z!^!_*g!_#O%Z#O#P&c#P#R%Z#R#S#DV#S#b%Z#b#c#>_#c#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#E|g$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q![#Ge![!^%Z!^!_*g!_!c%Z!c!i#Ge!i#O%Z#O#P&c#P#R%Z#R#S#Ge#S#T%Z#T#Z#Ge#Z#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z'Ad#Gpi$i&j(Vp(Y!bs'9tOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!Q%Z!Q![#Ge![!^%Z!^!_*g!_!c%Z!c!i#Ge!i#O%Z#O#P&c#P#R%Z#R#S#Ge#S#T%Z#T#Z#Ge#Z#b%Z#b#c#>_#c#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z*)x#Il_!g$b$i&j$O)Lv(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z)[#Jv_al$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z04f#LS^h#)`#R-<U(Vp(Y!b$n7`OY*gZr*grs'}sw*gwx)rx!P*g!P!Q#MO!Q!^*g!^!_#Mt!_!`$ f!`#O*g#P;'S*g;'S;=`+Z<%lO*g(n#MXX$k&j(Vp(Y!bOY*gZr*grs'}sw*gwx)rx#O*g#P;'S*g;'S;=`+Z<%lO*g(El#M}Z#r(Ch(Vp(Y!bOY*gZr*grs'}sw*gwx)rx!_*g!_!`#Np!`#O*g#P;'S*g;'S;=`+Z<%lO*g(El#NyX$Q(Ch(Vp(Y!bOY*gZr*grs'}sw*gwx)rx#O*g#P;'S*g;'S;=`+Z<%lO*g(El$ oX#s(Ch(Vp(Y!bOY*gZr*grs'}sw*gwx)rx#O*g#P;'S*g;'S;=`+Z<%lO*g*)x$!ga#`*!Y$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`0z!`!a$#l!a#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(K[$#w_#k(Cl$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z*)x$%Vag!*r#s(Ch$f#|$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`$&[!`!a$'f!a#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW$&g_#s(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW$'qa#r(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`!a$(v!a#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW$)R`#r(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(Kd$*`a(q(Ct$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!a%Z!a!b$+e!b#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW$+p`$i&j#{(Ch(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z%#`$,}_!|$Ip$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z04f$.X_!S0,v$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(n$/]Z$i&jO!^$0O!^!_$0f!_#i$0O#i#j$0k#j#l$0O#l#m$2^#m#o$0O#o#p$0f#p;'S$0O;'S;=`$4i<%lO$0O(n$0VT_#S$i&jO!^&c!_#o&c#p;'S&c;'S;=`&w<%lO&c#S$0kO_#S(n$0p[$i&jO!Q&c!Q![$1f![!^&c!_!c&c!c!i$1f!i#T&c#T#Z$1f#Z#o&c#o#p$3|#p;'S&c;'S;=`&w<%lO&c(n$1kZ$i&jO!Q&c!Q![$2^![!^&c!_!c&c!c!i$2^!i#T&c#T#Z$2^#Z#o&c#p;'S&c;'S;=`&w<%lO&c(n$2cZ$i&jO!Q&c!Q![$3U![!^&c!_!c&c!c!i$3U!i#T&c#T#Z$3U#Z#o&c#p;'S&c;'S;=`&w<%lO&c(n$3ZZ$i&jO!Q&c!Q![$0O![!^&c!_!c&c!c!i$0O!i#T&c#T#Z$0O#Z#o&c#p;'S&c;'S;=`&w<%lO&c#S$4PR!Q![$4Y!c!i$4Y#T#Z$4Y#S$4]S!Q![$4Y!c!i$4Y#T#Z$4Y#q#r$0f(n$4lP;=`<%l$0O#1[$4z_!Y#)l$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z(KW$6U`#x(Ch$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z+;p$7c_$i&j(Vp(Y!b(`+4QOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z07[$8qk$i&j(Vp(Y!b(S,2j$_#t(d$I[OY%ZYZ&cZr%Zrs&}st%Ztu$8buw%Zwx(rx}%Z}!O$:f!O!Q%Z!Q![$8b![!^%Z!^!_*g!_!c%Z!c!}$8b!}#O%Z#O#P&c#P#R%Z#R#S$8b#S#T%Z#T#o$8b#o#p*g#p$g%Z$g;'S$8b;'S;=`$<l<%lO$8b+d$:qk$i&j(Vp(Y!b$_#tOY%ZYZ&cZr%Zrs&}st%Ztu$:fuw%Zwx(rx}%Z}!O$:f!O!Q%Z!Q![$:f![!^%Z!^!_*g!_!c%Z!c!}$:f!}#O%Z#O#P&c#P#R%Z#R#S$:f#S#T%Z#T#o$:f#o#p*g#p$g%Z$g;'S$:f;'S;=`$<f<%lO$:f+d$<iP;=`<%l$:f07[$<oP;=`<%l$8b#Jf$<{X!_#Hb(Vp(Y!bOY*gZr*grs'}sw*gwx)rx#O*g#P;'S*g;'S;=`+Z<%lO*g,#x$=sa(x+JY$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_!`Ka!`#O%Z#O#P&c#P#o%Z#o#p*g#p#q$+e#q;'S%Z;'S;=`+a<%lO%Z)>v$?V_!^(CdvBr$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z?O$@a_!q7`$i&j(Vp(Y!bOY%ZYZ&cZr%Zrs&}sw%Zwx(rx!^%Z!^!_*g!_#O%Z#O#P&c#P#o%Z#o#p*g#p;'S%Z;'S;=`+a<%lO%Z07[$Aq|$i&j(Vp(Y!b'{0/l$]#t(S,2j(d$I[OX%ZXY+gYZ&cZ[+g[p%Zpq+gqr%Zrs&}st%ZtuEruw%Zwx(rx}%Z}!OGv!O!Q%Z!Q![Er![!^%Z!^!_*g!_!c%Z!c!}Er!}#O%Z#O#P&c#P#R%Z#R#SEr#S#T%Z#T#oEr#o#p*g#p$f%Z$f$g+g$g#BYEr#BY#BZ$A`#BZ$ISEr$IS$I_$A`$I_$JTEr$JT$JU$A`$JU$KVEr$KV$KW$A`$KW&FUEr&FU&FV$A`&FV;'SEr;'S;=`I|<%l?HTEr?HT?HU$A`?HUOEr07[$D|k$i&j(Vp(Y!b'|0/l$]#t(S,2j(d$I[OY%ZYZ&cZr%Zrs&}st%ZtuEruw%Zwx(rx}%Z}!OGv!O!Q%Z!Q![Er![!^%Z!^!_*g!_!c%Z!c!}Er!}#O%Z#O#P&c#P#R%Z#R#SEr#S#T%Z#T#oEr#o#p*g#p$g%Z$g;'SEr;'S;=`I|<%lOEr",
-  tokenizers: [noSemicolon, noSemicolonType, operatorToken, jsx, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, insertSemicolon, new LocalTokenGroup("$S~RRtu[#O#Pg#S#T#|~_P#o#pb~gOx~~jVO#i!P#i#j!U#j#l!P#l#m!q#m;'S!P;'S;=`#v<%lO!P~!UO!U~~!XS!Q![!e!c!i!e#T#Z!e#o#p#Z~!hR!Q![!q!c!i!q#T#Z!q~!tR!Q![!}!c!i!}#T#Z!}~#QR!Q![!P!c!i!P#T#Z!P~#^R!Q![#g!c!i#g#T#Z#g~#jS!Q![#g!c!i#g#T#Z#g#q#r!P~#yP;=`<%l!P~$RO(b~~", 141, 339), new LocalTokenGroup("j~RQYZXz{^~^O(P~~aP!P!Qd~iO(Q~~", 25, 322)],
+  tokenizers: [noSemicolon, noSemicolonType, operatorToken, jsx2, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, insertSemicolon, new LocalTokenGroup("$S~RRtu[#O#Pg#S#T#|~_P#o#pb~gOx~~jVO#i!P#i#j!U#j#l!P#l#m!q#m;'S!P;'S;=`#v<%lO!P~!UO!U~~!XS!Q![!e!c!i!e#T#Z!e#o#p#Z~!hR!Q![!q!c!i!q#T#Z!q~!tR!Q![!}!c!i!}#T#Z!}~#QR!Q![!P!c!i!P#T#Z!P~#^R!Q![#g!c!i#g#T#Z#g~#jS!Q![#g!c!i#g#T#Z#g#q#r!P~#yP;=`<%l!P~$RO(b~~", 141, 339), new LocalTokenGroup("j~RQYZXz{^~^O(P~~aP!P!Qd~iO(Q~~", 25, 322)],
   topRules: { "Script": [0, 7], "SingleExpression": [1, 275], "SingleClassItem": [2, 276] },
   dialects: { jsx: 0, ts: 15098 },
   dynamicPrecedences: { "80": 1, "82": 1, "94": 1, "169": 1, "199": 1 },
@@ -7259,7 +6780,7 @@ var parser3 = LRParser.deserialize({
 // node_modules/@codemirror/lang-javascript/dist/index.js
 import { syntaxTree as syntaxTree2, LRLanguage as LRLanguage2, indentNodeProp as indentNodeProp2, continuedIndent as continuedIndent2, flatIndent, delimitedIndent, foldNodeProp as foldNodeProp2, foldInside as foldInside2, defineLanguageFacet, sublanguageProp, LanguageSupport as LanguageSupport2 } from "@codemirror/language";
 import { EditorSelection } from "@codemirror/state";
-import { EditorView as EditorView8 } from "@codemirror/view";
+import { EditorView as EditorView7 } from "@codemirror/view";
 import { snippetCompletion, ifNotIn, completeFromList } from "@codemirror/autocomplete";
 var snippets = [
   /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
@@ -7524,7 +7045,7 @@ function elementName(doc, tree, max = doc.length) {
   return "";
 }
 var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
-var autoCloseTags = /* @__PURE__ */ EditorView8.inputHandler.of((view, from, to, text, defaultInsert) => {
+var autoCloseTags = /* @__PURE__ */ EditorView7.inputHandler.of((view, from, to, text, defaultInsert) => {
   if ((android ? view.composing : view.compositionStarted) || view.state.readOnly || from != to || text != ">" && text != "/" || !javascriptLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = defaultInsert(), { state } = base;
@@ -7559,7 +7080,7 @@ var autoCloseTags = /* @__PURE__ */ EditorView8.inputHandler.of((view, from, to,
 });
 
 // node_modules/@codemirror/lang-html/dist/index.js
-import { EditorView as EditorView9 } from "@codemirror/view";
+import { EditorView as EditorView8 } from "@codemirror/view";
 import { EditorSelection as EditorSelection2 } from "@codemirror/state";
 import { syntaxTree as syntaxTree3, LRLanguage as LRLanguage3, indentNodeProp as indentNodeProp3, foldNodeProp as foldNodeProp3, bracketMatchingHandle, LanguageSupport as LanguageSupport3 } from "@codemirror/language";
 var Targets = ["_blank", "_self", "_top", "_parent"];
@@ -8250,7 +7771,7 @@ function html(config = {}) {
   ]);
 }
 var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
-var autoCloseTags2 = /* @__PURE__ */ EditorView9.inputHandler.of((view, from, to, text, insertTransaction) => {
+var autoCloseTags2 = /* @__PURE__ */ EditorView8.inputHandler.of((view, from, to, text, insertTransaction) => {
   if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = insertTransaction(), { state } = base;
@@ -9076,10 +8597,10 @@ var atomicIndents = [
 ];
 
 // src/app/obsidian-editor/extensions/MarkdownPasteHandler.js
-import { EditorView as EditorView10 } from "@codemirror/view";
+import { EditorView as EditorView9 } from "@codemirror/view";
 import { Prec as Prec2 } from "@codemirror/state";
 import { marked } from "marked";
-var markdownPasteHandler = Prec2.highest(EditorView10.domEventHandlers({
+var markdownPasteHandler = Prec2.highest(EditorView9.domEventHandlers({
   paste(event, view) {
     console.log("[MarkdownPasteHandler] Paste event triggered.");
     const clipboardData = event.clipboardData || window.clipboardData;
@@ -9370,16 +8891,16 @@ var createCustomHighlightStyle = () => {
       return [];
     }
     const validStyles = [];
-    if (tags5.heading1) validStyles.push({ tag: tags5.heading1, fontSize: "1.6em", fontWeight: "bold" });
-    if (tags5.heading2) validStyles.push({ tag: tags5.heading2, fontSize: "1.4em", fontWeight: "bold" });
-    if (tags5.heading3) validStyles.push({ tag: tags5.heading3, fontSize: "1.2em", fontWeight: "bold" });
-    if (tags5.heading4) validStyles.push({ tag: tags5.heading4, fontSize: "1.1em", fontWeight: "bold" });
-    if (tags5.heading5) validStyles.push({ tag: tags5.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (tags5.heading6) validStyles.push({ tag: tags5.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (tags5.strong) validStyles.push({ tag: tags5.strong, fontWeight: "bold" });
-    if (tags5.emphasis) validStyles.push({ tag: tags5.emphasis, fontStyle: "italic" });
-    if (tags5.link) validStyles.push({ tag: tags5.link, color: "#2563eb", textDecoration: "underline" });
-    if (tags5.monospace) validStyles.push({ tag: tags5.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
+    if (tags5.heading1) validStyles.push({ tag: [tags5.heading1], fontSize: "1.6em", fontWeight: "bold" });
+    if (tags5.heading2) validStyles.push({ tag: [tags5.heading2], fontSize: "1.4em", fontWeight: "bold" });
+    if (tags5.heading3) validStyles.push({ tag: [tags5.heading3], fontSize: "1.2em", fontWeight: "bold" });
+    if (tags5.heading4) validStyles.push({ tag: [tags5.heading4], fontSize: "1.1em", fontWeight: "bold" });
+    if (tags5.heading5) validStyles.push({ tag: [tags5.heading5], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags5.heading6) validStyles.push({ tag: [tags5.heading6], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags5.strong) validStyles.push({ tag: [tags5.strong], fontWeight: "bold" });
+    if (tags5.emphasis) validStyles.push({ tag: [tags5.emphasis], fontStyle: "italic" });
+    if (tags5.link) validStyles.push({ tag: [tags5.link], color: "#2563eb", textDecoration: "underline" });
+    if (tags5.monospace) validStyles.push({ tag: [tags5.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
     if (validStyles.length > 0) {
       return HighlightStyle2.define(validStyles);
     } else {
@@ -9479,7 +9000,7 @@ var createMarkdownKeymaps = (onSaveRef) => {
   ]);
 };
 var createEditorStyling = () => {
-  return EditorView11.theme({
+  return EditorView10.theme({
     "&": {
       height: "100%"
     },
@@ -9511,9 +9032,9 @@ var createEditorExtensions = (options) => {
     markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    EditorView11.lineWrapping,
+    EditorView10.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
-    editableCompartment.of(EditorView11.editable.of(true)),
+    editableCompartment.of(EditorView10.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
@@ -9532,109 +9053,162 @@ var createEditorExtensions = (options) => {
   return safeExtensions;
 };
 
-// src/contexts/ThemeContext.tsx
-import { createContext, useContext, useEffect, useState } from "react";
-import { jsx as jsx2 } from "react/jsx-runtime";
-var ThemeContext = createContext(void 0);
-function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState("light");
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-    setTheme(initialTheme);
-    setMounted(true);
-    applyThemeToHTML(initialTheme, true);
-  }, []);
-  const toggleTheme = () => {
-    if (!mounted) return;
-    setTheme((prevTheme) => {
-      const newTheme = prevTheme === "light" ? "dark" : "light";
-      localStorage.setItem("theme", newTheme);
-      applyThemeToHTML(newTheme, true);
-      return newTheme;
-    });
-  };
-  return /* @__PURE__ */ jsx2(ThemeContext.Provider, { value: { theme, toggleTheme, mounted }, children });
-}
-function useTheme() {
-  const context = useContext(ThemeContext);
-  if (context === void 0) {
-    throw new Error("useTheme must be used within a ThemeProvider");
-  }
-  return context;
-}
-function applyThemeToHTML(theme, isMounted = false) {
-  if (typeof document !== "undefined") {
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
-      document.body.classList.add("dark");
-      document.body.classList.remove("light");
-      if (isMounted) {
-        document.documentElement.style.setProperty("--background-primary", "#1e1e1e");
-        document.documentElement.style.setProperty("--background-secondary", "#252525");
-        document.documentElement.style.setProperty("--text-normal", "#dcddde");
-      }
-    } else {
-      document.documentElement.classList.add("light");
-      document.documentElement.classList.remove("dark");
-      document.body.classList.add("light");
-      document.body.classList.remove("dark");
-      if (isMounted) {
-        document.documentElement.style.setProperty("--background-primary", "#ffffff");
-        document.documentElement.style.setProperty("--background-secondary", "#f5f5f5");
-        document.documentElement.style.setProperty("--text-normal", "#1e1e1e");
-      }
+// src/app/obsidian-editor/utils/theme.ts
+import { EditorView as EditorView11 } from "@codemirror/view";
+var getCurrentDocumentTheme = () => {
+  if (typeof window !== "undefined") {
+    const storedTheme = localStorage.getItem("obsidian-theme");
+    if (storedTheme === "light" || storedTheme === "dark") {
+      return storedTheme;
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
     }
   }
-}
-
-// src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { jsx as jsx3, jsxs } from "react/jsx-runtime";
-var createSafeHighlightStyle = (styles) => {
-  try {
-    const highlightStyle = HighlightStyle3.define(styles);
-    const safeHighlightStyle = Object.assign(
-      Object.create(Object.getPrototypeOf(highlightStyle)),
-      highlightStyle
-    );
-    const originalStyleFn = highlightStyle.style;
-    Object.defineProperty(safeHighlightStyle, "style", {
-      value: function(tags6) {
-        if (!tags6 || !Array.isArray(tags6) || tags6.length === 0) {
-          return "";
-        }
-        return originalStyleFn.call(highlightStyle, tags6);
-      },
-      writable: false,
-      configurable: true
-    });
-    return safeHighlightStyle;
-  } catch (error) {
-    console.error("Error creating highlight style:", error);
-    return HighlightStyle3.define([]);
+  return "light";
+};
+var obsidianCssVariables = {
+  light: {
+    "--background-primary": "#ffffff",
+    "--background-secondary": "#f8f8f8",
+    "--text-normal": "#2e3338",
+    "--text-muted": "#888888",
+    "--text-faint": "#999999",
+    "--text-error": "#e75545",
+    "--text-accent": "#705dcf",
+    "--interactive-normal": "#f2f3f5",
+    "--interactive-hover": "#e9e9e9",
+    "--interactive-accent": "#7b6cd9",
+    "--interactive-accent-hover": "#8875ff",
+    "--link-color": "#5E81AC",
+    "--hr-color": "#dcddde",
+    "--tag-color": "#2991e3",
+    "--selection-background": "rgba(104, 134, 197, 0.3)",
+    "--code-background": "rgba(0, 0, 0, 0.03)"
+  },
+  dark: {
+    "--background-primary": "#2b2b2b",
+    "--background-secondary": "#363636",
+    "--text-normal": "#dcddde",
+    "--text-muted": "#999999",
+    "--text-faint": "#666666",
+    "--text-error": "#ff3333",
+    "--text-accent": "#a277ff",
+    "--interactive-normal": "#3f3f3f",
+    "--interactive-hover": "#4a4a4a",
+    "--interactive-accent": "#7b6cd9",
+    "--interactive-accent-hover": "#8875ff",
+    "--link-color": "#a8c0e0",
+    "--hr-color": "#444444",
+    "--tag-color": "#4097e3",
+    "--selection-background": "rgba(104, 134, 197, 0.2)",
+    "--code-background": "rgba(255, 255, 255, 0.05)"
   }
 };
-var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave }) => {
-  const [editorView, setEditorView] = useState2(null);
-  const [currentMode, setCurrentMode] = useState2("live");
-  const { theme, toggleTheme, mounted } = useTheme();
-  const editable = !readOnly;
-  const isInitialMount = useRef(true);
-  const initialContent = useRef(initialValue);
+var applyThemeVariables = (theme) => {
+  if (typeof document !== "undefined") {
+    const variables = obsidianCssVariables[theme];
+    const root = document.documentElement;
+    Object.entries(variables).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+  }
+};
+var lightTheme = EditorView11.theme({
+  "&": {
+    backgroundColor: "var(--background-primary, #ffffff)",
+    color: "var(--text-normal, #2e3338)"
+  },
+  ".cm-content": {
+    caretColor: "var(--text-normal, #2e3338)"
+  },
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "var(--text-normal, #2e3338)"
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.3))"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary, #f5f6f8)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "var(--background-secondary, #f5f6f8)"
+  }
+}, { dark: false });
+var darkTheme = EditorView11.theme({
+  "&": {
+    backgroundColor: "var(--background-primary, #202020)",
+    color: "var(--text-normal, #dcddde)"
+  },
+  ".cm-content": {
+    caretColor: "var(--text-normal, #dcddde)"
+  },
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "var(--text-normal, #dcddde)"
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.2))"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary, #161616)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "var(--background-secondary, #161616)"
+  }
+}, { dark: true });
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    const initialTheme = getCurrentDocumentTheme();
+    applyThemeVariables(initialTheme);
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+        if (!localStorage.getItem("obsidian-theme")) {
+          const newTheme = e.matches ? "dark" : "light";
+          applyThemeVariables(newTheme);
+        }
+      });
+    }
+  }, 0);
+}
+
+// src/app/obsidian-editor/components/EditorCore.tsx
+import { jsx as jsx3 } from "react/jsx-runtime";
+var EditorCore = ({
+  initialValue,
+  readOnly,
+  mode,
+  onChange,
+  onSave,
+  onEditorViewCreated
+}) => {
   const editorRef = useRef(null);
-  const editableCompartment = useRef(new Compartment()).current;
-  const themeCompartment = useRef(new Compartment()).current;
+  const editorViewRef = useRef(null);
+  const { theme, mounted } = useTheme();
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
+  const editableCompartment = useRef(new Compartment()).current;
+  const themeCompartment = useRef(new Compartment()).current;
   useEffect2(() => {
     onChangeRef.current = onChange;
     onSaveRef.current = onSave;
   }, [onChange, onSave]);
   useEffect2(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+    const editorElement = editorRef.current;
+    if (editorElement) {
+      editorElement.addEventListener("wheel", handleWheel, { passive: true });
+      return () => {
+        editorElement.removeEventListener("wheel", handleWheel);
+      };
+    }
+  }, []);
+  useEffect2(() => {
     if (!mounted || !editorRef.current) return;
+    if (editorViewRef.current) {
+      editorViewRef.current.destroy();
+    }
     try {
       const themeExtension = theme === "dark" ? darkTheme : lightTheme;
       const changeListener = EditorView12.updateListener.of((update) => {
@@ -9645,181 +9219,355 @@ var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave 
           }
         }
       });
-      let customHighlightStyle;
-      try {
-        if (typeof t === "object" && t !== null) {
-          const validTags = [];
-          if (t.heading1) validTags.push({ tag: t.heading1, class: "cm-header cm-header-1" });
-          if (t.heading2) validTags.push({ tag: t.heading2, class: "cm-header cm-header-2" });
-          if (t.heading3) validTags.push({ tag: t.heading3, class: "cm-header cm-header-3" });
-          if (t.strong) validTags.push({ tag: t.strong, class: "cm-strong" });
-          if (t.emphasis) validTags.push({ tag: t.emphasis, class: "cm-em" });
-          if (t.link) validTags.push({ tag: t.link, class: "cm-link" });
-          if (t.monospace) validTags.push({ tag: t.monospace, class: "cm-monospace" });
-          if (t.keyword) validTags.push({ tag: t.keyword, class: "cm-keyword" });
-          if (t.string) validTags.push({ tag: t.string, class: "cm-string" });
-          if (t.comment) validTags.push({ tag: t.comment, class: "cm-comment" });
-          if (t.name) validTags.push({ tag: t.name, class: "cm-def" });
-          if (validTags.length > 0) {
-            const safeHighlightStyle = createSafeHighlightStyle(validTags);
-            customHighlightStyle = syntaxHighlighting2(safeHighlightStyle);
-          } else {
-            console.warn("No valid lezer highlight tags found, using empty highlight style");
-            customHighlightStyle = [];
-          }
-        } else {
-          console.warn("Lezer highlight tags not available, using empty highlight style");
-          customHighlightStyle = [];
-        }
-      } catch (e) {
-        console.error("Error creating highlight style:", e);
-        customHighlightStyle = [];
-      }
       const extensions = [
         ...createEditorExtensions({
-          markdown: initialContent.current,
+          markdown: initialValue,
           editableCompartment,
           isDark: theme === "dark",
           themeExtension: themeCompartment.of(themeExtension),
           onSave: () => onSaveRef.current?.()
         }),
-        changeListener,
-        customHighlightStyle
+        changeListener
       ];
       const view = new EditorView12({
         state: EditorState5.create({
-          doc: initialContent.current,
+          doc: initialValue,
           extensions
         }),
         parent: editorRef.current
       });
-      setEditorView(view);
-      isInitialMount.current = false;
+      editorViewRef.current = view;
+      if (onEditorViewCreated) {
+        onEditorViewCreated(view);
+      }
       return () => {
         view.destroy();
       };
     } catch (error) {
       console.error("Error initializing CodeMirror:", error);
-      if (onChange) {
-        onChange(initialValue);
-      }
       throw error;
     }
-  }, [editableCompartment, mounted]);
+  }, [mounted]);
   useEffect2(() => {
-    if (!isInitialMount.current && editorView && initialValue !== initialContent.current) {
-      try {
-        const prevSelection = editorView.state.selection;
-        if (editorView.state.doc.toString() !== initialValue) {
-          const transaction = editorView.state.update({
-            changes: { from: 0, to: editorView.state.doc.length, insert: initialValue },
-            selection: prevSelection
-            // Keep cursor position
-          });
-          editorView.dispatch(transaction);
-        }
-        initialContent.current = initialValue;
-      } catch (error) {
-        console.error("Error updating CodeMirror content:", error);
-      }
-    }
-  }, [initialValue, editorView]);
-  useEffect2(() => {
-    if (editorView && themeCompartment) {
+    if (editorViewRef.current && themeCompartment && mounted) {
       try {
         const themeExtension = theme === "dark" ? darkTheme : lightTheme;
-        editorView.dispatch({
+        editorViewRef.current.dispatch({
           effects: themeCompartment.reconfigure(themeExtension)
         });
       } catch (error) {
         console.error("Error updating theme:", error);
       }
     }
-  }, [theme, editorView, themeCompartment]);
+  }, [theme, themeCompartment, mounted]);
   useEffect2(() => {
-    if (editorView) {
+    if (editorViewRef.current && mounted) {
       try {
-        editorView.dispatch({
+        editorViewRef.current.dispatch({
           effects: [
-            setMarkdownSyntaxMode.of(currentMode)
+            setMarkdownSyntaxMode.of(mode)
           ]
         });
-        const isEditable = currentMode === "live" && editable;
-        editorView.dispatch({
+        const isEditable = mode === "live" && !readOnly;
+        editorViewRef.current.dispatch({
           effects: editableCompartment.reconfigure(EditorView12.editable.of(isEditable))
         });
       } catch (error) {
         console.error("Error updating editor mode:", error);
       }
     }
-  }, [currentMode, editable, editorView, editableCompartment]);
-  if (!mounted) {
-    return /* @__PURE__ */ jsxs("div", { className: "flex flex-col h-full border rounded-md overflow-hidden", children: [
-      /* @__PURE__ */ jsxs("div", { className: "p-2 border-b shrink-0 bg-slate-50 flex justify-between items-center", children: [
-        /* @__PURE__ */ jsx3("div", { className: "w-24 h-6 bg-gray-200 rounded animate-pulse" }),
-        /* @__PURE__ */ jsx3("div", { className: "w-24 h-6 bg-gray-200 rounded animate-pulse" })
-      ] }),
-      /* @__PURE__ */ jsxs("div", { className: "flex-grow overflow-auto p-4 bg-white", children: [
-        /* @__PURE__ */ jsx3("div", { className: "h-4 bg-gray-200 rounded w-3/4 mb-2 animate-pulse" }),
-        /* @__PURE__ */ jsx3("div", { className: "h-4 bg-gray-200 rounded w-1/2 mb-2 animate-pulse" }),
-        /* @__PURE__ */ jsx3("div", { className: "h-4 bg-gray-200 rounded w-5/6 mb-2 animate-pulse" })
-      ] })
-    ] });
+  }, [mode, readOnly, editableCompartment, mounted]);
+  useEffect2(() => {
+    if (editorViewRef.current && mounted) {
+      try {
+        const currentContent = editorViewRef.current.state.doc.toString();
+        if (currentContent !== initialValue) {
+          const prevSelection = editorViewRef.current.state.selection;
+          const transaction = editorViewRef.current.state.update({
+            changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: initialValue },
+            selection: prevSelection
+            // Keep cursor position
+          });
+          editorViewRef.current.dispatch(transaction);
+        }
+      } catch (error) {
+        console.error("Error updating editor content:", error);
+      }
+    }
+  }, [initialValue, mounted]);
+  return /* @__PURE__ */ jsx3("div", { ref: editorRef, className: "obsidian-editor-core" });
+};
+var EditorCore_default = EditorCore;
+
+// src/app/obsidian-editor/utils/formatting/markdownFormatting.ts
+import { EditorSelection as EditorSelection6 } from "@codemirror/state";
+function toggleBold(selection, doc) {
+  const changes = [];
+  let newSelection;
+  for (const range of selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: "**bold text**"
+      });
+      const cursorPos = range.from + 2;
+      newSelection = EditorSelection6.cursor(cursorPos);
+    } else {
+      const selectedText = doc.slice(range.from, range.to);
+      if (selectedText.startsWith("**") && selectedText.endsWith("**")) {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: selectedText.slice(2, -2)
+        });
+      } else {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: `**${selectedText}**`
+        });
+      }
+    }
   }
-  return /* @__PURE__ */ jsxs("div", { className: "flex flex-col h-full border rounded-md overflow-hidden", children: [
-    /* @__PURE__ */ jsxs("div", { className: "p-2 border-b shrink-0 bg-slate-50 dark:bg-slate-800 flex justify-between items-center", children: [
-      /* @__PURE__ */ jsx3(
+  return { changes, selection: newSelection };
+}
+function toggleItalic(selection, doc) {
+  const changes = [];
+  let newSelection;
+  for (const range of selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: "*italic text*"
+      });
+      const cursorPos = range.from + 1;
+      newSelection = EditorSelection6.cursor(cursorPos);
+    } else {
+      const selectedText = doc.slice(range.from, range.to);
+      if (selectedText.startsWith("*") && selectedText.endsWith("*") && !(selectedText.startsWith("**") && selectedText.endsWith("**"))) {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: selectedText.slice(1, -1)
+        });
+      } else {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: `*${selectedText}*`
+        });
+      }
+    }
+  }
+  return { changes, selection: newSelection };
+}
+function toggleHeading(selection, doc, level) {
+  const changes = [];
+  if (level < 1 || level > 6) {
+    console.error("Invalid heading level. Must be between 1 and 6.");
+    return { changes: [] };
+  }
+  const headingMarker = "#".repeat(level) + " ";
+  for (const range of selection.ranges) {
+    let lineStart = range.from;
+    while (lineStart > 0 && doc.charAt(lineStart - 1) !== "\n") {
+      lineStart--;
+    }
+    const lineEndSearch = doc.indexOf("\n", lineStart);
+    const lineEnd = lineEndSearch === -1 ? doc.length : lineEndSearch;
+    const line = doc.slice(lineStart, lineEnd);
+    const headingRegex = /^(#{1,6})\s/;
+    const match = line.match(headingRegex);
+    if (match && match[1].length === level) {
+      changes.push({
+        from: lineStart,
+        to: lineStart + match[0].length,
+        insert: ""
+      });
+    } else if (match) {
+      changes.push({
+        from: lineStart,
+        to: lineStart + match[0].length,
+        insert: headingMarker
+      });
+    } else {
+      changes.push({
+        from: lineStart,
+        to: lineStart,
+        insert: headingMarker
+      });
+    }
+  }
+  return { changes };
+}
+
+// src/app/obsidian-editor/components/EditorToolbar.tsx
+import { jsx as jsx4, jsxs } from "react/jsx-runtime";
+var EditorToolbar = ({
+  editorView,
+  mode,
+  onModeChange
+}) => {
+  const applyFormatting = (formatter) => {
+    if (!editorView) return;
+    const { state, dispatch } = editorView;
+    const changes = formatter(state.selection, state.doc.toString());
+    if (changes) {
+      dispatch({
+        changes: changes.changes,
+        selection: changes.selection || state.selection,
+        scrollIntoView: true
+      });
+      editorView.focus();
+    }
+  };
+  return /* @__PURE__ */ jsxs("div", { className: "obsidian-editor-toolbar", children: [
+    /* @__PURE__ */ jsxs("div", { className: "mode-toggle", children: [
+      /* @__PURE__ */ jsx4(
         "button",
         {
-          onClick: () => setCurrentMode(currentMode === "live" ? "preview" : "live"),
-          className: "px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 text-sm transition-colors duration-150",
-          children: currentMode === "live" ? "View Preview" : "Edit Content"
+          className: `mode-button ${mode === "live" ? "active" : ""}`,
+          onClick: () => onModeChange("live"),
+          "aria-pressed": mode === "live",
+          "aria-label": "Edit mode",
+          title: "Edit mode",
+          children: "Edit"
         }
       ),
-      /* @__PURE__ */ jsx3(
+      /* @__PURE__ */ jsx4(
         "button",
         {
-          onClick: toggleTheme,
-          className: "px-3 py-1 border rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-gray-600 text-sm transition-colors duration-150",
-          children: theme === "dark" ? "Light Mode" : "Dark Mode"
+          className: `mode-button ${mode === "preview" ? "active" : ""}`,
+          onClick: () => onModeChange("preview"),
+          "aria-pressed": mode === "preview",
+          "aria-label": "Preview mode",
+          title: "Preview mode",
+          children: "Preview"
         }
       )
     ] }),
-    /* @__PURE__ */ jsx3("div", { className: "flex-grow overflow-auto", children: /* @__PURE__ */ jsx3(
-      "div",
+    mode === "live" && /* @__PURE__ */ jsxs("div", { className: "format-buttons", children: [
+      /* @__PURE__ */ jsx4(
+        "button",
+        {
+          onClick: () => applyFormatting(toggleBold),
+          className: "format-button",
+          "aria-label": "Bold",
+          title: "Bold (Ctrl+B)",
+          children: /* @__PURE__ */ jsx4("strong", { children: "B" })
+        }
+      ),
+      /* @__PURE__ */ jsx4(
+        "button",
+        {
+          onClick: () => applyFormatting(toggleItalic),
+          className: "format-button",
+          "aria-label": "Italic",
+          title: "Italic (Ctrl+I)",
+          children: /* @__PURE__ */ jsx4("em", { children: "I" })
+        }
+      ),
+      /* @__PURE__ */ jsx4(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
+          className: "format-button",
+          "aria-label": "Heading 1",
+          title: "Heading 1 (Ctrl+1)",
+          children: "H1"
+        }
+      ),
+      /* @__PURE__ */ jsx4(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
+          className: "format-button",
+          "aria-label": "Heading 2",
+          title: "Heading 2 (Ctrl+2)",
+          children: "H2"
+        }
+      ),
+      /* @__PURE__ */ jsx4(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
+          className: "format-button",
+          "aria-label": "Heading 3",
+          title: "Heading 3 (Ctrl+3)",
+          children: "H3"
+        }
+      )
+    ] })
+  ] });
+};
+var EditorToolbar_default = EditorToolbar;
+
+// src/app/obsidian-editor/CodeMirrorEditor.tsx
+import { Fragment, jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
+var CodeMirrorEditor = ({
+  initialValue = "",
+  readOnly = false,
+  onChange,
+  onSave
+}) => {
+  const [editorView, setEditorView] = useState2(null);
+  const [currentMode, setCurrentMode] = useState2("live");
+  const { mounted } = useTheme();
+  const handleEditorViewCreated = (view) => {
+    setEditorView(view);
+  };
+  const handleModeChange = (mode) => {
+    setCurrentMode(mode);
+  };
+  return /* @__PURE__ */ jsx5("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ jsxs2(Fragment, { children: [
+    /* @__PURE__ */ jsx5(
+      EditorToolbar_default,
       {
-        className: "h-full",
-        "data-testid": "codemirror-editor",
-        children: /* @__PURE__ */ jsx3("div", { ref: editorRef, className: "h-full" })
+        editorView,
+        mode: currentMode,
+        onModeChange: handleModeChange
+      }
+    ),
+    /* @__PURE__ */ jsx5("div", { className: "obsidian-editor-content", children: /* @__PURE__ */ jsx5(
+      EditorCore_default,
+      {
+        initialValue,
+        readOnly,
+        mode: currentMode,
+        onChange,
+        onSave,
+        onEditorViewCreated: handleEditorViewCreated
       }
     ) })
-  ] });
+  ] }) });
 };
 var CodeMirrorEditor_default = CodeMirrorEditor;
 
 // src/components/ThemeToggle.tsx
 import { Moon, Sun } from "lucide-react";
-import { jsx as jsx4 } from "react/jsx-runtime";
+import { jsx as jsx6 } from "react/jsx-runtime";
 function ThemeToggle() {
   const { theme, toggleTheme, mounted } = useTheme();
   if (!mounted) {
-    return /* @__PURE__ */ jsx4(
+    return /* @__PURE__ */ jsx6(
       "button",
       {
         className: "p-2 rounded-full transition-colors",
         "aria-label": "Theme toggle",
         "aria-hidden": "true",
-        children: /* @__PURE__ */ jsx4("div", { className: "w-5 h-5" })
+        children: /* @__PURE__ */ jsx6("div", { className: "w-5 h-5" })
       }
     );
   }
-  return /* @__PURE__ */ jsx4(
+  return /* @__PURE__ */ jsx6(
     "button",
     {
       onClick: toggleTheme,
       className: "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors",
       "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
-      children: theme === "light" ? /* @__PURE__ */ jsx4(Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ jsx4(Sun, { className: "w-5 h-5 text-yellow-300" })
+      children: theme === "light" ? /* @__PURE__ */ jsx6(Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ jsx6(Sun, { className: "w-5 h-5 text-yellow-300" })
     }
   );
 }

@@ -1,9 +1,10 @@
-import * as react_jsx_runtime from 'react/jsx-runtime';
 import React from 'react';
+import * as react_jsx_runtime from 'react/jsx-runtime';
 import * as _codemirror_state from '@codemirror/state';
 
 /**
  * Props for the CodeMirrorEditor component.
+ * @interface CodeMirrorEditorProps
  */
 interface CodeMirrorEditorProps {
     /** Initial markdown content for the editor */
@@ -18,8 +19,11 @@ interface CodeMirrorEditorProps {
 /**
  * A CodeMirror editor component with Markdown syntax highlighting and preview mode.
  * This component is client-side only and includes SSR-safety measures.
+ *
+ * @param props - Component props
+ * @returns React component
  */
-declare const CodeMirrorEditor: ({ initialValue, readOnly, onChange, onSave }: CodeMirrorEditorProps) => react_jsx_runtime.JSX.Element;
+declare const CodeMirrorEditor: React.FC<CodeMirrorEditorProps>;
 
 /**
  * Represents the possible theme states.

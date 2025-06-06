@@ -61,6 +61,23 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
     onSaveRef.current = onSave;
   }, [onChange, onSave]);
   
+  // Add wheel event handler to ensure scrolling works
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      // Let the default behavior happen - the scroller will handle it
+      e.stopPropagation();
+    };
+
+    const editorElement = editorRef.current;
+    if (editorElement) {
+      editorElement.addEventListener('wheel', handleWheel, { passive: true });
+      
+      return () => {
+        editorElement.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, []);
+  
   // Initialize the editor once when the component mounts
   useEffect(() => {
     // Only initialize on client-side after mounting

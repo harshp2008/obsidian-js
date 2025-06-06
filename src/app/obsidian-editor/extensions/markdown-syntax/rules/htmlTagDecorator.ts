@@ -660,19 +660,58 @@ export const HTMLTagDecorator = ViewPlugin.fromClass(
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
-      this.decorations = buildHTMLTagDecorations(view);
+      this.decorations = this.buildDecorations(view);
     }
 
-    update(update: ViewUpdate) {
-      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== 
-                              update.state.field(markdownSyntaxStateField, false)?.currentMode;
-      
-      if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
-        this.decorations = buildHTMLTagDecorations(update.view);
+    update(update: any) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.buildDecorations(update.view);
       }
+    }
+
+    buildDecorations(view: EditorView) {
+      const builder = new RangeSetBuilder<Decoration>();
+      
+      // Safely process each visible range
+      try {
+        for (const { from, to } of view.visibleRanges) {
+          const text = view.state.doc.sliceString(from, to);
+          let match;
+          
+          // Reset regex state for each iteration
+          HTML_TAG_REGEX.lastIndex = 0;
+          
+          while ((match = HTML_TAG_REGEX.exec(text)) !== null) {
+            // Add defensive checks
+            if (!match || !match.index) {
+              continue;
+            }
+            
+            const tagStart = from + match.index;
+            const tagEnd = tagStart + match[0].length;
+            
+            // Create decoration with improved error handling
+            try {
+              const decoration = Decoration.mark({
+                class: "cm-html-tag",
+              });
+              
+              if (decoration) {
+                builder.add(tagStart, tagEnd, decoration);
+              }
+            } catch (decorationError) {
+              console.warn("Error creating HTML tag decoration:", decorationError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error building HTML decorations:", error);
+      }
+      
+      return builder.finish();
     }
   },
   {
-    decorations: (v) => v.decorations
+    decorations: v => v.decorations
   }
 );
