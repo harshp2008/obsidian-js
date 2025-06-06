@@ -40,7 +40,7 @@ module.exports = __toCommonJS(index_exports);
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
 var import_react = __toESM(require("react"));
 var import_state11 = require("@codemirror/state");
-var import_view20 = require("@codemirror/view");
+var import_view21 = require("@codemirror/view");
 var import_commands = require("@codemirror/commands");
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
@@ -6835,7 +6835,7 @@ var import_language5 = require("@codemirror/language");
 var import_highlight4 = require("@lezer/highlight");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
-var import_view17 = require("@codemirror/view");
+var import_view18 = require("@codemirror/view");
 var import_state7 = require("@codemirror/state");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
@@ -7915,6 +7915,92 @@ var HTMLTagDecorator = import_view16.ViewPlugin.fromClass(
   }
 );
 
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/blockquoteDecorator.ts
+var import_view17 = require("@codemirror/view");
+var VerticalBarWidget = class extends import_view17.WidgetType {
+  toDOM() {
+    const bar = document.createElement("span");
+    bar.className = "cm-blockquote-bar";
+    return bar;
+  }
+  ignoreEvent() {
+    return true;
+  }
+};
+var BlockquoteBarWidget = class extends import_view17.WidgetType {
+  constructor(level) {
+    super();
+    this.level = level;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    for (let i = 0; i < this.level; i++) {
+      const bar = document.createElement("span");
+      bar.className = "cm-blockquote-bar";
+      span.appendChild(bar);
+    }
+    return span;
+  }
+  ignoreEvent() {
+    return true;
+  }
+};
+var BlockquoteDecorator = class {
+  process(context) {
+    const { docText, textSliceFrom, decorations, currentMode, cursorPositions, view } = context;
+    if (!decorations) return;
+    const lines = docText.split("\n");
+    if (currentMode === "preview") {
+      let charPos = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
+        if (match && lineText.length > 0) {
+          const markerStr = String(match[2]);
+          const barCount = (markerStr.match(/>/g) || []).length;
+          const lineStartInDoc = charPos;
+          const markerStart = lineStartInDoc + match[1].length;
+          decorations.push({
+            from: markerStart,
+            to: markerStart + markerStr.length,
+            decoration: import_view17.Decoration.replace({ widget: new BlockquoteBarWidget(barCount) })
+          });
+        }
+        charPos += lineText.length + 1;
+      }
+    } else {
+      let charPos = 0;
+      const lineSpacingEm = 0.8;
+      const lineWidthPx = 4;
+      const textPaddingEm = 0.4;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
+        if (match && lineText.length > 0) {
+          const markerStr = String(match[2]);
+          const level = (markerStr.match(/>/g) || []).length;
+          const lineStartInDoc = charPos;
+          const lineEndInDoc = charPos + lineText.length;
+          const isActive = cursorPositions.some((pos) => pos >= lineStartInDoc && pos <= lineEndInDoc);
+          if (!isActive && level > 0) {
+            const markerStart = lineStartInDoc + match[1].length;
+            for (let k = 0; k < markerStr.length; k++) {
+              if (markerStr[k] === ">") {
+                decorations.push({
+                  from: markerStart + k,
+                  to: markerStart + k + 1,
+                  decoration: import_view17.Decoration.replace({ widget: new VerticalBarWidget() })
+                });
+              }
+            }
+          }
+        }
+        charPos += lineText.length + 1;
+      }
+    }
+  }
+};
+
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 var syntaxRules = [
   new HeadingDecorator(),
@@ -7926,6 +8012,7 @@ var syntaxRules = [
   new OldBoldDecorator(),
   new OldItalicDecorator(),
   new ListDecorator(),
+  new BlockquoteDecorator(),
   new FencedCodeBlockDecorator()
   // HorizontalRuleDecorator is now a ViewPlugin and managed separately
 ];
@@ -8026,7 +8113,7 @@ var markdownSyntaxStateField = import_state7.StateField.define({
     }
     return value;
   },
-  provide: (f) => import_view17.EditorView.decorations.from(f, (value) => value.decorations)
+  provide: (f) => import_view18.EditorView.decorations.from(f, (value) => value.decorations)
 });
 function createMarkdownSyntaxPlugin() {
   return [
@@ -8039,11 +8126,11 @@ function createMarkdownSyntaxPlugin() {
 }
 
 // src/app/obsidian-editor/extensions/MarkdownPasteHandler.js
-var import_view18 = require("@codemirror/view");
+var import_view19 = require("@codemirror/view");
 var import_state8 = require("@codemirror/state");
 var import_marked = require("marked");
 var asteriskItalicRegex = new RegExp("(?<![\\\\*])\\*(?!\\*)([\\s\\S]+?)(?<!\\*)\\*", "g");
-var markdownPasteHandler = import_state8.Prec.highest(import_view18.EditorView.domEventHandlers({
+var markdownPasteHandler = import_state8.Prec.highest(import_view19.EditorView.domEventHandlers({
   paste(event, view) {
     console.log("[MarkdownPasteHandler] Paste event triggered.");
     const clipboardData = event.clipboardData || window.clipboardData;
@@ -8085,7 +8172,7 @@ var markdownPasteHandler = import_state8.Prec.highest(import_view18.EditorView.d
 }));
 
 // src/app/obsidian-editor/extensions/AtomicIndents.ts
-var import_view19 = require("@codemirror/view");
+var import_view20 = require("@codemirror/view");
 var import_state9 = require("@codemirror/state");
 var NBSP = "\xA0";
 var INDENT_UNIT = NBSP.repeat(4);
@@ -8111,7 +8198,7 @@ var AtomicIndentPluginValue = class {
           const matchStart = line.from + match;
           const matchEnd = matchStart + INDENT_UNIT.length;
           if (matchStart < to && matchEnd > from) {
-            builder.add(matchStart, matchEnd, import_view19.Decoration.mark({}));
+            builder.add(matchStart, matchEnd, import_view20.Decoration.mark({}));
           }
           searchPosInLine = match + INDENT_UNIT.length;
           if (searchPosInLine >= line.length) break;
@@ -8123,8 +8210,8 @@ var AtomicIndentPluginValue = class {
     return result;
   }
 };
-var atomicIndentPlugin = import_view19.ViewPlugin.fromClass(AtomicIndentPluginValue);
-var atomicRangesFacetProvider = import_view19.EditorView.atomicRanges.of((view) => {
+var atomicIndentPlugin = import_view20.ViewPlugin.fromClass(AtomicIndentPluginValue);
+var atomicRangesFacetProvider = import_view20.EditorView.atomicRanges.of((view) => {
   const pluginValue = view.plugin(atomicIndentPlugin);
   if (pluginValue) {
     return pluginValue.atomicRanges || import_state9.RangeSet.empty;
@@ -8416,7 +8503,7 @@ var handleBackspaceIndent = (editorView) => {
 };
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-var lightTheme = import_view20.EditorView.theme({
+var lightTheme = import_view21.EditorView.theme({
   "&": { color: "#1a1a1a", backgroundColor: "#ffffff" },
   ".cm-content": { caretColor: "#000000" },
   ".cm-gutters": { backgroundColor: "#f8f9fa", color: "#6c757d", border: "none" },
@@ -8426,7 +8513,7 @@ var lightTheme = import_view20.EditorView.theme({
   ".cm-line": { padding: "0 4px" },
   ".cm-cursor": { borderLeftWidth: "2px", borderLeftColor: "#3b82f6" }
 }, { dark: false });
-var darkTheme = import_view20.EditorView.theme({
+var darkTheme = import_view21.EditorView.theme({
   "&": { color: "#e0e0e0", backgroundColor: "#1e1e1e" },
   // Slightly different dark background
   ".cm-content": { caretColor: "#ffffff" },
@@ -8507,12 +8594,12 @@ var CodeMirrorEditor = ({
       createMarkdownSyntaxPlugin(),
       // Now returns the StateField directly
       markdownPasteHandler,
-      (0, import_view20.highlightActiveLine)(),
-      (0, import_view20.highlightActiveLineGutter)(),
+      (0, import_view21.highlightActiveLine)(),
+      (0, import_view21.highlightActiveLineGutter)(),
       (0, import_language5.syntaxHighlighting)(customHighlightStyle),
-      import_view20.EditorView.lineWrapping,
+      import_view21.EditorView.lineWrapping,
       // Added for text wrapping
-      import_view20.keymap.of([
+      import_view21.keymap.of([
         {
           key: "Backspace",
           run: (view2) => {
@@ -8589,7 +8676,7 @@ var CodeMirrorEditor = ({
           }
         }
       ]),
-      import_view20.EditorView.updateListener.of((update) => {
+      import_view21.EditorView.updateListener.of((update) => {
         if (currentMode === "live" && update.docChanged) {
           const doc = update.state.doc;
           const value = doc.toString();
@@ -8598,9 +8685,9 @@ var CodeMirrorEditor = ({
           }
         }
       }),
-      editableCompartment.of(import_view20.EditorView.editable.of(currentMode === "live" && editable)),
+      editableCompartment.of(import_view21.EditorView.editable.of(currentMode === "live" && editable)),
       // Initial setup
-      import_view20.EditorView.theme({
+      import_view21.EditorView.theme({
         "&": {
           height: "100%"
         },
@@ -8616,7 +8703,7 @@ var CodeMirrorEditor = ({
       doc: content,
       extensions
     });
-    const view = new import_view20.EditorView({
+    const view = new import_view21.EditorView({
       state,
       parent: editorRef.current
     });
@@ -8655,9 +8742,9 @@ var CodeMirrorEditor = ({
         ]
       });
       const isEditable = currentMode === "live" && editable;
-      if (editorView.state.facet(import_view20.EditorView.editable) !== isEditable) {
+      if (editorView.state.facet(import_view21.EditorView.editable) !== isEditable) {
         editorView.dispatch({
-          effects: editableCompartment.reconfigure(import_view20.EditorView.editable.of(isEditable))
+          effects: editableCompartment.reconfigure(import_view21.EditorView.editable.of(isEditable))
         });
       }
     }

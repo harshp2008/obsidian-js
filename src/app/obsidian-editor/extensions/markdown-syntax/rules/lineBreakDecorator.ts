@@ -3,13 +3,25 @@ import { RangeSetBuilder } from '@codemirror/state';
 import { markdownSyntaxStateField } from '../index'; // Assuming index.ts is one level up
 import { syntaxTree } from '@codemirror/language';
 
-const LINE_BREAK_REGEX = /\s{2,}$/m; // Matches two spaces at the end of a line
+/**
+ * Regular expression to match two or more spaces at the end of a line (markdown line break)
+ */
+const LINE_BREAK_REGEX = /\s{2,}$/m;
 
-// Widget for preview mode (renders a <br> tag)
-class LineBreakPreviewWidget extends WidgetType {
+/**
+ * Widget for preview mode that renders a visual indicator for line breaks.
+ * Instead of actually replacing the breaks, which causes issues, we just
+ * style them differently.
+ */
+class LineBreakVisualIndicator extends WidgetType {
   toDOM() {
-    const br = document.createElement('br');
-    return br;
+    const span = document.createElement('span');
+    span.className = 'cm-line-break-indicator';
+    span.innerHTML = '↵'; // Visual indicator for line break
+    span.style.color = '#888';
+    span.style.fontSize = '0.85em';
+    span.style.verticalAlign = 'text-top';
+    return span;
   }
 
   ignoreEvent() {
@@ -17,16 +29,22 @@ class LineBreakPreviewWidget extends WidgetType {
   }
 }
 
-// Decoration for live mode (subtly indicates the two spaces)
+/**
+ * Decoration for live mode (subtly indicates the two spaces)
+ */
 const liveLineBreakMark = Decoration.mark({
-  class: 'cm-line-break-syntax',
-  // attributes: { 'data-two-spaces': 'true' } // Optional: for debugging or more specific styling
+  class: 'cm-line-break-syntax'
 });
 
+/**
+ * Builds decorations for line breaks in the document
+ * @param view - The editor view
+ * @returns A set of decorations
+ */
 function buildLineBreakDecorations(view: EditorView): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
   const modeState = view.state.field(markdownSyntaxStateField, false);
-  const currentMode = modeState ? modeState.currentMode : 'live'; // Default to 'live' if state field is not ready
+  const currentMode = modeState ? modeState.currentMode : 'live';
 
   for (const { from, to } of view.visibleRanges) {
     for (let pos = from; pos < to; ) {
@@ -35,24 +53,31 @@ function buildLineBreakDecorations(view: EditorView): DecorationSet {
 
       if (match) {
         const lineBreakStart = line.from + match.index;
-        const lineBreakEnd = line.to; // The two spaces are at the very end of the line content
-
-        // Ensure we don't process already decorated or non-editable areas if necessary
-        // For simplicity, we're not adding complex checks here, but in a real scenario, you might.
-
+        const lineBreakEnd = line.to; 
+        
         if (currentMode === 'preview') {
-          // In preview, replace the two spaces with a <br> widget
-          // The widget should be placed *after* the text, effectively replacing the spaces
+          // Instead of replacing the spaces with a widget that includes line breaks,
+          // we'll mark the spaces and add a widget after them
           builder.add(
-            lineBreakEnd - 2, // Position of the first space
-            lineBreakEnd,     // Position after the second space
-            Decoration.replace({ widget: new LineBreakPreviewWidget() })
+            lineBreakEnd - 2,
+            lineBreakEnd,
+            liveLineBreakMark
+          );
+          
+          // Add a visual indicator (↵) after the spaces but before actual line break
+          builder.add(
+            lineBreakEnd,
+            lineBreakEnd,
+            Decoration.widget({
+              widget: new LineBreakVisualIndicator(),
+              side: -1 // Position before the line break
+            })
           );
         } else {
-          // In live mode, mark the two spaces
+          // In live mode, just mark the spaces
           builder.add(
-            lineBreakEnd - 2, // Position of the first space
-            lineBreakEnd,     // Position after the second space
+            lineBreakEnd - 2,
+            lineBreakEnd,
             liveLineBreakMark
           );
         }
@@ -63,6 +88,9 @@ function buildLineBreakDecorations(view: EditorView): DecorationSet {
   return builder.finish();
 }
 
+/**
+ * ViewPlugin that handles decorating line breaks in markdown
+ */
 export const LineBreakDecorator = ViewPlugin.fromClass(
   class {
     decorations: DecorationSet;

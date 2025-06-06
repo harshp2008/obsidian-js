@@ -1,10 +1,55 @@
 /* CodeMirrorEditor.css */
 
+/* Global theme variables for the CodeMirror editor */
+:root {
+  --cm-background-primary: #ffffff;
+  --cm-background-secondary: #f8f8f8;
+  --cm-text-normal: #2e3338;
+  --cm-text-muted: #888888;
+  --cm-text-faint: #999999;
+  --cm-text-accent: #705dcf;
+  --cm-selection-background: rgba(104, 134, 197, 0.3);
+  --cm-code-background: rgba(0, 0, 0, 0.03);
+}
+
+html.dark {
+  --cm-background-primary: #2b2b2b;
+  --cm-background-secondary: #363636;
+  --cm-text-normal: #dcddde;
+  --cm-text-muted: #999999;
+  --cm-text-faint: #666666;
+  --cm-text-accent: #a277ff;
+  --cm-selection-background: rgba(104, 134, 197, 0.2);
+  --cm-code-background: rgba(255, 255, 255, 0.05);
+  --html-tag-color: #cf6060;
+  --html-attr-color: #b78c4a;
+  --html-content-color: #50a14f;
+}
+
+/* Light mode-specific styles */
+html.light {
+  --html-tag-color: #e45649;
+  --html-attr-color: #986801;
+  --html-content-color: #50a14f;
+  --cm-code-background: rgba(0, 0, 0, 0.03);
+}
+
 /* Base editor styles */
 .cm-content {
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  line-height: 1.5;
+  font-family: var(
+    --font-text,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif
+  );
+  line-height: 1.6;
   font-size: 16px;
+  color: var(--cm-text-normal);
+  background-color: var(--cm-background-primary);
 }
 
 /* Horizontal Rule Widget Styling */
@@ -260,6 +305,7 @@
 .cm-editor {
   height: 100%;
   padding: 1rem;
+  background-color: var(--cm-background-primary);
 }
 
 /* Improve cursor visibility */
@@ -270,7 +316,7 @@
 
 /* Improve selection styling */
 .cm-selectionBackground {
-  background-color: rgba(59, 130, 246, 0.2) !important;
+  background-color: var(--cm-selection-background) !important;
 }
 
 /* Style for different markdown elements */
@@ -727,7 +773,7 @@
 
 /* HTML Tag Syntax (Live Mode) */
 .cm-html-tag-syntax {
-  color: #059669; /* A distinct green color for HTML tags */
+  color: var(--html-tag-color) !important;
   background-color: rgba(5, 150, 105, 0.05); /* Very subtle background */
   padding: 0 2px;
   border-radius: 3px;
@@ -736,8 +782,8 @@
 
 /* Dark mode for HTML Tag Syntax */
 .dark .cm-html-tag-syntax {
-  color: #34d399; /* Lighter green for dark mode */
-  background-color: rgba(52, 211, 153, 0.1);
+  color: #cf6060 !important;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 /* Live Mode Horizontal Rule Line */
@@ -766,6 +812,120 @@
   /* Consider adding max-width/max-height for very large inline iframes */
   /* max-width: 400px; */
   /* max-height: 250px; */
+}
+
+/* New HTML content rendered widget */
+.cm-html-rendered {
+  display: inline-block;
+  vertical-align: middle;
+  background-color: rgba(247, 250, 252, 0.6);
+  border-radius: 4px;
+  padding: 8px;
+  margin: 4px 0;
+  max-width: 100%;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: var(--cm-background-primary);
+  transition: background-color 0.2s ease;
+  font-family: inherit;
+  color: var(--cm-text-normal);
+}
+
+/* Specialized containers for different HTML elements */
+.cm-html-iframe-container {
+  text-align: center;
+  padding: 4px;
+  min-width: 200px;
+  max-width: 100%;
+  position: relative;
+  margin: 1em 0;
+  padding: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--interactive-normal);
+}
+
+.cm-html-audio-container {
+  background-color: rgba(247, 250, 252, 0.8);
+  border-radius: 8px;
+  padding: 6px 12px;
+  margin: 1em 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cm-html-video-container {
+  text-align: center;
+  max-width: 100%;
+  margin: 1em 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Loading indicator for iframes */
+.cm-html-loading {
+  margin: 8px auto;
+  padding: 8px;
+  font-size: 0.9em;
+  color: #666;
+  text-align: center;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  padding: 2px;
+  background-color: var(--interactive-normal);
+  color: var(--cm-text-muted);
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8em;
+  border-radius: 2px;
+}
+
+.dark .cm-html-rendered {
+  background-color: rgba(26, 32, 44, 0.6);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark .cm-html-audio-container {
+  background-color: rgba(26, 32, 44, 0.8);
+}
+
+.dark .cm-html-loading {
+  background-color: #333;
+  color: #ccc;
+}
+
+/* Styling for specific HTML elements inside rendered widgets */
+.cm-html-rendered iframe {
+  border: 1px solid var(--interactive-hover);
+  border-radius: 4px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  min-width: 100px;
+  min-height: 60px;
+}
+
+.cm-html-rendered audio {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background-color: var(--interactive-normal);
+}
+
+.cm-html-rendered source {
+  max-width: 100%;
+}
+
+.cm-html-rendered video {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.dark .cm-html-rendered iframe {
+  border-color: #4a5568;
 }
 
 /* Ensure that the raw HTML tag syntax also behaves inline */
@@ -883,4 +1043,259 @@
   margin-right: 16px;
   vertical-align: middle;
   border-radius: 0;
+}
+
+/* HTML Rendering Styles - Obsidian-like */
+.cm-html-rendered {
+  background-color: var(--cm-background-primary);
+  transition: background-color 0.2s ease;
+  font-family: inherit;
+  color: var(--cm-text-normal);
+}
+
+/* Inline HTML */
+.cm-html-inline {
+  display: inline;
+  padding: 0;
+  margin: 0;
+  border: none;
+  vertical-align: baseline;
+}
+
+/* Block HTML */
+.cm-html-block {
+  display: block;
+  margin: 1em 0;
+  padding: 0;
+  border: none;
+}
+
+/* Multi-line HTML handling - more subtle styling */
+.cm-html-multiline-start,
+.cm-html-multiline-middle,
+.cm-html-multiline-end {
+  display: block;
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+/* HTML syntax highlighting - subtle colors */
+.cm-html-tag-syntax {
+  color: var(--html-tag-color) !important;
+  font-weight: normal;
+}
+
+/* Container styles for specific elements */
+.cm-html-iframe-container {
+  position: relative;
+  margin: 1em 0;
+  padding: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--interactive-normal);
+}
+
+.cm-html-audio-container,
+.cm-html-video-container {
+  margin: 1em 0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Enhanced styling for audio elements */
+.cm-html-rendered audio {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+  background-color: var(--interactive-normal);
+}
+
+/* Enhanced styling for video elements */
+.cm-html-rendered video {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* Enhanced styling for images */
+.cm-html-rendered img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+}
+
+/* Enhanced styling for iframes */
+.cm-html-rendered iframe {
+  border: 1px solid var(--interactive-hover);
+  border-radius: 4px;
+  background-color: var(--interactive-normal);
+}
+
+/* Styled inline elements */
+.cm-html-rendered span {
+  display: inline;
+  padding: 0;
+  margin: 0;
+}
+
+/* Make links look like Obsidian links */
+.cm-html-rendered a {
+  color: var(--link-color);
+  text-decoration: none;
+}
+
+.cm-html-rendered a:hover {
+  text-decoration: underline;
+}
+
+/* Make inline code look like Obsidian code */
+.cm-html-rendered code {
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  background-color: var(--cm-code-background);
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.9em;
+}
+
+/* Make colored text more integrated with theme */
+.cm-html-span[style*="color"] {
+  opacity: 0.9;
+}
+
+/* Better style for bold and italic */
+.cm-html-rendered strong,
+.cm-html-rendered b {
+  font-weight: 600;
+  color: var(--cm-text-normal);
+}
+
+.cm-html-rendered em,
+.cm-html-rendered i {
+  font-style: italic;
+  color: var(--cm-text-normal);
+}
+
+/* Better spacing for paragraphs and headers */
+.cm-html-rendered p {
+  margin: 0.5em 0;
+  color: var(--cm-text-normal);
+}
+
+.cm-html-rendered h1,
+.cm-html-rendered h2,
+.cm-html-rendered h3,
+.cm-html-rendered h4,
+.cm-html-rendered h5,
+.cm-html-rendered h6 {
+  margin: 0.8em 0 0.4em 0;
+  padding: 0;
+  line-height: 1.3;
+  font-weight: 600;
+  color: var(--cm-text-normal);
+}
+
+/* Cleaner audio player */
+.cm-html-rendered audio {
+  border: none;
+  outline: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading indicator */
+.cm-html-loading {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  right: 0;
+  padding: 2px;
+  background-color: var(--interactive-normal);
+  color: var(--cm-text-muted);
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8em;
+  border-radius: 2px;
+}
+
+/* Ensure script tags are visible with proper syntax highlighting */
+.cm-html-tag-syntax {
+  color: var(--html-tag-color) !important;
+  font-weight: normal;
+}
+
+/* Different colors for different parts of HTML tags */
+.cm-content span[class*="ͼ"] {
+  color: inherit;
+}
+
+/* Script tag specific styling */
+span.cm-html-tag-syntax:has(span:contains("script")) {
+  color: var(--html-tag-color) !important;
+}
+
+.cm-content script,
+.cm-html-rendered script {
+  display: inline;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  background-color: var(--cm-code-background);
+  color: var(--cm-text-normal);
+}
+
+/* Make HTML tags in script elements visible */
+.cm-html-rendered .cm-html-tag-syntax {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Script tag highlighting */
+.cm-content .cm-line .script-tag,
+.script-tag {
+  color: var(--html-tag-color) !important;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  background-color: transparent;
+}
+
+/* Script content highlighting */
+.script-tag-content {
+  color: var(--html-content-color) !important;
+  font-family: "Menlo", "Monaco", "Courier New", monospace;
+  background-color: var(--cm-code-background);
+  padding: 0.2em;
+  display: block;
+  margin: 0.2em 0;
+  border-radius: 3px;
+}
+
+/* Override hidden or rendered script tags */
+.cm-html-rendered script,
+.cm-html-inline script,
+.cm-html-block script {
+  display: inline !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background-color: transparent;
+}
+
+/* Style script tags properly */
+.cm-html-rendered script::before {
+  content: "<script>";
+  color: var(--html-tag-color);
+}
+
+.cm-html-rendered script::after {
+  content: "</script>";
+  color: var(--html-tag-color);
+}
+
+/* Ensure no scripts get executed */
+.cm-html-rendered script {
+  display: block !important;
+  white-space: pre-wrap;
+  font-family: monospace;
+  color: var(--html-content-color);
+  background-color: var(--cm-code-background);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+  margin: 0.2em 0;
 }

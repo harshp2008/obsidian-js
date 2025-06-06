@@ -43,11 +43,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setMounted(true);
       
       // Update the HTML class
-      if (initialTheme === 'dark') {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
+      applyThemeToHTML(initialTheme);
     }
   }, []);
 
@@ -58,14 +54,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       // Update localStorage
       if (typeof window !== 'undefined') {
         localStorage.setItem('theme', newTheme);
-        
-        // Update the HTML class
-        if (newTheme === 'dark') {
-          document.documentElement.classList.add('dark');
-        } else {
-          document.documentElement.classList.remove('dark');
-        }
       }
+      
+      // Apply theme to HTML
+      applyThemeToHTML(newTheme);
       
       return newTheme;
     });
@@ -96,4 +88,26 @@ export function useTheme() {
     throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
+}
+
+/**
+ * Apply the HTML theme class to document
+ */
+function applyThemeToHTML(theme: Theme) {
+  if (typeof document !== 'undefined') {
+    // Add theme class to HTML element
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+      
+      document.body.classList.add('dark');
+      document.body.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+      
+      document.body.classList.add('light');
+      document.body.classList.remove('dark');
+    }
+  }
 }

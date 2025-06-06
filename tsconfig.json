@@ -29,7 +29,7 @@
       ]
     },
     "noEmit": true,
-    "incremental": true
+    "incremental": false
   },
   "include": [
     "next-env.d.ts",

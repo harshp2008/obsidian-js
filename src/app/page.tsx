@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import CodeMirrorEditor from './obsidian-editor/CodeMirrorEditor';
 import { ThemeToggle } from '../components/ThemeToggle';
-
-
+import debounce from 'lodash/debounce';
 
 // Load the default content from the markdown file
-import defaultContentString from './obsidian-editor/defaultText.md';
+import defaultContentString from './defaultText.md';
 
 const initialContent = defaultContentString;
 
@@ -21,14 +20,14 @@ export default function CodeMirrorDemoPage() {
   const [content, setContent] = useState(initialContent);
   
   /**
-   * Handles changes to the editor's content.
-   * Updates the local state with the new content.
-   *
-   * @param {string} newContent - The new content from the editor.
+   * Debounced content change handler to avoid too frequent state updates
    */
-  const handleContentChange = (newContent: string) => {
-    setContent(newContent);
-  };
+  const handleContentChange = useCallback(
+    debounce((newContent: string) => {
+      setContent(newContent);
+    }, 500),
+    []
+  );
   
   /**
    * Handles the save action triggered from the editor (e.g., Ctrl+S).
@@ -53,8 +52,9 @@ export default function CodeMirrorDemoPage() {
           
           <div className="h-[600px] border rounded-md">
             <CodeMirrorEditor 
-              content={content} 
-              onChange={handleContentChange} 
+              initialValue={content}
+              readOnly={false}
+              onChange={handleContentChange}
               onSave={handleSave}
             />
           </div>

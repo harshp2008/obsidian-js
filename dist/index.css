@@ -620,3 +620,200 @@
   display: inline-block;
   vertical-align: baseline;
 }
+.ProseMirror blockquote {
+  border-left: 4px solid #e5e7eb;
+  padding-left: 1em;
+  color: #6b7280;
+  margin: 1em 0;
+}
+.dark .ProseMirror blockquote {
+  border-left-color: #4b5563;
+  color: #9ca3af;
+}
+.cm-line {
+  position: relative;
+}
+[class*=cm-blockquote-content-level-] {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  background-color: #fcfaf7;
+  color: #6b5c3e;
+  line-height: inherit;
+  padding-top: 0.05em;
+  padding-bottom: 0.05em;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.cm-blockquote-content-level-1 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  background-size: 2px 100%;
+  padding-left: calc(2px + 0.4em);
+}
+.cm-blockquote-content-level-2 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position: 0 0, 6px 0;
+  background-size: 2px 100%, 2px 100%;
+  padding-left: calc(8px + 0.4em);
+}
+.cm-blockquote-content-level-3 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    6px 0,
+    12px 0;
+  background-size:
+    2px 100%,
+    2px 100%,
+    2px 100%;
+  padding-left: calc(14px + 0.4em);
+}
+.cm-blockquote-content-level-4 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    6px 0,
+    12px 0,
+    18px 0;
+  background-size:
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%;
+  padding-left: calc(20px + 0.4em);
+}
+.cm-blockquote-content-level-5 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    6px 0,
+    12px 0,
+    18px 0,
+    24px 0;
+  background-size:
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%;
+  padding-left: calc(26px + 0.4em);
+}
+.cm-blockquote-content-level-6 {
+  background-image:
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px),
+    linear-gradient(
+      to right,
+      #e0d9ce 2px,
+      transparent 2px);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    6px 0,
+    12px 0,
+    18px 0,
+    24px 0,
+    30px 0;
+  background-size:
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%,
+    2px 100%;
+  padding-left: calc(32px + 0.4em);
+}
+.cm-blockquote-bar {
+  display: inline-block;
+  width: 2px;
+  height: 1.6em;
+  background: #e0d9ce;
+  margin-right: 16px;
+  vertical-align: middle;
+  border-radius: 0;
+}

@@ -2,28 +2,54 @@ import { Decoration } from '@codemirror/view';
 import { SyntaxRule, SyntaxRuleContext } from '../types';
 import { isCursorNearRange, escapeRegExp } from './utils';
 
-// Get the extended context type that includes the decorations array
+/**
+ * Represents a decoration item with its position and decoration object
+ */
 interface DecorationItem {
+  /** Start position of the decoration */
   from: number;
+  /** End position of the decoration */
   to: number;
+  /** The decoration object to apply */
   decoration: Decoration;
 }
 
+/**
+ * Extended context that includes the decorations array
+ */
 type ExtendedContext = SyntaxRuleContext & {
+  /** Collection of decorations to be applied */
   decorations?: DecorationItem[];
 };
 
+/**
+ * Pattern information for bold syntax
+ */
+interface BoldPattern {
+  /** The marker string (e.g., "**" or "__") */
+  marker: string;
+  /** Regular expression to match the bold pattern */
+  regex: RegExp;
+}
+
+/**
+ * Decorator class that handles bold text syntax highlighting in markdown
+ * Supports both **bold** and __bold__ formats
+ */
 export class BoldDecorator implements SyntaxRule {
-  // Regex for **bold** and __bold__
-  // It looks for non-greedy content between the markers.
-  // It also ensures that the character before the opening marker and after the closing marker
-  // is not the marker character itself, to avoid matching parts of ***italicbold*** or similar.
-  // And it avoids matching if the content is empty, e.g. **** or ____
-  private boldPatterns = [
+  /**
+   * Patterns for bold text in markdown
+   * Each pattern includes the marker string and a regex to match the pattern
+   */
+  private boldPatterns: BoldPattern[] = [
     { marker: '**', regex: /(?<!\*)\*\*(?!\s)([^\*]+?)(?<!\s)\*\*(?!\*)/g }, // **bold**
     { marker: '__', regex: /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g }    // __bold__
   ];
 
+  /**
+   * Process the document text to find and decorate bold text
+   * @param context - The syntax rule context containing document information
+   */
   process(context: SyntaxRuleContext): void {
     const { builder, docText, textSliceFrom, cursorPositions } = context;
     // Cast to get access to the decorations array
@@ -46,6 +72,7 @@ export class BoldDecorator implements SyntaxRule {
           continue;
         }
 
+        // Calculate positions in the document
         const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
         const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
 
@@ -61,6 +88,7 @@ export class BoldDecorator implements SyntaxRule {
         // Check if cursor is near the entire bold span or its markers
         const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
 
+        // Use different styling based on cursor proximity
         const syntaxClass = isNearSyntax ? 'markdown-syntax-active' : 'markdown-syntax-dim';
 
         // If we have a decorations collector, use it instead of the builder directly
