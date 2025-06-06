@@ -31,19 +31,39 @@ import {
  * Creates a custom highlight style for markdown content
  * @returns {HighlightStyle} The highlight style extension
  */
-export const createCustomHighlightStyle = (): HighlightStyle => {
-  return HighlightStyle.define([
-    { tag: tags.heading1, fontSize: '1.6em', fontWeight: 'bold' },
-    { tag: tags.heading2, fontSize: '1.4em', fontWeight: 'bold' },
-    { tag: tags.heading3, fontSize: '1.2em', fontWeight: 'bold' },
-    { tag: tags.heading4, fontSize: '1.1em', fontWeight: 'bold' },
-    { tag: tags.heading5, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' },
-    { tag: tags.heading6, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' },
-    { tag: tags.strong, fontWeight: 'bold' },
-    { tag: tags.emphasis, fontStyle: 'italic' },
-    { tag: tags.link, color: '#2563eb', textDecoration: 'underline' },
-    { tag: tags.monospace, fontFamily: 'monospace', fontSize: '0.9em', color: '#10b981' },
-  ]);
+export const createCustomHighlightStyle = (): HighlightStyle | Extension[] => {
+  try {
+    // First verify that tags is an object and has the expected properties
+    if (typeof tags !== 'object' || tags === null) {
+      console.warn('Lezer highlight tags not available, using empty highlight style');
+      return [];
+    }
+
+    // Build an array of valid tag styles
+    const validStyles = [];
+    
+    if (tags.heading1) validStyles.push({ tag: tags.heading1, fontSize: '1.6em', fontWeight: 'bold' });
+    if (tags.heading2) validStyles.push({ tag: tags.heading2, fontSize: '1.4em', fontWeight: 'bold' });
+    if (tags.heading3) validStyles.push({ tag: tags.heading3, fontSize: '1.2em', fontWeight: 'bold' });
+    if (tags.heading4) validStyles.push({ tag: tags.heading4, fontSize: '1.1em', fontWeight: 'bold' });
+    if (tags.heading5) validStyles.push({ tag: tags.heading5, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
+    if (tags.heading6) validStyles.push({ tag: tags.heading6, fontSize: '1.1em', fontWeight: 'bold', fontStyle: 'italic' });
+    if (tags.strong) validStyles.push({ tag: tags.strong, fontWeight: 'bold' });
+    if (tags.emphasis) validStyles.push({ tag: tags.emphasis, fontStyle: 'italic' });
+    if (tags.link) validStyles.push({ tag: tags.link, color: '#2563eb', textDecoration: 'underline' });
+    if (tags.monospace) validStyles.push({ tag: tags.monospace, fontFamily: 'monospace', fontSize: '0.9em', color: '#10b981' });
+    
+    // Only create the highlight style if we have valid tags
+    if (validStyles.length > 0) {
+      return HighlightStyle.define(validStyles);
+    } else {
+      console.warn('No valid lezer highlight tags found, using empty highlight style');
+      return [];
+    }
+  } catch (error) {
+    console.error('Error creating custom highlight style:', error);
+    return []; // Return empty extension on failure
+  }
 };
 
 /**
@@ -185,7 +205,8 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
     current: options.onSave || (() => {})
   };
   
-  return [
+  // Create extensions that are less likely to cause issues
+  const safeExtensions: Extension[] = [
     themeExtension,
     history(),
     atomicIndents,
@@ -199,10 +220,28 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
     markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    syntaxHighlighting(createCustomHighlightStyle()),
     EditorView.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
     editableCompartment.of(EditorView.editable.of(true)), // Start as editable
     createEditorStyling(),
   ];
+
+  // Try to apply syntax highlighting safely
+  try {
+    const highlightStyle = createCustomHighlightStyle();
+    
+    // Only add syntax highlighting if we got a valid HighlightStyle object
+    if (Array.isArray(highlightStyle)) {
+      if (highlightStyle.length > 0) {
+        safeExtensions.push(...highlightStyle);
+      }
+    } else {
+      safeExtensions.push(syntaxHighlighting(highlightStyle));
+    }
+  } catch (error) {
+    console.error("Error applying syntax highlighting:", error);
+    // Continue without syntax highlighting
+  }
+  
+  return safeExtensions;
 }; 

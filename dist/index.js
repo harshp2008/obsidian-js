@@ -39,6 +39,42 @@ __export(index_exports, {
 });
 module.exports = __toCommonJS(index_exports);
 
+// src/app/obsidian-editor/utils/highlightStyleFix.ts
+var import_language = require("@codemirror/language");
+function applyHighlightStyleFix() {
+  try {
+    if (import_language.HighlightStyle.__patched) return;
+    const originalDefine = import_language.HighlightStyle.define;
+    import_language.HighlightStyle.define = function(specs) {
+      try {
+        const style = originalDefine.call(this, specs);
+        const originalStyleFn = style.style;
+        Object.defineProperty(style, "style", {
+          value: function(tags6) {
+            if (!tags6) return "";
+            try {
+              return originalStyleFn.call(this, tags6);
+            } catch (e) {
+              console.warn("Error in highlight style:", e);
+              return "";
+            }
+          },
+          writable: false,
+          configurable: true
+        });
+        return style;
+      } catch (error) {
+        console.error("Error creating HighlightStyle:", error);
+        return originalDefine.call(this, []);
+      }
+    };
+    import_language.HighlightStyle.__patched = true;
+    console.info("HighlightStyle successfully patched to prevent 'tags is not iterable' error");
+  } catch (error) {
+    console.error("Failed to patch HighlightStyle:", error);
+  }
+}
+
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
 var import_react2 = require("react");
 var import_state13 = require("@codemirror/state");
@@ -1763,7 +1799,7 @@ function createMarkdownSyntaxPlugin() {
 }
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-var import_language6 = require("@codemirror/language");
+var import_language7 = require("@codemirror/language");
 var import_highlight5 = require("@lezer/highlight");
 
 // src/app/obsidian-editor/utils/theme.ts
@@ -1891,7 +1927,7 @@ var import_view22 = require("@codemirror/view");
 // node_modules/@codemirror/lang-markdown/dist/index.js
 var import_state7 = require("@codemirror/state");
 var import_view19 = require("@codemirror/view");
-var import_language4 = require("@codemirror/language");
+var import_language5 = require("@codemirror/language");
 var import_autocomplete2 = require("@codemirror/autocomplete");
 var import_markdown = require("@lezer/markdown");
 
@@ -6187,7 +6223,7 @@ var parser2 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-css/dist/index.js
-var import_language = require("@codemirror/language");
+var import_language2 = require("@codemirror/language");
 var _properties = null;
 function properties() {
   if (!_properties && typeof document == "object" && document.body) {
@@ -6992,7 +7028,7 @@ function variableNames(doc, node, isVariable) {
   }
 }
 var defineCSSCompletionSource = (isVariable) => (context) => {
-  let { state, pos } = context, node = (0, import_language.syntaxTree)(state).resolveInner(pos, -1);
+  let { state, pos } = context, node = (0, import_language2.syntaxTree)(state).resolveInner(pos, -1);
   let isDash = node.type.isError && node.from == node.to - 1 && state.doc.sliceString(node.from, node.to) == "-";
   if (node.name == "PropertyName" || (isDash || node.name == "TagName") && /^(Block|Styles)$/.test(node.resolve(node.to).name))
     return { from: node.from, options: properties(), validFor: identifier2 };
@@ -7026,15 +7062,15 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
   return null;
 };
 var cssCompletionSource = /* @__PURE__ */ defineCSSCompletionSource((n) => n.name == "VariableName");
-var cssLanguage = /* @__PURE__ */ import_language.LRLanguage.define({
+var cssLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
   name: "css",
   parser: /* @__PURE__ */ parser2.configure({
     props: [
-      /* @__PURE__ */ import_language.indentNodeProp.add({
-        Declaration: /* @__PURE__ */ (0, import_language.continuedIndent)()
+      /* @__PURE__ */ import_language2.indentNodeProp.add({
+        Declaration: /* @__PURE__ */ (0, import_language2.continuedIndent)()
       }),
-      /* @__PURE__ */ import_language.foldNodeProp.add({
-        "Block KeyframeList": import_language.foldInside
+      /* @__PURE__ */ import_language2.foldNodeProp.add({
+        "Block KeyframeList": import_language2.foldInside
       })
     ]
   }),
@@ -7045,7 +7081,7 @@ var cssLanguage = /* @__PURE__ */ import_language.LRLanguage.define({
   }
 });
 function css() {
-  return new import_language.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
+  return new import_language2.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 }
 
 // node_modules/@lezer/javascript/dist/index.js
@@ -7262,7 +7298,7 @@ var parser3 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-javascript/dist/index.js
-var import_language2 = require("@codemirror/language");
+var import_language3 = require("@codemirror/language");
 var import_state5 = require("@codemirror/state");
 var import_view17 = require("@codemirror/view");
 var import_autocomplete = require("@codemirror/autocomplete");
@@ -7423,7 +7459,7 @@ var dontComplete = [
   "?."
 ];
 function localCompletionSource(context) {
-  let inner = (0, import_language2.syntaxTree)(context.state).resolveInner(context.pos, -1);
+  let inner = (0, import_language3.syntaxTree)(context.state).resolveInner(context.pos, -1);
   if (dontComplete.indexOf(inner.name) > -1)
     return null;
   let isWord = inner.name == "VariableName" || inner.to - inner.from < 20 && Identifier.test(context.state.sliceDoc(inner.from, inner.to));
@@ -7440,22 +7476,22 @@ function localCompletionSource(context) {
     validFor: Identifier
   };
 }
-var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
+var javascriptLanguage = /* @__PURE__ */ import_language3.LRLanguage.define({
   name: "javascript",
   parser: /* @__PURE__ */ parser3.configure({
     props: [
-      /* @__PURE__ */ import_language2.indentNodeProp.add({
-        IfStatement: /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*({|else\b)/ }),
-        TryStatement: /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
-        LabeledStatement: import_language2.flatIndent,
+      /* @__PURE__ */ import_language3.indentNodeProp.add({
+        IfStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|else\b)/ }),
+        TryStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
+        LabeledStatement: import_language3.flatIndent,
         SwitchBody: (context) => {
           let after = context.textAfter, closed = /^\s*\}/.test(after), isCase = /^\s*(case|default)\b/.test(after);
           return context.baseIndent + (closed ? 0 : isCase ? 1 : 2) * context.unit;
         },
-        Block: /* @__PURE__ */ (0, import_language2.delimitedIndent)({ closing: "}" }),
+        Block: /* @__PURE__ */ (0, import_language3.delimitedIndent)({ closing: "}" }),
         ArrowFunction: (cx) => cx.baseIndent + cx.unit,
         "TemplateString BlockComment": () => null,
-        "Statement Property": /* @__PURE__ */ (0, import_language2.continuedIndent)({ except: /^\s*{/ }),
+        "Statement Property": /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*{/ }),
         JSXElement(context) {
           let closed = /^\s*<\//.test(context.textAfter);
           return context.lineIndent(context.node.from) + (closed ? 0 : context.unit);
@@ -7468,8 +7504,8 @@ var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
           return context.column(context.node.from) + context.unit;
         }
       }),
-      /* @__PURE__ */ import_language2.foldNodeProp.add({
-        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language2.foldInside,
+      /* @__PURE__ */ import_language3.foldNodeProp.add({
+        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language3.foldInside,
         BlockComment(tree) {
           return { from: tree.from + 2, to: tree.to - 2 };
         }
@@ -7485,16 +7521,16 @@ var javascriptLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
 });
 var jsxSublanguage = {
   test: (node) => /^JSX/.test(node.name),
-  facet: /* @__PURE__ */ (0, import_language2.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
+  facet: /* @__PURE__ */ (0, import_language3.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
 };
 var typescriptLanguage = /* @__PURE__ */ javascriptLanguage.configure({ dialect: "ts" }, "typescript");
 var jsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx",
-  props: [/* @__PURE__ */ import_language2.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 });
 var tsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx ts",
-  props: [/* @__PURE__ */ import_language2.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 }, "typescript");
 var kwCompletion = (name) => ({ label: name, type: "keyword" });
 var keywords = /* @__PURE__ */ "break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion);
@@ -7502,7 +7538,7 @@ var typescriptKeywords = /* @__PURE__ */ keywords.concat(/* @__PURE__ */ ["decla
 function javascript(config = {}) {
   let lang = config.jsx ? config.typescript ? tsxLanguage : jsxLanguage : config.typescript ? typescriptLanguage : javascriptLanguage;
   let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords);
-  return new import_language2.LanguageSupport(lang, [
+  return new import_language3.LanguageSupport(lang, [
     javascriptLanguage.data.of({
       autocomplete: (0, import_autocomplete.ifNotIn)(dontComplete, (0, import_autocomplete.completeFromList)(completions))
     }),
@@ -7535,7 +7571,7 @@ var autoCloseTags = /* @__PURE__ */ import_view17.EditorView.inputHandler.of((vi
   let base = defaultInsert(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a;
-    let { head } = range, around = (0, import_language2.syntaxTree)(state).resolveInner(head - 1, -1), name;
+    let { head } = range, around = (0, import_language3.syntaxTree)(state).resolveInner(head - 1, -1), name;
     if (around.name == "JSXStartTag")
       around = around.parent;
     if (state.doc.sliceString(head - 1, head) != text || around.name == "JSXAttributeValue" && around.to > head) ;
@@ -7566,7 +7602,7 @@ var autoCloseTags = /* @__PURE__ */ import_view17.EditorView.inputHandler.of((vi
 // node_modules/@codemirror/lang-html/dist/index.js
 var import_view18 = require("@codemirror/view");
 var import_state6 = require("@codemirror/state");
-var import_language3 = require("@codemirror/language");
+var import_language4 = require("@codemirror/language");
 var Targets = ["_blank", "_self", "_top", "_parent"];
 var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
 var Methods = ["get", "post", "put", "delete"];
@@ -8110,7 +8146,7 @@ function completeAttrValue(state, schema, tree, from, to) {
   return { from, to, options, validFor: token };
 }
 function htmlCompletionFor(schema, context) {
-  let { state, pos } = context, tree = (0, import_language3.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
+  let { state, pos } = context, tree = (0, import_language4.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
   for (let scan = pos, before; around == tree && (before = tree.childBefore(scan)); ) {
     let last = before.lastChild;
     if (!last || !last.type.isError || last.from < last.to)
@@ -8187,11 +8223,11 @@ var defaultAttrs = /* @__PURE__ */ [
     parser: /* @__PURE__ */ cssLanguage.parser.configure({ top: "Styles" })
   }
 ].concat(/* @__PURE__ */ eventAttributes.map((name) => ({ name, parser: javascriptLanguage.parser })));
-var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
+var htmlPlain = /* @__PURE__ */ import_language4.LRLanguage.define({
   name: "html",
   parser: /* @__PURE__ */ parser.configure({
     props: [
-      /* @__PURE__ */ import_language3.indentNodeProp.add({
+      /* @__PURE__ */ import_language4.indentNodeProp.add({
         Element(context) {
           let after = /^(\s*)(<\/)?/.exec(context.textAfter);
           if (context.node.to <= context.pos + after[0].length)
@@ -8216,7 +8252,7 @@ var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
           return null;
         }
       }),
-      /* @__PURE__ */ import_language3.foldNodeProp.add({
+      /* @__PURE__ */ import_language4.foldNodeProp.add({
         Element(node) {
           let first = node.firstChild, last = node.lastChild;
           if (!first || first.name != "OpenTag")
@@ -8224,7 +8260,7 @@ var htmlPlain = /* @__PURE__ */ import_language3.LRLanguage.define({
           return { from: first.to, to: last.name == "CloseTag" ? last.from : node.to };
         }
       }),
-      /* @__PURE__ */ import_language3.bracketMatchingHandle.add({
+      /* @__PURE__ */ import_language4.bracketMatchingHandle.add({
         "OpenTag CloseTag": (node) => node.getChild("TagName")
       })
     ]
@@ -8247,7 +8283,7 @@ function html(config = {}) {
   if (config.nestedLanguages && config.nestedLanguages.length || config.nestedAttributes && config.nestedAttributes.length)
     wrap = configureNesting((config.nestedLanguages || []).concat(defaultNesting), (config.nestedAttributes || []).concat(defaultAttrs));
   let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
-  return new import_language3.LanguageSupport(lang, [
+  return new import_language4.LanguageSupport(lang, [
     htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config) }),
     config.autoCloseTags !== false ? autoCloseTags2 : [],
     javascript().support,
@@ -8262,7 +8298,7 @@ var autoCloseTags2 = /* @__PURE__ */ import_view18.EditorView.inputHandler.of((v
   let closeTags = state.changeByRange((range) => {
     var _a, _b, _c;
     let didType = state.doc.sliceString(range.from - 1, range.to) == text;
-    let { head } = range, after = (0, import_language3.syntaxTree)(state).resolveInner(head, -1), name;
+    let { head } = range, after = (0, import_language4.syntaxTree)(state).resolveInner(head, -1), name;
     if (didType && text == ">" && after.name == "EndTag") {
       let tag = after.parent;
       if (((_b = (_a = tag.parent) === null || _a === void 0 ? void 0 : _a.lastChild) === null || _b === void 0 ? void 0 : _b.name) != "CloseTag" && (name = elementName2(state.doc, tag.parent, head)) && !selfClosers2.has(name)) {
@@ -8296,18 +8332,18 @@ var autoCloseTags2 = /* @__PURE__ */ import_view18.EditorView.inputHandler.of((v
 });
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
-var data = /* @__PURE__ */ (0, import_language4.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
+var data = /* @__PURE__ */ (0, import_language5.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
 var headingProp = /* @__PURE__ */ new NodeProp();
 var commonmark = /* @__PURE__ */ import_markdown.parser.configure({
   props: [
-    /* @__PURE__ */ import_language4.foldNodeProp.add((type) => {
+    /* @__PURE__ */ import_language5.foldNodeProp.add((type) => {
       return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to });
     }),
     /* @__PURE__ */ headingProp.add(isHeading),
-    /* @__PURE__ */ import_language4.indentNodeProp.add({
+    /* @__PURE__ */ import_language5.indentNodeProp.add({
       Document: () => null
     }),
-    /* @__PURE__ */ import_language4.languageDataProp.add({
+    /* @__PURE__ */ import_language5.languageDataProp.add({
       Document: data
     })
   ]
@@ -8329,8 +8365,8 @@ function findSectionEnd(headerNode, level) {
   }
   return last.to;
 }
-var headerIndent = /* @__PURE__ */ import_language4.foldService.of((state, start, end) => {
-  for (let node = (0, import_language4.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
+var headerIndent = /* @__PURE__ */ import_language5.foldService.of((state, start, end) => {
+  for (let node = (0, import_language5.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
     if (node.from < start)
       break;
     let heading = node.type.prop(headingProp);
@@ -8343,12 +8379,12 @@ var headerIndent = /* @__PURE__ */ import_language4.foldService.of((state, start
   return null;
 });
 function mkLang(parser5) {
-  return new import_language4.Language(data, parser5, [headerIndent], "markdown");
+  return new import_language5.Language(data, parser5, [headerIndent], "markdown");
 }
 var commonmarkLanguage = /* @__PURE__ */ mkLang(commonmark);
 var extended = /* @__PURE__ */ commonmark.configure([import_markdown.GFM, import_markdown.Subscript, import_markdown.Superscript, import_markdown.Emoji, {
   props: [
-    /* @__PURE__ */ import_language4.foldNodeProp.add({
+    /* @__PURE__ */ import_language5.foldNodeProp.add({
       Table: (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to })
     })
   ]
@@ -8362,9 +8398,9 @@ function getCodeParser(languages2, defaultLanguage) {
       if (typeof languages2 == "function")
         found = languages2(info);
       else
-        found = import_language4.LanguageDescription.matchLanguageName(languages2, info, true);
-      if (found instanceof import_language4.LanguageDescription)
-        return found.support ? found.support.language.parser : import_language4.ParseContext.getSkippingParser(found.load());
+        found = import_language5.LanguageDescription.matchLanguageName(languages2, info, true);
+      if (found instanceof import_language5.LanguageDescription)
+        return found.support ? found.support.language.parser : import_language5.ParseContext.getSkippingParser(found.load());
       else if (found)
         return found.parser;
     }
@@ -8455,7 +8491,7 @@ function renumberList(after, doc, changes, offset = 0) {
 }
 function normalizeIndent(content, state) {
   let blank = /^[ \t]*/.exec(content)[0].length;
-  if (!blank || state.facet(import_language4.indentUnit) != "	")
+  if (!blank || state.facet(import_language5.indentUnit) != "	")
     return content;
   let col = (0, import_state7.countColumn)(content, 4, blank);
   let space3 = "";
@@ -8471,7 +8507,7 @@ function normalizeIndent(content, state) {
   return space3 + content.slice(blank);
 }
 var insertNewlineContinueMarkup = ({ state, dispatch }) => {
-  let tree = (0, import_language4.syntaxTree)(state), { doc } = state;
+  let tree = (0, import_language5.syntaxTree)(state), { doc } = state;
   let dont = null, changes = state.changeByRange((range) => {
     if (!range.empty || !markdownLanguage.isActiveAt(state, range.from, 0))
       return dont = { range };
@@ -8583,7 +8619,7 @@ function contextNodeForDelete(tree, pos) {
   return node;
 }
 var deleteMarkupBackward = ({ state, dispatch }) => {
-  let tree = (0, import_language4.syntaxTree)(state);
+  let tree = (0, import_language5.syntaxTree)(state);
   let dont = null, changes = state.changeByRange((range) => {
     let pos = range.from, { doc } = state;
     if (range.empty && markdownLanguage.isActiveAt(state, range.from)) {
@@ -8634,7 +8670,7 @@ function markdown(config = {}) {
     throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
   let extensions = config.extensions ? [config.extensions] : [];
   let support = [htmlTagLanguage.support], defaultCode;
-  if (defaultCodeLanguage instanceof import_language4.LanguageSupport) {
+  if (defaultCodeLanguage instanceof import_language5.LanguageSupport) {
     support.push(defaultCodeLanguage.support);
     defaultCode = defaultCodeLanguage.language;
   } else if (defaultCodeLanguage) {
@@ -8647,13 +8683,13 @@ function markdown(config = {}) {
   let lang = mkLang(parser5.configure(extensions));
   if (completeHTMLTags)
     support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
-  return new import_language4.LanguageSupport(lang, support);
+  return new import_language5.LanguageSupport(lang, support);
 }
 function htmlTagCompletion(context) {
   let { state, pos } = context, m = /<[:\-\.\w\u00b7-\uffff]*$/.exec(state.sliceDoc(pos - 25, pos));
   if (!m)
     return null;
-  let tree = (0, import_language4.syntaxTree)(state).resolveInner(pos, -1);
+  let tree = (0, import_language5.syntaxTree)(state).resolveInner(pos, -1);
   while (tree && !tree.type.isTop) {
     if (tree.name == "CodeBlock" || tree.name == "FencedCode" || tree.name == "ProcessingInstructionBlock" || tree.name == "CommentBlock" || tree.name == "Link" || tree.name == "Image")
       return null;
@@ -8676,7 +8712,7 @@ function htmlTagCompletions() {
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 var import_language_data = require("@codemirror/language-data");
-var import_language5 = require("@codemirror/language");
+var import_language6 = require("@codemirror/language");
 var import_highlight4 = require("@lezer/highlight");
 var import_commands = require("@codemirror/commands");
 
@@ -9369,18 +9405,32 @@ var handleEnterListBlockquote = (editorView) => {
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 var createCustomHighlightStyle = () => {
-  return import_language5.HighlightStyle.define([
-    { tag: import_highlight4.tags.heading1, fontSize: "1.6em", fontWeight: "bold" },
-    { tag: import_highlight4.tags.heading2, fontSize: "1.4em", fontWeight: "bold" },
-    { tag: import_highlight4.tags.heading3, fontSize: "1.2em", fontWeight: "bold" },
-    { tag: import_highlight4.tags.heading4, fontSize: "1.1em", fontWeight: "bold" },
-    { tag: import_highlight4.tags.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-    { tag: import_highlight4.tags.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-    { tag: import_highlight4.tags.strong, fontWeight: "bold" },
-    { tag: import_highlight4.tags.emphasis, fontStyle: "italic" },
-    { tag: import_highlight4.tags.link, color: "#2563eb", textDecoration: "underline" },
-    { tag: import_highlight4.tags.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" }
-  ]);
+  try {
+    if (typeof import_highlight4.tags !== "object" || import_highlight4.tags === null) {
+      console.warn("Lezer highlight tags not available, using empty highlight style");
+      return [];
+    }
+    const validStyles = [];
+    if (import_highlight4.tags.heading1) validStyles.push({ tag: import_highlight4.tags.heading1, fontSize: "1.6em", fontWeight: "bold" });
+    if (import_highlight4.tags.heading2) validStyles.push({ tag: import_highlight4.tags.heading2, fontSize: "1.4em", fontWeight: "bold" });
+    if (import_highlight4.tags.heading3) validStyles.push({ tag: import_highlight4.tags.heading3, fontSize: "1.2em", fontWeight: "bold" });
+    if (import_highlight4.tags.heading4) validStyles.push({ tag: import_highlight4.tags.heading4, fontSize: "1.1em", fontWeight: "bold" });
+    if (import_highlight4.tags.heading5) validStyles.push({ tag: import_highlight4.tags.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (import_highlight4.tags.heading6) validStyles.push({ tag: import_highlight4.tags.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (import_highlight4.tags.strong) validStyles.push({ tag: import_highlight4.tags.strong, fontWeight: "bold" });
+    if (import_highlight4.tags.emphasis) validStyles.push({ tag: import_highlight4.tags.emphasis, fontStyle: "italic" });
+    if (import_highlight4.tags.link) validStyles.push({ tag: import_highlight4.tags.link, color: "#2563eb", textDecoration: "underline" });
+    if (import_highlight4.tags.monospace) validStyles.push({ tag: import_highlight4.tags.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
+    if (validStyles.length > 0) {
+      return import_language6.HighlightStyle.define(validStyles);
+    } else {
+      console.warn("No valid lezer highlight tags found, using empty highlight style");
+      return [];
+    }
+  } catch (error) {
+    console.error("Error creating custom highlight style:", error);
+    return [];
+  }
 };
 var createCustomEnterKeymap = () => {
   return import_state12.Prec.highest(import_view22.keymap.of([
@@ -9488,7 +9538,7 @@ var createEditorExtensions = (options) => {
     current: options.onSave || (() => {
     })
   };
-  return [
+  const safeExtensions = [
     themeExtension,
     (0, import_commands.history)(),
     atomicIndents,
@@ -9502,13 +9552,25 @@ var createEditorExtensions = (options) => {
     markdownPasteHandler,
     (0, import_view22.highlightActiveLine)(),
     (0, import_view22.highlightActiveLineGutter)(),
-    (0, import_language5.syntaxHighlighting)(createCustomHighlightStyle()),
     import_view22.EditorView.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
     editableCompartment.of(import_view22.EditorView.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
+  try {
+    const highlightStyle = createCustomHighlightStyle();
+    if (Array.isArray(highlightStyle)) {
+      if (highlightStyle.length > 0) {
+        safeExtensions.push(...highlightStyle);
+      }
+    } else {
+      safeExtensions.push((0, import_language6.syntaxHighlighting)(highlightStyle));
+    }
+  } catch (error) {
+    console.error("Error applying syntax highlighting:", error);
+  }
+  return safeExtensions;
 };
 
 // src/contexts/ThemeContext.tsx
@@ -9572,6 +9634,30 @@ function applyThemeToHTML(theme, isMounted = false) {
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
+var createSafeHighlightStyle = (styles) => {
+  try {
+    const highlightStyle = import_language7.HighlightStyle.define(styles);
+    const safeHighlightStyle = Object.assign(
+      Object.create(Object.getPrototypeOf(highlightStyle)),
+      highlightStyle
+    );
+    const originalStyleFn = highlightStyle.style;
+    Object.defineProperty(safeHighlightStyle, "style", {
+      value: function(tags6) {
+        if (!tags6 || !Array.isArray(tags6) || tags6.length === 0) {
+          return "";
+        }
+        return originalStyleFn.call(highlightStyle, tags6);
+      },
+      writable: false,
+      configurable: true
+    });
+    return safeHighlightStyle;
+  } catch (error) {
+    console.error("Error creating highlight style:", error);
+    return import_language7.HighlightStyle.define([]);
+  }
+};
 var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave }) => {
   const [editorView, setEditorView] = (0, import_react2.useState)(null);
   const [currentMode, setCurrentMode] = (0, import_react2.useState)("live");
@@ -9602,22 +9688,26 @@ var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave 
       });
       let customHighlightStyle;
       try {
-        if (typeof import_highlight5.tags === "object") {
-          const safeHighlightStyle = import_language6.HighlightStyle.define([
-            // Only use known valid tags to avoid errors
-            { tag: import_highlight5.tags.heading1, class: "cm-header cm-header-1" },
-            { tag: import_highlight5.tags.heading2, class: "cm-header cm-header-2" },
-            { tag: import_highlight5.tags.heading3, class: "cm-header cm-header-3" },
-            { tag: import_highlight5.tags.strong, class: "cm-strong" },
-            { tag: import_highlight5.tags.emphasis, class: "cm-em" },
-            { tag: import_highlight5.tags.link, class: "cm-link" },
-            { tag: import_highlight5.tags.monospace, class: "cm-monospace" },
-            { tag: import_highlight5.tags.keyword, class: "cm-keyword" },
-            { tag: import_highlight5.tags.string, class: "cm-string" },
-            { tag: import_highlight5.tags.comment, class: "cm-comment" },
-            { tag: import_highlight5.tags.name, class: "cm-def" }
-          ]);
-          customHighlightStyle = (0, import_language6.syntaxHighlighting)(safeHighlightStyle);
+        if (typeof import_highlight5.tags === "object" && import_highlight5.tags !== null) {
+          const validTags = [];
+          if (import_highlight5.tags.heading1) validTags.push({ tag: import_highlight5.tags.heading1, class: "cm-header cm-header-1" });
+          if (import_highlight5.tags.heading2) validTags.push({ tag: import_highlight5.tags.heading2, class: "cm-header cm-header-2" });
+          if (import_highlight5.tags.heading3) validTags.push({ tag: import_highlight5.tags.heading3, class: "cm-header cm-header-3" });
+          if (import_highlight5.tags.strong) validTags.push({ tag: import_highlight5.tags.strong, class: "cm-strong" });
+          if (import_highlight5.tags.emphasis) validTags.push({ tag: import_highlight5.tags.emphasis, class: "cm-em" });
+          if (import_highlight5.tags.link) validTags.push({ tag: import_highlight5.tags.link, class: "cm-link" });
+          if (import_highlight5.tags.monospace) validTags.push({ tag: import_highlight5.tags.monospace, class: "cm-monospace" });
+          if (import_highlight5.tags.keyword) validTags.push({ tag: import_highlight5.tags.keyword, class: "cm-keyword" });
+          if (import_highlight5.tags.string) validTags.push({ tag: import_highlight5.tags.string, class: "cm-string" });
+          if (import_highlight5.tags.comment) validTags.push({ tag: import_highlight5.tags.comment, class: "cm-comment" });
+          if (import_highlight5.tags.name) validTags.push({ tag: import_highlight5.tags.name, class: "cm-def" });
+          if (validTags.length > 0) {
+            const safeHighlightStyle = createSafeHighlightStyle(validTags);
+            customHighlightStyle = (0, import_language7.syntaxHighlighting)(safeHighlightStyle);
+          } else {
+            console.warn("No valid lezer highlight tags found, using empty highlight style");
+            customHighlightStyle = [];
+          }
         } else {
           console.warn("Lezer highlight tags not available, using empty highlight style");
           customHighlightStyle = [];
@@ -9857,6 +9947,15 @@ var createFileSystemExtension = (fileSystem) => {
     }
   });
 };
+
+// src/index.ts
+if (typeof window !== "undefined") {
+  try {
+    applyHighlightStyleFix();
+  } catch (e) {
+    console.warn("Failed to apply highlight style fix:", e);
+  }
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   CodeMirrorEditor,

@@ -12,6 +12,40 @@ import { lightTheme, darkTheme } from './utils/theme';
 import { createEditorExtensions } from './utils/editorExtensions';
 import { useTheme } from '../../contexts/ThemeContext';
 
+// Helper function to patch HighlightStyle to prevent "tags is not iterable" error
+const createSafeHighlightStyle = (styles: Array<{tag: any, class: string}>) => {
+  try {
+    // Create the highlight style with error handling
+    const highlightStyle = HighlightStyle.define(styles);
+    
+    // Create a new object with the same properties but with a safer style function
+    // This avoids modifying the readonly property directly
+    const safeHighlightStyle = Object.assign(
+      Object.create(Object.getPrototypeOf(highlightStyle)),
+      highlightStyle
+    );
+    
+    // Define a safer style function with proper checks
+    const originalStyleFn = highlightStyle.style;
+    Object.defineProperty(safeHighlightStyle, 'style', {
+      value: function(tags: any[] | undefined) {
+        if (!tags || !Array.isArray(tags) || tags.length === 0) {
+          return "";  // Return empty string for undefined or empty tags
+        }
+        return originalStyleFn.call(highlightStyle, tags);
+      },
+      writable: false,
+      configurable: true
+    });
+    
+    return safeHighlightStyle;
+  } catch (error) {
+    console.error("Error creating highlight style:", error);
+    // Return a minimal working highlight style
+    return HighlightStyle.define([]);
+  }
+};
+
 // Import our custom styles
 import './CodeMirrorEditor.css';
 
@@ -85,23 +119,31 @@ const CodeMirrorEditor = ({ initialValue = '', readOnly = false, onChange, onSav
       let customHighlightStyle: Extension;
       try {
         // Make sure tags is properly defined and available
-        if (typeof t === 'object') {
-          // Create a simplified highlight style that avoids the "tags is not iterable" error
-          const safeHighlightStyle = HighlightStyle.define([
-            // Only use known valid tags to avoid errors
-            { tag: t.heading1, class: "cm-header cm-header-1" },
-            { tag: t.heading2, class: "cm-header cm-header-2" },
-            { tag: t.heading3, class: "cm-header cm-header-3" },
-            { tag: t.strong, class: "cm-strong" },
-            { tag: t.emphasis, class: "cm-em" },
-            { tag: t.link, class: "cm-link" },
-            { tag: t.monospace, class: "cm-monospace" },
-            { tag: t.keyword, class: "cm-keyword" },
-            { tag: t.string, class: "cm-string" },
-            { tag: t.comment, class: "cm-comment" },
-            { tag: t.name, class: "cm-def" }
-          ]);
-          customHighlightStyle = syntaxHighlighting(safeHighlightStyle);
+        if (typeof t === 'object' && t !== null) {
+          const validTags = [];
+          
+          // Check each tag individually to ensure it exists before using it
+          if (t.heading1) validTags.push({ tag: t.heading1, class: "cm-header cm-header-1" });
+          if (t.heading2) validTags.push({ tag: t.heading2, class: "cm-header cm-header-2" });
+          if (t.heading3) validTags.push({ tag: t.heading3, class: "cm-header cm-header-3" });
+          if (t.strong) validTags.push({ tag: t.strong, class: "cm-strong" });
+          if (t.emphasis) validTags.push({ tag: t.emphasis, class: "cm-em" });
+          if (t.link) validTags.push({ tag: t.link, class: "cm-link" });
+          if (t.monospace) validTags.push({ tag: t.monospace, class: "cm-monospace" });
+          if (t.keyword) validTags.push({ tag: t.keyword, class: "cm-keyword" });
+          if (t.string) validTags.push({ tag: t.string, class: "cm-string" });
+          if (t.comment) validTags.push({ tag: t.comment, class: "cm-comment" });
+          if (t.name) validTags.push({ tag: t.name, class: "cm-def" });
+          
+          // Only create the highlight style if we have valid tags
+          if (validTags.length > 0) {
+            // Use our safe highlight style creation function instead of direct HighlightStyle.define
+            const safeHighlightStyle = createSafeHighlightStyle(validTags);
+            customHighlightStyle = syntaxHighlighting(safeHighlightStyle);
+          } else {
+            console.warn("No valid lezer highlight tags found, using empty highlight style");
+            customHighlightStyle = [];
+          }
         } else {
           console.warn("Lezer highlight tags not available, using empty highlight style");
           customHighlightStyle = [];

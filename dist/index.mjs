@@ -1,3 +1,39 @@
+// src/app/obsidian-editor/utils/highlightStyleFix.ts
+import { HighlightStyle } from "@codemirror/language";
+function applyHighlightStyleFix() {
+  try {
+    if (HighlightStyle.__patched) return;
+    const originalDefine = HighlightStyle.define;
+    HighlightStyle.define = function(specs) {
+      try {
+        const style = originalDefine.call(this, specs);
+        const originalStyleFn = style.style;
+        Object.defineProperty(style, "style", {
+          value: function(tags6) {
+            if (!tags6) return "";
+            try {
+              return originalStyleFn.call(this, tags6);
+            } catch (e) {
+              console.warn("Error in highlight style:", e);
+              return "";
+            }
+          },
+          writable: false,
+          configurable: true
+        });
+        return style;
+      } catch (error) {
+        console.error("Error creating HighlightStyle:", error);
+        return originalDefine.call(this, []);
+      }
+    };
+    HighlightStyle.__patched = true;
+    console.info("HighlightStyle successfully patched to prevent 'tags is not iterable' error");
+  } catch (error) {
+    console.error("Failed to patch HighlightStyle:", error);
+  }
+}
+
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
 import { useEffect as useEffect2, useRef, useState as useState2 } from "react";
 import { EditorState as EditorState5, Compartment } from "@codemirror/state";
@@ -1722,7 +1758,7 @@ function createMarkdownSyntaxPlugin() {
 }
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { syntaxHighlighting as syntaxHighlighting2, HighlightStyle as HighlightStyle2 } from "@codemirror/language";
+import { syntaxHighlighting as syntaxHighlighting2, HighlightStyle as HighlightStyle3 } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 
 // src/app/obsidian-editor/utils/theme.ts
@@ -8635,7 +8671,7 @@ function htmlTagCompletions() {
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 import { languages } from "@codemirror/language-data";
-import { syntaxHighlighting, HighlightStyle } from "@codemirror/language";
+import { syntaxHighlighting, HighlightStyle as HighlightStyle2 } from "@codemirror/language";
 import { tags as tags5 } from "@lezer/highlight";
 import { defaultKeymap, historyKeymap, history } from "@codemirror/commands";
 
@@ -9328,18 +9364,32 @@ var handleEnterListBlockquote = (editorView) => {
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 var createCustomHighlightStyle = () => {
-  return HighlightStyle.define([
-    { tag: tags5.heading1, fontSize: "1.6em", fontWeight: "bold" },
-    { tag: tags5.heading2, fontSize: "1.4em", fontWeight: "bold" },
-    { tag: tags5.heading3, fontSize: "1.2em", fontWeight: "bold" },
-    { tag: tags5.heading4, fontSize: "1.1em", fontWeight: "bold" },
-    { tag: tags5.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-    { tag: tags5.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" },
-    { tag: tags5.strong, fontWeight: "bold" },
-    { tag: tags5.emphasis, fontStyle: "italic" },
-    { tag: tags5.link, color: "#2563eb", textDecoration: "underline" },
-    { tag: tags5.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" }
-  ]);
+  try {
+    if (typeof tags5 !== "object" || tags5 === null) {
+      console.warn("Lezer highlight tags not available, using empty highlight style");
+      return [];
+    }
+    const validStyles = [];
+    if (tags5.heading1) validStyles.push({ tag: tags5.heading1, fontSize: "1.6em", fontWeight: "bold" });
+    if (tags5.heading2) validStyles.push({ tag: tags5.heading2, fontSize: "1.4em", fontWeight: "bold" });
+    if (tags5.heading3) validStyles.push({ tag: tags5.heading3, fontSize: "1.2em", fontWeight: "bold" });
+    if (tags5.heading4) validStyles.push({ tag: tags5.heading4, fontSize: "1.1em", fontWeight: "bold" });
+    if (tags5.heading5) validStyles.push({ tag: tags5.heading5, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags5.heading6) validStyles.push({ tag: tags5.heading6, fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags5.strong) validStyles.push({ tag: tags5.strong, fontWeight: "bold" });
+    if (tags5.emphasis) validStyles.push({ tag: tags5.emphasis, fontStyle: "italic" });
+    if (tags5.link) validStyles.push({ tag: tags5.link, color: "#2563eb", textDecoration: "underline" });
+    if (tags5.monospace) validStyles.push({ tag: tags5.monospace, fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
+    if (validStyles.length > 0) {
+      return HighlightStyle2.define(validStyles);
+    } else {
+      console.warn("No valid lezer highlight tags found, using empty highlight style");
+      return [];
+    }
+  } catch (error) {
+    console.error("Error creating custom highlight style:", error);
+    return [];
+  }
 };
 var createCustomEnterKeymap = () => {
   return Prec3.highest(keymap2.of([
@@ -9447,7 +9497,7 @@ var createEditorExtensions = (options) => {
     current: options.onSave || (() => {
     })
   };
-  return [
+  const safeExtensions = [
     themeExtension,
     history(),
     atomicIndents,
@@ -9461,13 +9511,25 @@ var createEditorExtensions = (options) => {
     markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    syntaxHighlighting(createCustomHighlightStyle()),
     EditorView11.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
     editableCompartment.of(EditorView11.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
+  try {
+    const highlightStyle = createCustomHighlightStyle();
+    if (Array.isArray(highlightStyle)) {
+      if (highlightStyle.length > 0) {
+        safeExtensions.push(...highlightStyle);
+      }
+    } else {
+      safeExtensions.push(syntaxHighlighting(highlightStyle));
+    }
+  } catch (error) {
+    console.error("Error applying syntax highlighting:", error);
+  }
+  return safeExtensions;
 };
 
 // src/contexts/ThemeContext.tsx
@@ -9531,6 +9593,30 @@ function applyThemeToHTML(theme, isMounted = false) {
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
 import { jsx as jsx3, jsxs } from "react/jsx-runtime";
+var createSafeHighlightStyle = (styles) => {
+  try {
+    const highlightStyle = HighlightStyle3.define(styles);
+    const safeHighlightStyle = Object.assign(
+      Object.create(Object.getPrototypeOf(highlightStyle)),
+      highlightStyle
+    );
+    const originalStyleFn = highlightStyle.style;
+    Object.defineProperty(safeHighlightStyle, "style", {
+      value: function(tags6) {
+        if (!tags6 || !Array.isArray(tags6) || tags6.length === 0) {
+          return "";
+        }
+        return originalStyleFn.call(highlightStyle, tags6);
+      },
+      writable: false,
+      configurable: true
+    });
+    return safeHighlightStyle;
+  } catch (error) {
+    console.error("Error creating highlight style:", error);
+    return HighlightStyle3.define([]);
+  }
+};
 var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave }) => {
   const [editorView, setEditorView] = useState2(null);
   const [currentMode, setCurrentMode] = useState2("live");
@@ -9561,22 +9647,26 @@ var CodeMirrorEditor = ({ initialValue = "", readOnly = false, onChange, onSave 
       });
       let customHighlightStyle;
       try {
-        if (typeof t === "object") {
-          const safeHighlightStyle = HighlightStyle2.define([
-            // Only use known valid tags to avoid errors
-            { tag: t.heading1, class: "cm-header cm-header-1" },
-            { tag: t.heading2, class: "cm-header cm-header-2" },
-            { tag: t.heading3, class: "cm-header cm-header-3" },
-            { tag: t.strong, class: "cm-strong" },
-            { tag: t.emphasis, class: "cm-em" },
-            { tag: t.link, class: "cm-link" },
-            { tag: t.monospace, class: "cm-monospace" },
-            { tag: t.keyword, class: "cm-keyword" },
-            { tag: t.string, class: "cm-string" },
-            { tag: t.comment, class: "cm-comment" },
-            { tag: t.name, class: "cm-def" }
-          ]);
-          customHighlightStyle = syntaxHighlighting2(safeHighlightStyle);
+        if (typeof t === "object" && t !== null) {
+          const validTags = [];
+          if (t.heading1) validTags.push({ tag: t.heading1, class: "cm-header cm-header-1" });
+          if (t.heading2) validTags.push({ tag: t.heading2, class: "cm-header cm-header-2" });
+          if (t.heading3) validTags.push({ tag: t.heading3, class: "cm-header cm-header-3" });
+          if (t.strong) validTags.push({ tag: t.strong, class: "cm-strong" });
+          if (t.emphasis) validTags.push({ tag: t.emphasis, class: "cm-em" });
+          if (t.link) validTags.push({ tag: t.link, class: "cm-link" });
+          if (t.monospace) validTags.push({ tag: t.monospace, class: "cm-monospace" });
+          if (t.keyword) validTags.push({ tag: t.keyword, class: "cm-keyword" });
+          if (t.string) validTags.push({ tag: t.string, class: "cm-string" });
+          if (t.comment) validTags.push({ tag: t.comment, class: "cm-comment" });
+          if (t.name) validTags.push({ tag: t.name, class: "cm-def" });
+          if (validTags.length > 0) {
+            const safeHighlightStyle = createSafeHighlightStyle(validTags);
+            customHighlightStyle = syntaxHighlighting2(safeHighlightStyle);
+          } else {
+            console.warn("No valid lezer highlight tags found, using empty highlight style");
+            customHighlightStyle = [];
+          }
         } else {
           console.warn("Lezer highlight tags not available, using empty highlight style");
           customHighlightStyle = [];
@@ -9816,6 +9906,15 @@ var createFileSystemExtension = (fileSystem) => {
     }
   });
 };
+
+// src/index.ts
+if (typeof window !== "undefined") {
+  try {
+    applyHighlightStyleFix();
+  } catch (e) {
+    console.warn("Failed to apply highlight style fix:", e);
+  }
+}
 export {
   CodeMirrorEditor_default as CodeMirrorEditor,
   ThemeProvider,

@@ -1,4 +1,15 @@
 // Main entry point for the obsidian-js package
+import { applyHighlightStyleFix } from './app/obsidian-editor/utils/highlightStyleFix';
+
+// Apply the fix as early as possible
+if (typeof window !== 'undefined') {
+  try {
+    // Fix the HighlightStyle to prevent "tags is not iterable" error
+    applyHighlightStyleFix();
+  } catch (e) {
+    console.warn("Failed to apply highlight style fix:", e);
+  }
+}
 
 // Core Editor Component
 export { default as CodeMirrorEditor } from './app/obsidian-editor/CodeMirrorEditor';
