@@ -29,7 +29,9 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('light');
+  const [mounted, setMounted] = useState(false);
 
+  // Initialize theme from localStorage or system preference
   useEffect(() => {
     // Check for window object to avoid SSR issues
     if (typeof window !== 'undefined') {
@@ -44,13 +46,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       applyThemeToHTML(initialTheme);
     }
   }, []);
-
-  useEffect(() => {
-    // Update document class and localStorage when theme changes
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
 
   const toggleTheme = () => {
     setTheme(prevTheme => {
@@ -87,7 +82,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
  * @throws {Error} If used outside of a `ThemeProvider`.
  * @returns {ThemeContextType} The theme context.
  */
-export function useTheme(): ThemeContextType {
+export function useTheme() {
   const context = useContext(ThemeContext);
   if (context === undefined) {
     throw new Error('useTheme must be used within a ThemeProvider');

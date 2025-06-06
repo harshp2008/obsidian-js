@@ -301,14 +301,7 @@ html.light {
   }
 }
 
-/* Ensure the editor container takes up full height */
-.editor-container {
-  height: 100%;
-  /* Temporary background to visualize container height */
-  background-color: #f0f0f0; /* Light gray */
-}
-
-/* Ensure the editor itself adapts to the container height */
+/* Ensure the editor has proper spacing */
 .cm-editor {
   height: 100%;
   padding: 1rem;
@@ -316,11 +309,9 @@ html.light {
 }
 
 /* Improve cursor visibility */
-.cm-editor .cm-content .cm-cursor,
-.cm-editor .cm-cursor-primary,
-.cm-editor .cm-cursor-secondary {
-  border-left-width: 1.5px !important; /* Cursor thickness */
-  border-left-color: #b79d7b !important; /* Cursor color (beige-ish) */
+.cm-cursor {
+  border-left-width: 2px !important;
+  border-left-color: #3b82f6 !important;
 }
 
 /* Improve selection styling */

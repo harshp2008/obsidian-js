@@ -14,7 +14,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import './CodeMirrorEditor.css';
 
 /**
- * Props for the CodeMirrorEditor component
+ * Props for the CodeMirrorEditor component.
  */
 export interface CodeMirrorEditorProps {
   /** Initial markdown content for the editor */
@@ -136,6 +136,7 @@ const CodeMirrorEditor = ({ initialValue = '', readOnly = false, onChange, onSav
   // Effect for updating the editor mode and editable state
   useEffect(() => {
     if (editorView) {
+      // Dispatch effects to update markdown syntax mode
       editorView.dispatch({
         effects: [
           setMarkdownSyntaxMode.of(currentMode)
