@@ -97,7 +97,10 @@ function createHtmlPreview(html: string): HTMLElement {
  * Build smart decorations that handle both edit mode and preview mode
  */
 function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPreviewMode: boolean): DecorationSet {
-  const builder = new RangeSetBuilder<Decoration>();
+  // Create a collection for all decorations before sorting
+  const allDecorations: DecorationItem[] = [];
+  
+  // Get cursor ranges
   const cursorRanges = view.state.selection.ranges;
   
   // Process each HTML region
@@ -152,28 +155,57 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
         tempContainer.appendChild(previewElement);
         const htmlString = tempContainer.innerHTML;
         
-        // Create a replace decoration for this region
-        builder.add(region.from, region.to, Decoration.replace({
-          widget: new HtmlReplaceWidget(htmlString),
-          inclusive: true
-        }));
+        // Add a replace decoration for this region to our collection
+        allDecorations.push({
+          from: region.from,
+          to: region.to,
+          decoration: Decoration.replace({
+            widget: new HtmlReplaceWidget(htmlString),
+            inclusive: true
+          })
+        });
       } 
       // If cursor is near, show editable code with syntax highlighting
       else {
         console.log(`Creating editable syntax highlighting for ${region.tagName}`);
         
-        // Apply syntax highlighting
-        const syntaxDecorations = HtmlSyntaxHighlighter.highlight(region);
+        // Get syntax highlighting decorations
+        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
         
-        // Add each syntax highlighting decoration
-        syntaxDecorations.between(region.from, region.to, (from, to, deco) => {
-          if (from < to) {
-            builder.add(from, to, deco);
-          }
+        // Collect decorations from the decoration set into our array
+        const syntaxDecorations: DecorationItem[] = [];
+        
+        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
+          syntaxDecorations.push({
+            from,
+            to,
+            decoration: deco
+          });
         });
+        
+        // If we have syntax decorations, add them to our collection
+        if (syntaxDecorations.length > 0) {
+          allDecorations.push(...syntaxDecorations);
+        }
       }
     } catch (error) {
       console.error('Error processing region:', error, region);
+    }
+  }
+  
+  // Sort all decorations by from position
+  allDecorations.sort((a, b) => {
+    if (a.from !== b.from) {
+      return a.from - b.from;
+    }
+    return a.to - b.to;
+  });
+  
+  // Add sorted decorations to the builder
+  const builder = new RangeSetBuilder<Decoration>();
+  for (const { from, to, decoration } of allDecorations) {
+    if (from < to) {
+      builder.add(from, to, decoration);
     }
   }
   
