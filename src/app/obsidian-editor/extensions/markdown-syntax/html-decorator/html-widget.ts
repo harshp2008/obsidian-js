@@ -103,7 +103,6 @@ export class HtmlPreviewWidget extends WidgetType {
         htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
         
         // Apply base editor styles to all HTML elements that don't have explicit styles
-        // But preserve native browser styles for lists and other elements
         htmlContainer.querySelectorAll('*').forEach(element => {
           if (element instanceof HTMLElement) {
             // Only apply default styles if not specified in the HTML
@@ -117,21 +116,35 @@ export class HtmlPreviewWidget extends WidgetType {
             // Make sure block elements display properly
             if (this.isBlockElement(element.tagName)) {
               element.style.display = 'block';
+              element.style.width = '100%';
+              
+              // Remove excessive margins to match Obsidian's rendering
+              if (!element.style.marginTop) element.style.marginTop = '0';
+              if (!element.style.marginBottom) element.style.marginBottom = '0';
             }
             
             // Special handling for list elements to show bullets
             if (element.tagName === 'UL') {
               element.style.listStyleType = 'disc';
               element.style.paddingLeft = '2em';
-              element.style.marginTop = '0.5em';
-              element.style.marginBottom = '0.5em';
+              element.style.marginTop = '0.2em';
+              element.style.marginBottom = '0.2em';
             } else if (element.tagName === 'OL') {
               element.style.listStyleType = 'decimal';
               element.style.paddingLeft = '2em';
-              element.style.marginTop = '0.5em';
-              element.style.marginBottom = '0.5em';
+              element.style.marginTop = '0.2em';
+              element.style.marginBottom = '0.2em';
             } else if (element.tagName === 'LI') {
               element.style.display = 'list-item';
+              element.style.marginTop = '0.1em';
+              element.style.marginBottom = '0.1em';
+            } else if (element.tagName === 'DIV') {
+              element.style.width = '100%';
+              element.style.boxSizing = 'border-box';
+            } else if (element.tagName === 'P') {
+              // Reduce paragraph spacing to match Obsidian
+              element.style.marginTop = '0.2em';
+              element.style.marginBottom = '0.2em';
             }
           }
         });

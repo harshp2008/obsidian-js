@@ -1460,35 +1460,35 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   font-family: monospace;
 }
 
-/* HTML tag level colors for nested tags */
+/* HTML tag level colors for nested tags - updated to match Obsidian style */
 .cm-html-tag-level-0,
 .cm-html-bracket-level-0 {
-  color: #e45649; /* Red */
+  color: #7c7ce3; /* Light blue-purple */
 }
 
 .cm-html-tag-level-1,
 .cm-html-bracket-level-1 {
-  color: #0086b3; /* Blue */
+  color: #50a14f; /* Muted green */
 }
 
 .cm-html-tag-level-2,
 .cm-html-bracket-level-2 {
-  color: #6a0dad; /* Purple */
+  color: #c18401; /* Gold */
 }
 
 .cm-html-tag-level-3,
 .cm-html-bracket-level-3 {
-  color: #008080; /* Teal */
+  color: #4078f2; /* Bright blue */
 }
 
 .cm-html-tag-level-4,
 .cm-html-bracket-level-4 {
-  color: #d73a49; /* Dark red */
+  color: #a626a4; /* Purple */
 }
 
 .cm-html-tag-level-5,
 .cm-html-bracket-level-5 {
-  color: #22863a; /* Green */
+  color: #e45649; /* Coral red */
 }
 
 /* General HTML syntax highlighting */
@@ -1498,4 +1498,14 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
 
 .cm-html-attribute-value {
   color: var(--html-content-color, #50a14f);
+}
+
+/* HTML code mode background - softer highlight */
+.cm-html-code-mode {
+  background-color: rgba(240, 246, 252, 0.15);
+  border-radius: 2px;
+}
+
+.dark .cm-html-code-mode {
+  background-color: rgba(30, 35, 42, 0.15);
 }
