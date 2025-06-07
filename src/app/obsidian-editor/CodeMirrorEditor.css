@@ -1534,6 +1534,113 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 2px;
 }
 
+/* Plain text mode for HTML content - completely disable all markdown styling */
+.cm-plain-text {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  font-weight: normal !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  background-color: transparent !important;
+  white-space: pre-wrap;
+}
+
+/* Override any markdown token styles within HTML edit regions */
+.cm-plain-text .cm-header,
+.cm-plain-text .cm-strong,
+.cm-plain-text .cm-em,
+.cm-plain-text .cm-link,
+.cm-plain-text .cm-url,
+.cm-plain-text .cm-hmd-frontmatter,
+.cm-plain-text .cm-hmd-barelink,
+.cm-plain-text .cm-quote,
+.cm-plain-text .cm-hr,
+.cm-plain-text .cm-tag,
+.cm-plain-text .cm-comment,
+.cm-plain-text .cm-keyword,
+.cm-plain-text .cm-atom,
+.cm-plain-text .cm-number,
+.cm-plain-text .cm-def,
+.cm-plain-text .cm-variable,
+.cm-plain-text .cm-operator,
+.cm-plain-text .cm-meta,
+.cm-plain-text .cm-strikethrough,
+.cm-plain-text .cm-hmd-list-1,
+.cm-plain-text .cm-hmd-list-2,
+.cm-plain-text .cm-hmd-list-3,
+.cm-plain-text .cm-formatting-list,
+.cm-plain-text .cm-formatting-list-ol,
+.cm-plain-text .cm-formatting-list-ul,
+.cm-plain-text .cm-formatting-code,
+.cm-plain-text .cm-formatting-em,
+.cm-plain-text .cm-formatting-strong,
+.cm-plain-text .cm-formatting-strikethrough,
+.cm-plain-text .cm-formatting-header,
+.cm-plain-text [class*="cm-formatting-"],
+.cm-plain-text [class*="cm-hmd-"],
+.cm-plain-text [class*="cm-header-"] {
+  color: inherit !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  background-color: transparent !important;
+  text-decoration: none !important;
+  font-size: inherit !important;
+  font-family: inherit !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Specifically handle list markers and bullet points */
+.cm-plain-text .cm-formatting-list-ul:before,
+.cm-plain-text .cm-formatting-list-ol:before,
+.cm-plain-text .cm-list-1:before,
+.cm-plain-text .cm-list-2:before,
+.cm-plain-text .cm-list-3:before {
+  display: none !important;
+  content: none !important;
+}
+
+/* Disable markdown styling within HTML edit mode */
+.cm-disable-markdown-parsing .cm-strong,
+.cm-disable-markdown-parsing .cm-em,
+.cm-disable-markdown-parsing .cm-strikethrough,
+.cm-disable-markdown-parsing .cm-highlight,
+.cm-disable-markdown-parsing .cm-link,
+.cm-disable-markdown-parsing .cm-header,
+.cm-disable-markdown-parsing .cm-header-1,
+.cm-disable-markdown-parsing .cm-header-2,
+.cm-disable-markdown-parsing .cm-header-3,
+.cm-disable-markdown-parsing .cm-header-4,
+.cm-disable-markdown-parsing .cm-header-5,
+.cm-disable-markdown-parsing .cm-header-6,
+.cm-disable-markdown-parsing .cm-quote,
+.cm-disable-markdown-parsing .cm-hmd-list-1,
+.cm-disable-markdown-parsing .cm-hmd-list-2,
+.cm-disable-markdown-parsing .cm-hmd-list-3,
+.cm-disable-markdown-parsing [class*="cm-formatting-"],
+.cm-disable-markdown-parsing [class*="cm-markdown-"],
+.cm-disable-markdown-parsing [class*="markdown-"] {
+  font-weight: normal !important;
+  font-style: normal !important;
+  text-decoration: none !important;
+  background-color: transparent !important;
+  color: inherit !important;
+  border: none !important;
+  font-size: inherit !important;
+}
+
+/* Ensure markdown bullet points aren't visible in HTML edit mode */
+.cm-disable-markdown-parsing .cm-formatting-list,
+.cm-disable-markdown-parsing .cm-formatting-list-ul,
+.cm-disable-markdown-parsing .cm-formatting-list-ol {
+  display: inline !important;
+  color: inherit !important;
+}
+
 .dark .cm-html-code-mode {
   background-color: rgba(30, 35, 42, 0.15);
 }

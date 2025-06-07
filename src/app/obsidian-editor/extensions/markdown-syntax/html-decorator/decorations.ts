@@ -149,6 +149,18 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
       if (editModeRegions.has(i)) {
         if (DEBUG) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
         
+        // Add special plain text decoration to prevent markdown parsing within HTML
+        allDecorations.push({
+          from: region.from,
+          to: region.to,
+          decoration: Decoration.mark({ 
+            class: 'cm-plain-text-marker',
+            inclusiveStart: true,
+            inclusiveEnd: true,
+            attributes: { 'data-html-content': 'true' }
+          })
+        });
+        
         // Get syntax highlighting decorations
         const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
         
@@ -224,6 +236,7 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
   
   // Sort all decorations by from position
   allDecorations.sort((a, b) => {
+    // First sort by from position
     if (a.from !== b.from) {
       return a.from - b.from;
     }
@@ -236,18 +249,40 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
       return aIsReplace ? -1 : 1;
     }
     
+    // For mark decorations, check inclusivity 
+    if (!aIsReplace && !bIsReplace) {
+      const aInclusive = a.decoration.spec?.inclusiveStart ?? false;
+      const bInclusive = b.decoration.spec?.inclusiveStart ?? false;
+      
+      if (aInclusive !== bInclusive) {
+        return aInclusive ? -1 : 1;
+      }
+    }
+    
+    // Finally sort by to position
     return a.to - b.to;
   });
   
   // Add sorted decorations to the builder
   const builder = new RangeSetBuilder<Decoration>();
-  for (const { from, to, decoration } of allDecorations) {
-    if (from < to) {
-      builder.add(from, to, decoration);
+  try {
+    // Add decorations in sorted order
+    for (const { from, to, decoration } of allDecorations) {
+      if (from < to) {
+        // Skip invalid ranges
+        try {
+          builder.add(from, to, decoration);
+        } catch (error) {
+          console.warn("Error adding decoration", { from, to, error });
+          // Continue with other decorations
+        }
+      }
     }
+    return builder.finish();
+  } catch (error) {
+    console.error("Critical error in decoration building:", error);
+    return Decoration.none;
   }
-  
-  return builder.finish();
 }
 
 /**

@@ -74,11 +74,15 @@ function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'previ
   // Determine which ranges of the document to process
   const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
 
+  // We no longer attempt to find HTML regions here to avoid cyclic dependencies
+  // The individual syntax rules will need to check for HTML regions if needed
+  const htmlEditRegions: {from: number, to: number}[] = [];
+  
   // Process each visible range
   for (const { from, to } of rangesToProcess) {
     const docTextSlice = state.doc.sliceString(from, to);
     
-    // Create the context for syntax rules
+    // Create the context for syntax rules, with information about HTML regions
     const context: SyntaxRuleContext = {
       builder,
       docText: docTextSlice,
@@ -87,7 +91,8 @@ function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'previ
       state: state,
       view: view,
       decorations: allDecorations,
-      currentMode: currentMode
+      currentMode: currentMode,
+      htmlEditRegions: htmlEditRegions // Empty array, but preserved for API compatibility
     };
 
     // Apply each syntax rule

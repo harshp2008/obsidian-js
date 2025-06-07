@@ -1,5 +1,5 @@
 import { RangeSetBuilder, EditorState } from '@codemirror/state';
-import { EditorView, Decoration } from '@codemirror/view';
+import { EditorView, Decoration, DecorationSet } from '@codemirror/view';
 
 /**
  * Represents a range in the document.
@@ -10,26 +10,39 @@ export interface DocRange {
 }
 
 /**
- * Item for collecting decorations that will be sorted later
+ * Interface representing a decoration item with its position and decoration object
  */
 export interface DecorationItem {
+  /** Start position of the decoration */
   from: number;
+  /** End position of the decoration */
   to: number;
+  /** The decoration object to apply */
   decoration: Decoration;
 }
 
 /**
- * Context passed to each syntax rule processor.
+ * Context provided to syntax rules for processing
  */
 export interface SyntaxRuleContext {
+  /** Builder used to build decorations */
   builder: RangeSetBuilder<Decoration>;
-  docText: string; // Full document text or relevant slice
-  textSliceFrom: number; // Starting position of the textSlice in the full document
-  state: EditorState;
+  /** Current document text */
+  docText: string;
+  /** The offset at which the slice starts in the document */
+  textSliceFrom: number;
+  /** Array of current cursor positions */
   cursorPositions: number[];
-  view?: EditorView; // View might not be available in all contexts (e.g., StateField.update)
-  decorations?: DecorationItem[]; // Optional array for collecting decorations to sort later
+  /** Current editor state */
+  state: EditorState;
+  /** Editor view, if available */
+  view?: EditorView;
+  /** Collection of decorations being built */
+  decorations: DecorationItem[];
+  /** Current rendering mode */
   currentMode: 'live' | 'preview';
+  /** HTML edit regions that should be excluded from markdown parsing (optional) */
+  htmlEditRegions?: {from: number, to: number}[];
 }
 
 /**
