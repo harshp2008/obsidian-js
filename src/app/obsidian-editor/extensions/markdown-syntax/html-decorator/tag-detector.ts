@@ -151,29 +151,17 @@ export function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolea
   const cursor = selection.head;
   const doc = view.state.doc;
   
-  // 1. Check if cursor is directly within the HTML region
-  if (cursor >= region.from && cursor <= region.to) {
+  // Only consider cursor as "near" when it's directly within the HTML region
+  if (cursor > region.from && cursor < region.to) {
     return true;
   }
   
-  // 2. Check if cursor is on the same line and directly adjacent to the region
-  const cursorLine = doc.lineAt(cursor);
-  const regionStartLine = doc.lineAt(region.from);
-  const regionEndLine = doc.lineAt(region.to);
-  
-  // If on same line as region start, must be directly before it
-  if (cursorLine.number === regionStartLine.number) {
-    // Must be directly before the region (within 1 character)
-    return cursor === region.from - 1;
+  // Only consider exactly at tag boundaries, not even 1 character away
+  if (cursor === region.from || cursor === region.to) {
+    return true;
   }
   
-  // If on same line as region end, must be directly after it
-  if (cursorLine.number === regionEndLine.number) {
-    // Must be directly after the region (within 1 character)
-    return cursor === region.to + 1;
-  }
-  
-  // Not adjacent to the HTML region
+  // Not adjacent to or within the HTML region
   return false;
 }
 

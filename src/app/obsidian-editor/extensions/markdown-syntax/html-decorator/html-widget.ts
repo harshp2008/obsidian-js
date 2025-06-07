@@ -45,15 +45,13 @@ export class HtmlPreviewWidget extends WidgetType {
         wrapper.classList.add('cm-html-preview-inline');
       }
       
-      // Create content container
+      // Create content container (removed the label)
       const contentContainer = document.createElement('div');
       contentContainer.className = 'cm-html-content-container';
       contentContainer.style.cssText = `
-        padding: 10px;
-        border: 1px solid #e0e0e0;
-        background: white;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        border-radius: 4px;
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
       `;
       
       try {
@@ -71,6 +69,8 @@ export class HtmlPreviewWidget extends WidgetType {
         
         // Extract content from the HTML if we have both opening and closing tags
         let htmlToRender = this.content;
+        let isBlockElement = false;
+        
         const match = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(this.content);
         if (match) {
           // Only render the inner content for specific tags that have wrappers
@@ -78,40 +78,77 @@ export class HtmlPreviewWidget extends WidgetType {
           const attributes = match[2];
           const innerContent = match[3];
           
+          // Check if this is a block element like div that should render on a new line
+          isBlockElement = (tagName === 'div' || tagName === 'p' || 
+                          tagName === 'article' || tagName === 'section' || 
+                          tagName === 'header' || tagName === 'footer' || 
+                          tagName === 'blockquote');
+          
           if (tagName === 'div' || tagName === 'span') {
             // Keep attributes for styling
             const attributesObj: Record<string, string> = {};
             const styleMatch = /style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/i.exec(attributes);
             if (styleMatch) {
               const styleContent = styleMatch[1] || styleMatch[2] || styleMatch[3];
-              contentContainer.setAttribute('style', contentContainer.getAttribute('style') + '; ' + styleContent);
+              
+              if (styleContent.trim()) {
+                // Keep the original tag with its style
+                htmlToRender = `<${tagName} style="${styleContent}">${innerContent}</${tagName}>`;
+              } else {
+                htmlToRender = innerContent;
+              }
+            } else {
+              htmlToRender = innerContent;
             }
-            
-            // For these wrapper elements, we want to render the inner content
-            htmlToRender = innerContent;
           }
         }
         
         // Create a container for the actual rendered HTML
         const htmlContainer = document.createElement('div');
+        
+        // Apply editor's base styles but allow HTML to override specific properties
+        htmlContainer.style.cssText = `
+          display: block; 
+          width: 100%;
+          font-family: inherit;
+          font-size: inherit;
+          line-height: inherit;
+          color: inherit;
+        `;
+        
+        // Apply block or inline styling based on element type
+        if (isBlockElement) {
+          htmlContainer.style.cssText += 'display: block;';
+        }
+        
+        // Apply the sanitized HTML content
         htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
         
-        // Make sure we can see the content by applying extra styles directly
+        // Apply base editor styles to all HTML elements that don't have explicit styles
         htmlContainer.querySelectorAll('*').forEach(element => {
           if (element instanceof HTMLElement) {
-            if (!element.style.color) {
-              element.style.color = 'black';
+            // Only apply default styles if not specified in the HTML
+            if (!element.hasAttribute('style')) {
+              element.style.fontFamily = 'inherit';
+              element.style.fontSize = 'inherit';
+              element.style.lineHeight = 'inherit';
+              element.style.color = 'inherit';
             }
-            if (!element.style.backgroundColor && element.tagName === 'DIV') {
-              element.style.backgroundColor = 'white';
+            
+            // Make sure block elements display properly
+            if (this.isBlockElement(element.tagName)) {
+              element.style.display = 'block';
             }
           }
         });
         
         contentContainer.appendChild(htmlContainer);
         
+        // Edit button has been removed as requested
+        
         // Disable any interactive elements
         this.disableInteractiveElements(htmlContainer);
+        
       } catch (error: any) {
         console.error('Error rendering HTML:', error);
         const errorDiv = document.createElement('div');
@@ -227,9 +264,72 @@ export class HtmlPreviewWidget extends WidgetType {
   }
 
   /**
+   * Try to find the editor view from a DOM element
+   */
+  private getEditorViewFromElement(element: HTMLElement): EditorView | null {
+    try {
+      // Look for the CodeMirror editor in the parent chain
+      let current: HTMLElement | null = element;
+      while (current) {
+        // Look for the CodeMirror editor wrapper
+        const editorEl = current.closest('.cm-editor');
+        if (editorEl) {
+          // Try to find the view instance
+          for (const key in editorEl) {
+            if (key.startsWith('__')) {
+              // @ts-ignore - accessing private property
+              const value = editorEl[key];
+              if (value instanceof EditorView) {
+                return value;
+              }
+            }
+          }
+          
+          // Alternative way - look through event listeners
+          // @ts-ignore - accessing private property
+          if (editorEl.cmView) {
+            // @ts-ignore - accessing private property
+            return editorEl.cmView;
+          }
+        }
+        current = current.parentElement;
+      }
+      
+      // Another approach - use a global CodeMirror registry if available
+      // @ts-ignore - accessing potential global property
+      if (window.CodeMirrorViewRegistry) {
+        // @ts-ignore - accessing potential global property
+        const registry = window.CodeMirrorViewRegistry;
+        for (const view of registry) {
+          if (view.dom && view.dom.contains(element)) {
+            return view;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error finding editor view:', error);
+    }
+    
+    return null;
+  }
+
+  /**
    * Allow events from the content (like scrolling in a div)
    */
   ignoreEvent(): boolean {
     return false;
+  }
+
+  /**
+   * Check if a tag name represents a block element
+   */
+  private isBlockElement(tagName: string): boolean {
+    const blockElements = [
+      'DIV', 'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+      'ARTICLE', 'SECTION', 'HEADER', 'FOOTER', 'BLOCKQUOTE',
+      'UL', 'OL', 'LI', 'TABLE', 'TR', 'HR', 'PRE', 'FIGURE'
+    ];
+    
+    return blockElements.includes(tagName.toUpperCase());
   }
 } 
