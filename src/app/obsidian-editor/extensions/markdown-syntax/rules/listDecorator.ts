@@ -11,6 +11,7 @@ interface DecorationItem {
 
 type ExtendedContext = SyntaxRuleContext & {
   decorations?: DecorationItem[];
+  htmlEditRegions?: {from: number, to: number}[];
 };
 
 export class ListDecorator implements SyntaxRule {
@@ -33,6 +34,7 @@ export class ListDecorator implements SyntaxRule {
     // Cast to get access to the decorations array
     const extContext = context as ExtendedContext;
     const decorations = extContext.decorations || [];
+    const htmlRegions = extContext.htmlEditRegions || [];
 
     // Create a new RegExp instance to reset lastIndex
     const localRegex = new RegExp(regex.source, 'gm');
@@ -49,6 +51,16 @@ export class ListDecorator implements SyntaxRule {
       const markerStartInDoc = fullMatchStartInDoc + leadingWhitespace.length;
       const markerEndInDoc = markerStartInDoc + marker.length;
       
+      // Check if this list item is inside an HTML region
+      const isInsideHtml = htmlRegions.some(region => 
+        markerStartInDoc >= region.from && markerEndInDoc <= region.to
+      );
+      
+      // Skip decoration if inside HTML
+      if (isInsideHtml) {
+        continue;
+      }
+
       // Check if cursor is exactly adjacent to the list marker
       const isAdjacentToMarker = cursorPositions.some(cursor => 
         cursor === markerStartInDoc || cursor === markerEndInDoc

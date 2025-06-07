@@ -154,10 +154,14 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
           from: region.from,
           to: region.to,
           decoration: Decoration.mark({ 
-            class: 'cm-plain-text-marker',
+            class: 'cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown',
             inclusiveStart: true,
             inclusiveEnd: true,
-            attributes: { 'data-html-content': 'true' }
+            attributes: { 
+              'data-html-content': 'true',
+              'data-no-markdown': 'true',
+              'data-no-list': 'true'
+            }
           })
         });
         

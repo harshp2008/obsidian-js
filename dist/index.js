@@ -601,12 +601,12 @@ function loadThemeCSS(name) {
     if (name === "vanilla") {
       const lightCSS = document.createElement("link");
       lightCSS.rel = "stylesheet";
-      lightCSS.href = "/vanilla-light.css";
+      lightCSS.href = "/css/vanilla-light.css";
       lightCSS.setAttribute("data-theme-css", "vanilla-light");
       document.head.appendChild(lightCSS);
       const darkCSS = document.createElement("link");
       darkCSS.rel = "stylesheet";
-      darkCSS.href = "/vanilla-dark.css";
+      darkCSS.href = "/css/vanilla-dark.css";
       darkCSS.setAttribute("data-theme-css", "vanilla-dark");
       document.head.appendChild(darkCSS);
       console.log("Loaded vanilla theme CSS");
@@ -763,8 +763,8 @@ if (typeof window !== "undefined") {
 
 // src/app/obsidian-editor/components/EditorCore.tsx
 var import_react2 = require("react");
-var import_state11 = require("@codemirror/state");
-var import_view24 = require("@codemirror/view");
+var import_state15 = require("@codemirror/state");
+var import_view30 = require("@codemirror/view");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 var import_view19 = require("@codemirror/view");
@@ -1339,6 +1339,7 @@ var ListDecorator = class {
     const { builder, docText, textSliceFrom, cursorPositions } = context;
     const extContext = context;
     const decorations = extContext.decorations || [];
+    const htmlRegions = extContext.htmlEditRegions || [];
     const localRegex = new RegExp(regex.source, "gm");
     let match;
     while ((match = localRegex.exec(docText)) !== null) {
@@ -1348,6 +1349,12 @@ var ListDecorator = class {
       const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
       const markerStartInDoc = fullMatchStartInDoc + leadingWhitespace.length;
       const markerEndInDoc = markerStartInDoc + marker.length;
+      const isInsideHtml2 = htmlRegions.some(
+        (region) => markerStartInDoc >= region.from && markerEndInDoc <= region.to
+      );
+      if (isInsideHtml2) {
+        continue;
+      }
       const isAdjacentToMarker = cursorPositions.some(
         (cursor) => cursor === markerStartInDoc || cursor === markerEndInDoc
       );
@@ -8473,6 +8480,7 @@ function htmlTagCompletions() {
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 var import_language_data = require("@codemirror/language-data");
 var import_state5 = require("@codemirror/state");
+var import_language9 = require("@codemirror/language");
 var syntaxRules = [
   new HeadingDecorator(),
   new BoldDecorator(),
@@ -8496,7 +8504,7 @@ function buildLegacyDecorations(state, currentMode, view) {
     cursorPositions.push(range.head);
   }
   const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
-  const htmlEditRegions = [];
+  const htmlRegions = findHtmlRegions(state);
   for (const { from, to } of rangesToProcess) {
     const docTextSlice = state.doc.sliceString(from, to);
     const context = {
@@ -8508,8 +8516,8 @@ function buildLegacyDecorations(state, currentMode, view) {
       view,
       decorations: allDecorations,
       currentMode,
-      htmlEditRegions
-      // Empty array, but preserved for API compatibility
+      htmlEditRegions: htmlRegions
+      // Pass HTML regions to avoid processing markdown inside them
     };
     for (const rule of syntaxRules) {
       try {
@@ -8523,8 +8531,21 @@ function buildLegacyDecorations(state, currentMode, view) {
       }
     }
   }
+  for (const region of htmlRegions) {
+    allDecorations.push({
+      from: region.from,
+      to: region.to,
+      decoration: import_view19.Decoration.mark({
+        class: "cm-plain-text cm-html-content cm-disable-markdown-parsing cm-no-list-rendering",
+        attributes: { "data-html-content": "true", "data-no-markdown": "true" }
+      })
+    });
+  }
   const groupedDecorations = /* @__PURE__ */ new Map();
   for (const item of allDecorations) {
+    if (!item.decoration.spec.class?.includes("cm-html-content") && isInsideHtml(item.from, item.to, htmlRegions)) {
+      continue;
+    }
     if (!groupedDecorations.has(item.from)) {
       groupedDecorations.set(item.from, []);
     }
@@ -8627,15 +8648,36 @@ function createMarkdownSyntaxPlugin(options = {}) {
     codeLanguages: import_language_data.languages
   };
   return [
-    markdownCompartment.of(markdown(markdownConfig))
+    markdownCompartment.of(markdown(markdownConfig)),
+    markdownSyntaxStateField
   ];
+}
+function findHtmlRegions(state) {
+  const regions = [];
+  const tree = (0, import_language9.syntaxTree)(state);
+  tree.iterate({
+    enter: (node) => {
+      if (node.name.includes("HtmlTag") || node.name.includes("HtmlBlock") || node.name.includes("OpenTag") || node.name.includes("CloseTag") || node.name.includes("SelfClosingTag") || node.name.includes("Element")) {
+        regions.push({ from: node.from, to: node.to });
+      }
+    }
+  });
+  return regions;
+}
+function isInsideHtml(from, to, htmlRegions) {
+  for (const region of htmlRegions) {
+    if (from >= region.from && to <= region.to) {
+      return true;
+    }
+  }
+  return false;
 }
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
-var import_state10 = require("@codemirror/state");
-var import_view23 = require("@codemirror/view");
+var import_state14 = require("@codemirror/state");
+var import_view29 = require("@codemirror/view");
 var import_language_data2 = require("@codemirror/language-data");
-var import_language9 = require("@codemirror/language");
+var import_language11 = require("@codemirror/language");
 var import_highlight6 = require("@lezer/highlight");
 var import_commands = require("@codemirror/commands");
 
@@ -8768,12 +8810,1153 @@ var atomicIndents = [
   atomicIndentsStyle
 ];
 
-// src/app/obsidian-editor/extensions/MarkdownPasteHandler.ts
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/index.ts
+var import_view25 = require("@codemirror/view");
+var import_state10 = require("@codemirror/state");
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/decorations.ts
+var import_view24 = require("@codemirror/view");
+var import_state9 = require("@codemirror/state");
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts
 var import_view21 = require("@codemirror/view");
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/types.ts
+var VOID_TAGS = /* @__PURE__ */ new Set([
+  "area",
+  "base",
+  "br",
+  "col",
+  "embed",
+  "hr",
+  "img",
+  "input",
+  "link",
+  "meta",
+  "param",
+  "source",
+  "track",
+  "wbr"
+]);
+var DANGEROUS_TAGS = /* @__PURE__ */ new Set([
+  "script",
+  "iframe",
+  "object",
+  "embed",
+  "applet",
+  "base",
+  "form",
+  "frame",
+  "frameset"
+]);
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts
+var DEBUG = false;
+var HtmlPreviewWidget = class extends import_view21.WidgetType {
+  constructor(content, isMultiline = false) {
+    super();
+    this.content = content;
+    this.isMultiline = isMultiline;
+    if (DEBUG) {
+      console.log("Creating HTML widget:", {
+        content: content.substring(0, 100) + (content.length > 100 ? "..." : ""),
+        isMultiline
+      });
+    }
+  }
+  eq(other) {
+    return this.content === other.content && this.isMultiline === other.isMultiline;
+  }
+  /**
+   * Renders the HTML content as a DOM element
+   */
+  toDOM() {
+    try {
+      if (DEBUG) console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
+      const wrapper = document.createElement("div");
+      wrapper.className = "cm-html-preview-widget";
+      if (this.isMultiline) {
+        wrapper.classList.add("cm-html-preview-multiline");
+      } else {
+        wrapper.classList.add("cm-html-preview-inline");
+      }
+      const contentContainer = document.createElement("div");
+      contentContainer.className = "cm-html-content-container";
+      contentContainer.style.cssText = `
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
+      `;
+      try {
+        const securityWarnings = this.checkSecurityIssues(this.content);
+        if (securityWarnings.length > 0) {
+          securityWarnings.forEach((warning) => {
+            const warningElement = document.createElement("div");
+            warningElement.className = "cm-html-security-warning";
+            warningElement.innerHTML = `\u26A0\uFE0F ${warning}`;
+            contentContainer.appendChild(warningElement);
+          });
+        }
+        let htmlToRender = this.content;
+        let isBlockElement = false;
+        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\s*\/?>)/i.exec(this.content);
+        if (tagMatch) {
+          const tagName = tagMatch[1].toLowerCase();
+          isBlockElement = this.isBlockElement(tagName);
+        }
+        const htmlContainer = document.createElement("div");
+        htmlContainer.style.cssText = `
+          display: block; 
+          width: 100%;
+          font-family: inherit;
+          font-size: inherit;
+          line-height: inherit;
+          color: inherit;
+        `;
+        if (isBlockElement) {
+          htmlContainer.style.cssText += "display: block;";
+        }
+        htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
+        htmlContainer.querySelectorAll("*").forEach((element) => {
+          if (element instanceof HTMLElement) {
+            if (!element.hasAttribute("style")) {
+              element.style.fontFamily = "inherit";
+              element.style.fontSize = "inherit";
+              element.style.lineHeight = "inherit";
+              element.style.color = "inherit";
+            }
+            if (this.isBlockElement(element.tagName)) {
+              element.style.display = "block";
+              element.style.width = "100%";
+              element.style.boxSizing = "border-box";
+              if (!element.style.marginTop) element.style.marginTop = "0";
+              if (!element.style.marginBottom) element.style.marginBottom = "0";
+            }
+            if (element.tagName === "UL") {
+              element.style.listStyleType = "disc";
+              element.style.paddingLeft = "2em";
+              element.style.marginTop = "0.2em";
+              element.style.marginBottom = "0.2em";
+            } else if (element.tagName === "OL") {
+              element.style.listStyleType = "decimal";
+              element.style.paddingLeft = "2em";
+              element.style.marginTop = "0.2em";
+              element.style.marginBottom = "0.2em";
+            } else if (element.tagName === "LI") {
+              element.style.display = "list-item";
+              element.style.marginTop = "0.1em";
+              element.style.marginBottom = "0.1em";
+            } else if (element.tagName === "DIV") {
+              element.style.width = "100%";
+              element.style.boxSizing = "border-box";
+              element.style.margin = "0";
+              element.style.padding = "0";
+            } else if (element.tagName === "P") {
+              element.style.marginTop = "0.2em";
+              element.style.marginBottom = "0.2em";
+            }
+          }
+        });
+        contentContainer.appendChild(htmlContainer);
+        this.disableInteractiveElements(htmlContainer);
+      } catch (error) {
+        console.error("Error rendering HTML:", error);
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "cm-html-error";
+        errorDiv.textContent = `Error rendering HTML: ${error.message || "Unknown error"}`;
+        contentContainer.appendChild(errorDiv);
+      }
+      wrapper.appendChild(contentContainer);
+      return wrapper;
+    } catch (error) {
+      console.error("Fatal error in HTML widget:", error);
+      const errorElement = document.createElement("div");
+      errorElement.className = "cm-html-error";
+      errorElement.textContent = "Error rendering HTML content";
+      return errorElement;
+    }
+  }
+  /**
+   * Check for potential security issues in HTML content
+   */
+  checkSecurityIssues(html2) {
+    const warnings = [];
+    DANGEROUS_TAGS.forEach((tag) => {
+      const tagRegex = new RegExp(`<${tag}[\\s>]`, "i");
+      if (tagRegex.test(html2)) {
+        warnings.push(`${tag.toUpperCase()} tag detected and will be sanitized`);
+      }
+    });
+    if (/\son\w+\s*=/i.test(html2)) {
+      warnings.push("Event handlers detected and removed");
+    }
+    if (/javascript:/i.test(html2)) {
+      warnings.push("JavaScript URLs detected and removed");
+    }
+    return warnings;
+  }
+  /**
+   * Sanitizes HTML to prevent XSS attacks
+   */
+  sanitizeHtml(html2) {
+    let sanitized = html2.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+    sanitized = sanitized.replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "");
+    sanitized = sanitized.replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+    sanitized = sanitized.replace(/javascript:/gi, "void:");
+    DANGEROUS_TAGS.forEach((tag) => {
+      const tagName = tag.toUpperCase();
+      const regex = new RegExp(`<${tag}([^>]*)>([\\s\\S]*?)<\\/${tag}>`, "gi");
+      sanitized = sanitized.replace(regex, (match, attrs, content) => {
+        return `<div class="cm-html-removed-tag">[${tagName} removed]</div>`;
+      });
+      const selfClosingRegex = new RegExp(`<${tag}([^>]*?)\\s*\\/>`, "gi");
+      sanitized = sanitized.replace(
+        selfClosingRegex,
+        `<div class="cm-html-removed-tag">[${tagName} removed]</div>`
+      );
+    });
+    return sanitized;
+  }
+  /**
+   * Disable interactive elements like links and forms
+   */
+  disableInteractiveElements(container) {
+    try {
+      const links = container.querySelectorAll("a");
+      links.forEach((link) => {
+        link.addEventListener("click", (e) => e.preventDefault());
+        link.style.pointerEvents = "none";
+        if (link.hasAttribute("href")) {
+          link.setAttribute("data-href", link.getAttribute("href") || "");
+          link.removeAttribute("href");
+        }
+      });
+      const forms = container.querySelectorAll("form");
+      forms.forEach((form) => {
+        form.addEventListener("submit", (e) => e.preventDefault());
+        form.setAttribute("onsubmit", "return false;");
+      });
+      const buttons = container.querySelectorAll('button, input[type="submit"], input[type="button"]');
+      buttons.forEach((button) => {
+        button.setAttribute("disabled", "disabled");
+        button.addEventListener("click", (e) => e.preventDefault());
+      });
+    } catch (error) {
+      if (DEBUG) console.error("Error disabling interactive elements:", error);
+    }
+  }
+  /**
+   * Try to find the editor view from a DOM element
+   */
+  getEditorViewFromElement(element) {
+    try {
+      let current = element;
+      while (current) {
+        const editorEl = current.closest(".cm-editor");
+        if (editorEl) {
+          for (const key in editorEl) {
+            if (key.startsWith("__")) {
+              const value = editorEl[key];
+              if (value instanceof import_view21.EditorView) {
+                return value;
+              }
+            }
+          }
+          if (editorEl.cmView) {
+            return editorEl.cmView;
+          }
+        }
+        current = current.parentElement;
+      }
+      if (window.CodeMirrorViewRegistry) {
+        const registry = window.CodeMirrorViewRegistry;
+        for (const view of registry) {
+          if (view.dom && view.dom.contains(element)) {
+            return view;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error finding editor view:", error);
+    }
+    return null;
+  }
+  /**
+   * Allow events from the content (like scrolling in a div)
+   */
+  ignoreEvent() {
+    return false;
+  }
+  /**
+   * Check if a tag name represents a block element
+   */
+  isBlockElement(tagName) {
+    const blockElements = [
+      "DIV",
+      "P",
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "ARTICLE",
+      "SECTION",
+      "HEADER",
+      "FOOTER",
+      "BLOCKQUOTE",
+      "UL",
+      "OL",
+      "LI",
+      "TABLE",
+      "TR",
+      "HR",
+      "PRE",
+      "FIGURE"
+    ];
+    return blockElements.includes(tagName.toUpperCase());
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/syntax-highlighter.ts
+var import_view22 = require("@codemirror/view");
 var import_state8 = require("@codemirror/state");
+var HtmlSyntaxHighlighter = class {
+  /**
+   * Highlight HTML code with appropriate syntax classes
+   */
+  static highlight(region) {
+    try {
+      if (!region.content || region.content.length === 0) {
+        return import_view22.Decoration.none;
+      }
+      const builder = new import_state8.RangeSetBuilder();
+      builder.add(
+        region.from,
+        region.to,
+        import_view22.Decoration.mark({
+          class: "cm-html-code-mode cm-disable-markdown-parsing cm-plain-text",
+          inclusive: true
+        })
+      );
+      this.addHtmlTokens(builder, region.content, region.from);
+      return builder.finish();
+    } catch (error) {
+      console.error("Error in HTML syntax highlighter:", error);
+      return import_view22.Decoration.none;
+    }
+  }
+  /**
+   * Add HTML token decorations directly to builder
+   */
+  static addHtmlTokens(builder, html2, baseOffset) {
+    const tagStack = [];
+    let currentLevel = 0;
+    const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(=(?:(['"]).*?\4|\S+))?|(['"])(.*?)\5|(\/?>)/g;
+    let match;
+    const tokens = [];
+    while ((match = tokenRegex.exec(html2)) !== null) {
+      try {
+        const [full, tagName, attrName, fullAttr, q1, attrValue, q2, bracket] = match;
+        const start = baseOffset + match.index;
+        if (tagName) {
+          const isClosing = full.startsWith("</");
+          const tagStart2 = start;
+          const tagEnd = start + (isClosing ? 2 : 1) + tagName.length;
+          tokens.push({
+            from: tagStart2,
+            to: tagStart2 + (isClosing ? 2 : 1),
+            class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}`
+          });
+          tokens.push({
+            from: tagStart2 + (isClosing ? 2 : 1),
+            to: tagEnd,
+            class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}`
+          });
+          if (isClosing) {
+            for (let i = tagStack.length - 1; i >= 0; i--) {
+              if (tagStack[i].name === tagName.toLowerCase()) {
+                currentLevel = tagStack[i].level;
+                tagStack.splice(i);
+                break;
+              }
+            }
+          } else {
+            tagStack.push({
+              name: tagName.toLowerCase(),
+              level: currentLevel
+            });
+            currentLevel = (currentLevel + 1) % 6;
+          }
+        } else if (attrName) {
+          const attrStart = start + 1;
+          const attrEnd = attrStart + attrName.length;
+          tokens.push({
+            from: attrStart,
+            to: attrEnd,
+            class: "cm-html-attribute"
+          });
+          if (fullAttr && fullAttr.includes("=")) {
+            const equalsPos = fullAttr.indexOf("=");
+            const valueStart = attrStart + attrName.length + 1;
+            if (q1) {
+              const quoteLen = q1.length;
+              tokens.push({
+                from: valueStart,
+                to: valueStart + fullAttr.length - equalsPos - 1,
+                class: "cm-html-attribute-value"
+              });
+            } else if (fullAttr.length > equalsPos + 1) {
+              tokens.push({
+                from: valueStart,
+                to: valueStart + fullAttr.length - equalsPos - 1,
+                class: "cm-html-attribute-value"
+              });
+            }
+          }
+        } else if (attrValue !== void 0 && q2) {
+          const valueStart = start;
+          const valueEnd = start + q2.length + attrValue.length + q2.length;
+          tokens.push({
+            from: valueStart,
+            to: valueEnd,
+            class: "cm-html-attribute-value"
+          });
+        } else if (bracket) {
+          const bracketStart = start;
+          const bracketEnd = start + bracket.length;
+          const isSelfClosing = bracket === "/>" || bracket === ">" && tagStack.length > 0 && VOID_TAGS.has(tagStack[tagStack.length - 1].name);
+          tokens.push({
+            from: bracketStart,
+            to: bracketEnd,
+            class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}`
+          });
+          if (isSelfClosing && tagStack.length > 0) {
+            currentLevel = tagStack[tagStack.length - 1].level;
+            tagStack.pop();
+          }
+        }
+      } catch (tokenError) {
+        console.warn("Error processing token:", tokenError);
+      }
+    }
+    tokens.sort((a, b) => {
+      if (a.from !== b.from) return a.from - b.from;
+      return a.to - b.to;
+    });
+    for (const token of tokens) {
+      builder.add(
+        token.from,
+        token.to,
+        import_view22.Decoration.mark({ class: token.class })
+      );
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/tag-detector.ts
+var import_view23 = require("@codemirror/view");
+function detectHtmlRegions(view) {
+  try {
+    const regions = [];
+    const { state } = view;
+    const doc = state.doc;
+    const fullText = doc.toString();
+    const commentRegions = findHtmlComments(fullText);
+    const parsedRegions = parseHtmlHierarchy(fullText, commentRegions);
+    for (const region of parsedRegions) {
+      try {
+        const { from, to, tagName, content, isMultiline, isSelfClosing, openTagEnd, closeTagStart } = region;
+        regions.push({
+          from,
+          to,
+          tagName,
+          isMultiline,
+          content,
+          openTagEnd,
+          closeTagStart,
+          isSelfClosing
+        });
+      } catch (error) {
+        console.error("Error processing HTML region:", error);
+      }
+    }
+    regions.sort((a, b) => a.from - b.from);
+    return regions;
+  } catch (error) {
+    console.error("Error detecting HTML regions:", error);
+    return [];
+  }
+}
+function parseHtmlHierarchy(text, commentRegions) {
+  const regions = [];
+  const tagStack = [];
+  const tagRegex = /<\/?\s*([a-zA-Z][a-zA-Z0-9\-_:]*)((?:\s+[a-zA-Z][a-zA-Z0-9\-_:]*(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*)\s*(\/?)>/g;
+  let match;
+  while ((match = tagRegex.exec(text)) !== null) {
+    const [fullMatch, tagName, attributes, selfClosing] = match;
+    const position = match.index;
+    const matchEnd = position + fullMatch.length;
+    const lowerTagName = tagName.toLowerCase();
+    if (isPositionInRanges(position, commentRegions)) {
+      continue;
+    }
+    const isClosingTag = fullMatch.startsWith("</");
+    const isSelfClosingTag = selfClosing === "/" || VOID_TAGS.has(lowerTagName);
+    if (isClosingTag) {
+      let foundMatchingTag = false;
+      for (let i = tagStack.length - 1; i >= 0; i--) {
+        const openTag = tagStack[i];
+        if (openTag.tagName.toLowerCase() === lowerTagName) {
+          const from = openTag.startIndex;
+          const to = matchEnd;
+          const content = text.substring(from, to);
+          const isMultiline = content.includes("\n");
+          regions.push({
+            from,
+            to,
+            tagName: lowerTagName,
+            content,
+            isMultiline,
+            isSelfClosing: false,
+            openTagEnd: openTag.openTagEnd,
+            closeTagStart: position
+          });
+          tagStack.splice(i);
+          foundMatchingTag = true;
+          break;
+        }
+      }
+      if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
+      }
+    } else if (isSelfClosingTag) {
+      regions.push({
+        from: position,
+        to: matchEnd,
+        tagName: lowerTagName,
+        content: fullMatch,
+        isMultiline: false,
+        isSelfClosing: true,
+        openTagEnd: matchEnd,
+        closeTagStart: matchEnd
+      });
+    } else {
+      tagStack.push({
+        tagName: lowerTagName,
+        startIndex: position,
+        openTagEnd: matchEnd,
+        content: fullMatch
+      });
+    }
+  }
+  const voidTagRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>/g;
+  voidTagRegex.lastIndex = 0;
+  while ((match = voidTagRegex.exec(text)) !== null) {
+    const [fullTag, tagName, attributes] = match;
+    const lowerTagName = tagName.toLowerCase();
+    const position = match.index;
+    const tagEnd = position + fullTag.length;
+    if (VOID_TAGS.has(lowerTagName) && !regions.some((r) => r.from === position) && !isPositionInRanges(position, commentRegions)) {
+      regions.push({
+        from: position,
+        to: tagEnd,
+        tagName: lowerTagName,
+        isMultiline: false,
+        content: fullTag,
+        openTagEnd: tagEnd,
+        closeTagStart: tagEnd,
+        isSelfClosing: true
+      });
+    }
+  }
+  return regions;
+}
+function isPositionInRanges(position, ranges) {
+  return ranges.some((range) => position >= range.from && position < range.to);
+}
+function findHtmlComments(text) {
+  const comments = [];
+  const commentRegex = /<!--[\s\S]*?-->/g;
+  let match;
+  while ((match = commentRegex.exec(text)) !== null) {
+    comments.push({
+      from: match.index,
+      to: match.index + match[0].length
+    });
+  }
+  return comments;
+}
+function isCursorNearRegion(view, region) {
+  const selection = view.state.selection.main;
+  const cursor = selection.head;
+  const doc = view.state.doc;
+  if (cursor > region.from && cursor < region.to) {
+    return true;
+  }
+  if (cursor === region.from || cursor === region.to) {
+    return true;
+  }
+  return false;
+}
+function isEditorInPreviewMode(view) {
+  if (!view.state.facet(import_view23.EditorView.editable)) {
+    return true;
+  }
+  let element = view.dom;
+  while (element) {
+    if (element.classList && element.classList.contains("preview-mode")) {
+      return true;
+    }
+    element = element.parentElement;
+  }
+  return false;
+}
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/decorations.ts
+var DEBUG2 = false;
+function buildHtmlDecorations(view) {
+  try {
+    if (DEBUG2) console.log("Building HTML decorations");
+    const regions = detectHtmlRegions(view);
+    if (!regions.length) {
+      if (DEBUG2) console.log("No HTML regions found");
+      return import_view24.Decoration.none;
+    }
+    if (DEBUG2) console.log(`Found ${regions.length} HTML regions:`, regions);
+    const inPreviewMode = isEditorInPreviewMode(view);
+    return buildSmartDecorations(regions, view, inPreviewMode);
+  } catch (error) {
+    console.error("Error building HTML decorations:", error);
+    return import_view24.Decoration.none;
+  }
+}
+function buildSmartDecorations(regions, view, inPreviewMode) {
+  const allDecorations = [];
+  const cursorRanges = view.state.selection.ranges;
+  const editModeRegions = /* @__PURE__ */ new Set();
+  for (let i = 0; i < regions.length; i++) {
+    const region = regions[i];
+    for (const range of cursorRanges) {
+      if (isCursorNearRegion(view, region)) {
+        editModeRegions.add(i);
+        break;
+      }
+    }
+  }
+  let madeChange = true;
+  while (madeChange) {
+    madeChange = false;
+    for (let i = 0; i < regions.length; i++) {
+      const region = regions[i];
+      if (editModeRegions.has(i)) {
+        for (let j = 0; j < regions.length; j++) {
+          if (i !== j && !editModeRegions.has(j)) {
+            const nestedRegion = regions[j];
+            if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
+              editModeRegions.add(j);
+              madeChange = true;
+            }
+          }
+        }
+      } else {
+        for (let j = 0; j < regions.length; j++) {
+          if (editModeRegions.has(j)) {
+            const editModeRegion = regions[j];
+            if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
+              editModeRegions.add(i);
+              madeChange = true;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (DEBUG2) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
+  for (let i = 0; i < regions.length; i++) {
+    const region = regions[i];
+    try {
+      if (editModeRegions.has(i)) {
+        if (DEBUG2) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
+        allDecorations.push({
+          from: region.from,
+          to: region.to,
+          decoration: import_view24.Decoration.mark({
+            class: "cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown",
+            inclusiveStart: true,
+            inclusiveEnd: true,
+            attributes: {
+              "data-html-content": "true",
+              "data-no-markdown": "true",
+              "data-no-list": "true"
+            }
+          })
+        });
+        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
+        const syntaxDecorations = [];
+        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
+          syntaxDecorations.push({
+            from,
+            to,
+            decoration: deco
+          });
+        });
+        if (syntaxDecorations.length > 0) {
+          allDecorations.push(...syntaxDecorations);
+        }
+      } else {
+        if (DEBUG2) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
+        let htmlContent = region.content;
+        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
+        if (tagMatch) {
+          const tagName = tagMatch[1].toLowerCase();
+          const attributes = tagMatch[2] || "";
+          const innerContent = tagMatch[3] || "";
+          if (tagName === "div" || tagName === "span") {
+            const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
+            const styleValue = styleMatch ? styleMatch[2] : "";
+            if (styleValue) {
+              htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
+            } else {
+              htmlContent = innerContent;
+            }
+          }
+        }
+        let overlapsEditMode = false;
+        for (const editIndex of editModeRegions) {
+          const editRegion = regions[editIndex];
+          if (region.from >= editRegion.from && region.from < editRegion.to || region.to > editRegion.from && region.to <= editRegion.to || region.from <= editRegion.from && region.to >= editRegion.to) {
+            overlapsEditMode = true;
+            break;
+          }
+        }
+        if (!overlapsEditMode) {
+          allDecorations.push({
+            from: region.from,
+            to: region.to,
+            decoration: import_view24.Decoration.replace({
+              widget: new HtmlPreviewWidget(htmlContent, region.isMultiline)
+            })
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error processing region:", error, region);
+    }
+  }
+  const builder = new import_state9.RangeSetBuilder();
+  try {
+    const positionMap = /* @__PURE__ */ new Map();
+    for (const deco of allDecorations) {
+      if (deco.from < deco.to) {
+        if (!positionMap.has(deco.from)) {
+          positionMap.set(deco.from, []);
+        }
+        positionMap.get(deco.from).push(deco);
+      }
+    }
+    const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
+    for (const pos of positions) {
+      const decos = positionMap.get(pos);
+      decos.sort((a, b) => {
+        const aIsWidget = a.decoration.spec.widget !== void 0;
+        const bIsWidget = b.decoration.spec.widget !== void 0;
+        if (aIsWidget !== bIsWidget) {
+          return aIsWidget ? -1 : 1;
+        }
+        if (!aIsWidget && !bIsWidget) {
+          const aInclusive = a.decoration.spec.inclusiveStart === true;
+          const bInclusive = b.decoration.spec.inclusiveStart === true;
+          if (aInclusive !== bInclusive) {
+            return aInclusive ? -1 : 1;
+          }
+        }
+        return a.to - b.to;
+      });
+      for (const deco of decos) {
+        try {
+          builder.add(deco.from, deco.to, deco.decoration);
+        } catch (e) {
+          if (DEBUG2) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
+        }
+      }
+    }
+    return builder.finish();
+  } catch (error) {
+    console.error("Critical error in decoration building:", error);
+    return import_view24.Decoration.none;
+  }
+}
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/cssVarStyles.ts
+function addCssVarHtmlStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("cm-html-decorator-styles")) {
+    const oldStyles = document.getElementById("cm-html-decorator-styles");
+    if (oldStyles && oldStyles.parentNode) {
+      oldStyles.parentNode.removeChild(oldStyles);
+    }
+  }
+  console.log("Adding HTML decorator styles with CSS variables");
+  const style = document.createElement("style");
+  style.id = "cm-html-decorator-styles";
+  style.textContent = `
+    /* Editor container - ensure it can display overflow */
+    .cm-editor {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    
+    /* HTML decoration using CSS variables - Light Theme */
+    .cm-html-preview {
+      position: relative;
+      background-color: var(--light-html-preview-bg, #f8f8f8);
+      border: 1px solid var(--light-html-preview-border, #e0e0e0);
+      border-radius: 4px;
+      padding: 12px;
+      margin: 4px 0;
+      box-shadow: var(--light-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.1));
+      min-height: 20px;
+      max-width: 100%;
+      width: calc(100% - 16px);
+      display: block;
+      visibility: visible !important;
+      color: var(--light-html-content-color, #333333);
+      z-index: 9999;
+    }
+    
+    /* HTML preview label */
+    .cm-html-preview-label {
+      position: absolute;
+      top: -10px;
+      left: 8px;
+      background: var(--light-html-label-bg, #e3e3e3);
+      color: var(--light-html-label-color, #333333);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      z-index: 10000;
+    }
+    
+    /* HTML content container */
+    .cm-html-content {
+      background: var(--light-html-content-bg, #ffffff);
+      padding: 8px;
+      border-radius: 3px;
+      color: var(--light-html-content-color, #333333);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      min-height: 10px;
+    }
+    
+    /* HTML code syntax highlighting */
+    .cm-editor .cm-html-code-mode {
+      color: var(--light-html-content-color, #333333) !important;
+      font-family: monospace !important;
+      background-color: transparent !important;
+      border-radius: 0 !important;
+    }
+    
+    .cm-editor .cm-html-tag-name {
+      color: var(--light-html-tag-color, #d73a49) !important;
+      font-weight: 600 !important;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+    }
+    
+    .cm-editor .cm-html-attribute {
+      color: var(--light-html-attribute-color, #e36209) !important;
+      font-style: normal !important;
+    }
+    
+    .cm-editor .cm-html-attribute-value {
+      color: var(--light-html-attribute-value-color, #22863a) !important;
+      font-style: normal !important;
+    }
+    
+    .cm-editor .cm-html-bracket {
+      color: var(--light-html-bracket-color, #909090) !important;
+      font-weight: normal !important;
+      opacity: 1 !important;
+    }
+    
+    /* Dark theme styles */
+    .dark .cm-html-preview {
+      background-color: var(--dark-html-preview-bg, #282828);
+      border: 1px solid var(--dark-html-preview-border, #444444);
+      box-shadow: var(--dark-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.3));
+      color: var(--dark-html-content-color, #e0e0e0);
+    }
+    
+    .dark .cm-html-preview-label {
+      background: var(--dark-html-label-bg, #4a4a4a);
+      color: var(--dark-html-label-color, #e0e0e0);
+    }
+    
+    .dark .cm-html-content {
+      background: var(--dark-html-content-bg, #333333);
+      color: var(--dark-html-content-color, #e0e0e0);
+    }
+    
+    .dark .cm-editor .cm-html-tag-name {
+      color: var(--dark-html-tag-color, #f97583) !important;
+    }
+    
+    .dark .cm-editor .cm-html-attribute {
+      color: var(--dark-html-attribute-color, #ffab70) !important;
+    }
+    
+    .dark .cm-editor .cm-html-attribute-value {
+      color: var(--dark-html-attribute-value-color, #85e89d) !important;
+    }
+    
+    .dark .cm-editor .cm-html-bracket {
+      color: var(--dark-html-bracket-color, #a0a0a0) !important;
+    }
+    
+    /* Force visibility of HTML elements inside the preview */
+    .cm-html-preview * {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    /* Block element defaults */
+    .cm-html-preview div,
+    .cm-html-preview p,
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6,
+    .cm-html-preview ul,
+    .cm-html-preview ol {
+      display: block !important;
+      margin: 0.4em 0 !important;
+    }
+    
+    /* Heading styles */
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6 {
+      font-weight: 600 !important;
+      color: var(--light-html-heading-color, #333333) !important;
+    }
+    
+    .dark .cm-html-preview h1,
+    .dark .cm-html-preview h2,
+    .dark .cm-html-preview h3,
+    .dark .cm-html-preview h4,
+    .dark .cm-html-preview h5,
+    .dark .cm-html-preview h6 {
+      color: var(--dark-html-heading-color, #e0e0e0) !important;
+    }
+    
+    .cm-html-preview h1 { font-size: 1.4em !important; }
+    .cm-html-preview h2 { font-size: 1.2em !important; }
+    .cm-html-preview h3 { font-size: 1.1em !important; }
+    
+    /* Debug info */
+    .cm-html-debug-info {
+      position: absolute;
+      bottom: -12px;
+      right: 4px;
+      font-size: 8px;
+      color: var(--light-html-debug-color, #999999);
+      background: rgba(255,255,255,0.7);
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+    
+    .dark .cm-html-debug-info {
+      color: var(--dark-html-debug-color, #777777);
+      background: rgba(0,0,0,0.3);
+    }
+    
+    /* Editorial indicator when in edit mode */
+    .cm-editing-html {
+      position: relative;
+    }
+    
+    .cm-editing-html::before {
+      content: "Editing HTML";
+      position: absolute;
+      top: -16px;
+      right: 8px;
+      background-color: var(--light-html-edit-label-bg, #f0f0f0);
+      color: var(--light-html-edit-label-color, #555555);
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 2px;
+      opacity: 0.8;
+    }
+    
+    .dark .cm-editing-html::before {
+      background-color: var(--dark-html-edit-label-bg, #3a3a3a);
+      color: var(--dark-html-edit-label-color, #bbbbbb);
+    }
+  `;
+  document.head.appendChild(style);
+  console.log("HTML decorator styles with CSS variables added to document");
+}
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/styles.ts
+function addHtmlStyles() {
+  addCssVarHtmlStyles();
+}
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/index.ts
+var HtmlDecoratorPlugin = class {
+  constructor(view) {
+    this.enabled = true;
+    this.debug = false;
+    this.updateScheduled = false;
+    this.isDestroyed = false;
+    this.lastSelectionHead = -1;
+    this.htmlRegions = [];
+    this.view = view;
+    addHtmlStyles();
+    if (view.state.selection.ranges.length > 0) {
+      this.lastSelectionHead = view.state.selection.main.head;
+    }
+    setTimeout(() => {
+      this.updateDecorations();
+    }, 100);
+    if (this.debug) console.log("HtmlDecorator plugin initialized");
+  }
+  /**
+   * Update the view - rebuild decorations when editor changes
+   */
+  update(update) {
+    if (!this.enabled || this.isDestroyed) return;
+    const contentChanged = update.docChanged;
+    const selectionChanged = update.selectionSet;
+    let cursorMoved = false;
+    if (selectionChanged && update.state.selection.ranges.length > 0) {
+      const newHead = update.state.selection.main.head;
+      cursorMoved = newHead !== this.lastSelectionHead;
+      this.lastSelectionHead = newHead;
+    }
+    let htmlContentChanged = false;
+    if (contentChanged) {
+      update.changes.iterChanges((fromA, toA, fromB, toB) => {
+        if (htmlContentChanged) return;
+        for (const region of this.htmlRegions) {
+          if (fromA <= region.to && toA >= region.from) {
+            htmlContentChanged = true;
+            break;
+          }
+        }
+        if (!htmlContentChanged) {
+          const changedText = update.state.doc.sliceString(fromB, toB);
+          htmlContentChanged = changedText.includes("<") && changedText.includes(">");
+        }
+      });
+    }
+    let cursorMovedToFromHtml = false;
+    if (cursorMoved) {
+      const currentPosition = update.state.selection.main.head;
+      const cursorInHtmlRegion = this.htmlRegions.some(
+        (region) => currentPosition >= region.from && currentPosition <= region.to
+      );
+      if (!cursorInHtmlRegion) {
+        cursorMovedToFromHtml = this.htmlRegions.some(
+          (region) => currentPosition === region.from || currentPosition === region.to
+        );
+      } else {
+        cursorMovedToFromHtml = true;
+      }
+    }
+    if (contentChanged && htmlContentChanged || cursorMoved) {
+      const reason = contentChanged ? "HTML content change" : "cursor movement";
+      if (this.debug) console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
+      if (!this.updateScheduled) {
+        this.updateScheduled = true;
+        setTimeout(() => {
+          this.updateDecorations();
+          this.updateScheduled = false;
+        }, 0);
+      }
+    }
+  }
+  /**
+   * Update decorations using the measure/notify pattern
+   */
+  updateDecorations() {
+    if (this.isDestroyed) return;
+    try {
+      if (this.debug) console.log("Updating HTML decorations");
+      const decorations = buildHtmlDecorations(this.view);
+      this.updateHtmlRegions();
+      this.view.dispatch({
+        effects: setHtmlDecorations.of(decorations)
+      });
+    } catch (error) {
+      console.error("Error updating HTML decorations:", error);
+    }
+  }
+  /**
+   * Update the cached list of HTML regions
+   */
+  updateHtmlRegions() {
+    try {
+      const { state } = this.view;
+      const doc = state.doc;
+      const fullText = doc.toString();
+      const regions = [];
+      const htmlRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/g;
+      let match;
+      while ((match = htmlRegex.exec(fullText)) !== null) {
+        regions.push({
+          from: match.index,
+          to: match.index + match[0].length
+        });
+      }
+      this.htmlRegions = regions;
+    } catch (error) {
+      console.error("Error updating HTML regions cache:", error);
+    }
+  }
+  /**
+   * Clean up resources when plugin is removed
+   */
+  destroy() {
+    this.updateScheduled = false;
+    this.isDestroyed = true;
+    if (this.debug) console.log("HtmlDecorator plugin destroyed");
+  }
+};
+var setHtmlDecorations = import_state10.StateEffect.define();
+var htmlDecorationsField = import_state10.StateField.define({
+  create: () => import_view25.Decoration.none,
+  update: (decorations, tr) => {
+    decorations = decorations.map(tr.changes);
+    for (const effect of tr.effects) {
+      if (effect.is(setHtmlDecorations)) {
+        decorations = effect.value;
+      }
+    }
+    return decorations;
+  },
+  provide: (field) => import_view25.EditorView.decorations.from(field)
+});
+function htmlDecorator() {
+  return [
+    htmlDecorationsField,
+    import_view25.ViewPlugin.define((view) => new HtmlDecoratorPlugin(view))
+  ];
+}
+
+// src/app/obsidian-editor/extensions/MarkdownPasteHandler.ts
+var import_view26 = require("@codemirror/view");
+var import_state11 = require("@codemirror/state");
 var import_marked = require("marked");
 function createMarkdownPasteHandler() {
-  return import_state8.Prec.highest(import_view21.EditorView.domEventHandlers({
+  return import_state11.Prec.highest(import_view26.EditorView.domEventHandlers({
     paste(event, view) {
       console.log("[MarkdownPasteHandler] Paste event triggered.");
       const clipboardData = event.clipboardData || window.clipboardData;
@@ -8817,15 +10000,15 @@ function createMarkdownPasteHandler() {
 var markdownPasteHandler = createMarkdownPasteHandler();
 
 // src/app/obsidian-editor/extensions/lezer-safety-plugin.ts
-var import_view22 = require("@codemirror/view");
+var import_view27 = require("@codemirror/view");
 function createLezerSafetyPlugin() {
-  return import_view22.EditorView.updateListener.of((update) => {
-    if (!update.view.state.field(import_view22.EditorView.decorations)) {
+  return import_view27.EditorView.updateListener.of((update) => {
+    if (!update.view.state.field(import_view27.EditorView.decorations)) {
       console.log("Applying Lezer safety patches");
       try {
         const view = update.view;
         if (view && view.plugin && view.dispatch) {
-          const plugins = view.state.facet(import_view22.EditorView.plugins);
+          const plugins = view.state.facet(import_view27.EditorView.plugins);
           if (plugins && Array.isArray(plugins)) {
             plugins.forEach((plugin) => {
               if (plugin && plugin.extension && plugin.extension.parser) {
@@ -8857,8 +10040,127 @@ function createLezerSafetyPlugin() {
   });
 }
 
+// src/app/obsidian-editor/extensions/markdown/no-formatting.ts
+var import_view28 = require("@codemirror/view");
+var import_language10 = require("@codemirror/language");
+var import_state12 = require("@codemirror/state");
+function createNoMarkdownInHtmlExtension() {
+  return import_view28.ViewPlugin.fromClass(
+    class {
+      constructor(view) {
+        this.decorations = this.buildDecorations(view);
+      }
+      update(update) {
+        if (update.docChanged || update.viewportChanged || update.selectionSet) {
+          this.decorations = this.buildDecorations(update.view);
+        }
+      }
+      buildDecorations(view) {
+        const builder = new import_state12.RangeSetBuilder();
+        const { state } = view;
+        const tree = (0, import_language10.syntaxTree)(state);
+        const htmlRegions = [];
+        tree.iterate({
+          enter: (node) => {
+            if (node.name.includes("HtmlTag") || node.name.includes("HtmlBlock") || node.name.includes("OpenTag") || node.name.includes("CloseTag") || node.name.includes("SelfClosingTag") || node.name.includes("Element")) {
+              htmlRegions.push({ from: node.from, to: node.to });
+              builder.add(node.from, node.to, import_view28.Decoration.mark({
+                class: "cm-html-content",
+                attributes: { "data-html": "true" }
+              }));
+              builder.add(node.from, node.to, import_view28.Decoration.mark({
+                class: "cm-plain-text cm-disable-markdown-parsing",
+                attributes: { "data-no-markdown": "true" }
+              }));
+              builder.add(node.from, node.to, import_view28.Decoration.mark({
+                class: "cm-html-tag-block cm-no-list-rendering",
+                attributes: { "data-html-tag": "true", "data-no-list": "true" }
+              }));
+            }
+          }
+        });
+        tree.iterate({
+          enter: (node) => {
+            if ((node.name.includes("ListItem") || node.name.includes("BulletList") || node.name.includes("OrderedList") || node.name.includes("ListMark") || node.name.includes("Emph") || node.name.includes("Strong") || node.name.includes("Heading")) && isInHtmlRegion(node.from, node.to, htmlRegions)) {
+              builder.add(node.from, node.to, import_view28.Decoration.mark({
+                class: "cm-no-markdown cm-no-list-rendering cm-html-plain-text",
+                attributes: {
+                  "data-force-plain": "true",
+                  "data-no-list": "true",
+                  "data-no-markdown": "true"
+                }
+              }));
+            }
+          }
+        });
+        return builder.finish();
+      }
+    },
+    {
+      decorations: (instance) => instance.decorations,
+      provide: (plugin) => import_view28.EditorView.baseTheme({
+        ".cm-html-content": {
+          // Styles for HTML content
+          backgroundColor: "rgba(0, 0, 0, 0.04)",
+          borderRadius: "2px"
+        },
+        // These rules ensure markdown formatting doesn't apply inside HTML
+        ".cm-html-content .cm-formatting": {
+          // Override any markdown formatting inside HTML
+          color: "inherit !important",
+          fontWeight: "inherit !important",
+          fontStyle: "inherit !important",
+          textDecoration: "inherit !important"
+        },
+        ".cm-html-tag-block": {
+          // Additional styling for HTML tags
+          color: "#0550ae !important"
+          // HTML tag color
+        },
+        ".cm-disable-markdown-parsing .cm-heading": {
+          // Prevent headings from being styled inside HTML
+          fontSize: "inherit !important",
+          fontWeight: "inherit !important",
+          color: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-strong": {
+          // Prevent bold from being styled inside HTML
+          fontWeight: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-emphasis": {
+          // Prevent italic from being styled inside HTML
+          fontStyle: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-list": {
+          // Prevent lists from being styled inside HTML
+          fontWeight: "inherit !important"
+        },
+        ".cm-no-list-rendering .cm-list-bullet": {
+          // Prevent list bullets from appearing
+          color: "inherit !important",
+          fontWeight: "inherit !important"
+        },
+        ".cm-html-plain-text": {
+          // Additional overrides for plain text inside HTML
+          fontWeight: "inherit !important",
+          fontStyle: "inherit !important",
+          fontSize: "inherit !important"
+        }
+      })
+    }
+  );
+}
+function isInHtmlRegion(from, to, htmlRegions) {
+  for (const region of htmlRegions) {
+    if (from >= region.from && to <= region.to) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // src/app/obsidian-editor/utils/formatting/index.ts
-var import_state9 = require("@codemirror/state");
+var import_state13 = require("@codemirror/state");
 function insertBold(view) {
   const { state, dispatch } = view;
   const changes = [];
@@ -8870,7 +10172,7 @@ function insertBold(view) {
         to: range.from,
         insert: "****"
       });
-      selections.push(import_state9.EditorSelection.cursor(range.from + 2));
+      selections.push(import_state13.EditorSelection.cursor(range.from + 2));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `**${selectedText}**`;
@@ -8879,12 +10181,12 @@ function insertBold(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(import_state13.EditorSelection.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function insertItalic(view) {
@@ -8898,7 +10200,7 @@ function insertItalic(view) {
         to: range.from,
         insert: "**"
       });
-      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+      selections.push(import_state13.EditorSelection.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `*${selectedText}*`;
@@ -8907,12 +10209,12 @@ function insertItalic(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(import_state13.EditorSelection.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function insertCode(view) {
@@ -8926,7 +10228,7 @@ function insertCode(view) {
         to: range.from,
         insert: "``"
       });
-      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+      selections.push(import_state13.EditorSelection.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `\`${selectedText}\``;
@@ -8935,12 +10237,12 @@ function insertCode(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(import_state13.EditorSelection.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function insertHeading(view, level = 1) {
@@ -8968,11 +10270,11 @@ function insertHeading(view, level = 1) {
     }
     const contentOffset = range.from - line.from;
     const newPos = line.from + prefix.length + contentOffset;
-    selections.push(import_state9.EditorSelection.cursor(newPos));
+    selections.push(import_state13.EditorSelection.cursor(newPos));
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function insertLink(view) {
@@ -8986,7 +10288,7 @@ function insertLink(view) {
         to: range.from,
         insert: "[](url)"
       });
-      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+      selections.push(import_state13.EditorSelection.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `[${selectedText}](url)`;
@@ -8996,12 +10298,12 @@ function insertLink(view) {
         insert: newText
       });
       const urlPos = range.from + selectedText.length + 3;
-      selections.push(import_state9.EditorSelection.cursor(urlPos));
+      selections.push(import_state13.EditorSelection.cursor(urlPos));
     }
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function indentText(view) {
@@ -9026,11 +10328,11 @@ function indentText(view) {
     }
     const newFrom = range.from + indentSize;
     const newTo = range.to + (endLine.number - startLine.number + 1) * indentSize;
-    selections.push(import_state9.EditorSelection.range(newFrom, newTo));
+    selections.push(import_state13.EditorSelection.range(newFrom, newTo));
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function unindentText(view) {
@@ -9072,11 +10374,11 @@ function unindentText(view) {
         newTo -= spacesToRemove;
       }
     }
-    selections.push(import_state9.EditorSelection.range(newFrom, Math.max(newFrom, newTo)));
+    selections.push(import_state13.EditorSelection.range(newFrom, Math.max(newFrom, newTo)));
   }
   dispatch({
     changes,
-    selection: import_state9.EditorSelection.create(selections)
+    selection: import_state13.EditorSelection.create(selections)
   });
 }
 function handleBackspaceIndent(view) {
@@ -9100,7 +10402,7 @@ function handleBackspaceIndent(view) {
           to: pos,
           insert: ""
         });
-        selections.push(import_state9.EditorSelection.cursor(pos - spacesToRemove));
+        selections.push(import_state13.EditorSelection.cursor(pos - spacesToRemove));
         handled = true;
       }
     }
@@ -9108,7 +10410,7 @@ function handleBackspaceIndent(view) {
   if (handled) {
     dispatch({
       changes,
-      selection: import_state9.EditorSelection.create(selections)
+      selection: import_state13.EditorSelection.create(selections)
     });
     return true;
   }
@@ -9161,7 +10463,7 @@ var createCustomHighlightStyle = () => {
     if (import_highlight6.tags.link) validStyles.push({ tag: [import_highlight6.tags.link], color: "#2563eb", textDecoration: "underline" });
     if (import_highlight6.tags.monospace) validStyles.push({ tag: [import_highlight6.tags.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
     if (validStyles.length > 0) {
-      return import_language9.HighlightStyle.define(validStyles);
+      return import_language11.HighlightStyle.define(validStyles);
     } else {
       console.warn("No valid lezer highlight tags found, using empty highlight style");
       return [];
@@ -9172,7 +10474,7 @@ var createCustomHighlightStyle = () => {
   }
 };
 var createCustomEnterKeymap = () => {
-  return import_state10.Prec.highest(import_view23.keymap.of([
+  return import_state14.Prec.highest(import_view29.keymap.of([
     {
       key: "Enter",
       run: (view) => handleEnterListBlockquote(view)
@@ -9180,7 +10482,7 @@ var createCustomEnterKeymap = () => {
   ]));
 };
 var createMarkdownKeymaps = (onSaveRef) => {
-  return import_view23.keymap.of([
+  return import_view29.keymap.of([
     {
       key: "Backspace",
       run: (view) => {
@@ -9259,7 +10561,7 @@ var createMarkdownKeymaps = (onSaveRef) => {
   ]);
 };
 var createEditorStyling = () => {
-  return import_view23.EditorView.theme({
+  return import_view29.EditorView.theme({
     "&": {
       height: "100%"
     },
@@ -9283,19 +10585,23 @@ var createEditorExtensions = (options) => {
     atomicIndents,
     createCustomEnterKeymap(),
     // Add our Lezer safety plugin with highest precedence to run first
-    import_state10.Prec.highest(createLezerSafetyPlugin()),
+    import_state14.Prec.highest(createLezerSafetyPlugin()),
     markdown({
       base: markdownLanguage,
       codeLanguages: import_language_data2.languages,
       addKeymap: false
     }),
+    // Add the extension to prevent markdown in HTML with high precedence
+    import_state14.Prec.high(createNoMarkdownInHtmlExtension()),
     createMarkdownSyntaxPlugin(),
+    htmlDecorator(),
+    // Add HTML decorator extension for HTML rendering
     markdownPasteHandler,
-    (0, import_view23.highlightActiveLine)(),
-    (0, import_view23.highlightActiveLineGutter)(),
-    import_view23.EditorView.lineWrapping,
+    (0, import_view29.highlightActiveLine)(),
+    (0, import_view29.highlightActiveLineGutter)(),
+    import_view29.EditorView.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
-    editableCompartment.of(import_view23.EditorView.editable.of(true)),
+    editableCompartment.of(import_view29.EditorView.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
@@ -9306,7 +10612,7 @@ var createEditorExtensions = (options) => {
         safeExtensions.push(...highlightStyle);
       }
     } else {
-      safeExtensions.push((0, import_language9.syntaxHighlighting)(highlightStyle));
+      safeExtensions.push((0, import_language11.syntaxHighlighting)(highlightStyle));
     }
   } catch (error) {
     console.error("Error applying syntax highlighting:", error);
@@ -9330,8 +10636,8 @@ var EditorCore = ({
   const [initializationError, setInitializationError] = (0, import_react2.useState)(null);
   const onChangeRef = (0, import_react2.useRef)(onChange);
   const onSaveRef = (0, import_react2.useRef)(onSave);
-  const editableCompartment = (0, import_react2.useRef)(new import_state11.Compartment()).current;
-  const themeCompartment = (0, import_react2.useRef)(new import_state11.Compartment()).current;
+  const editableCompartment = (0, import_react2.useRef)(new import_state15.Compartment()).current;
+  const themeCompartment = (0, import_react2.useRef)(new import_state15.Compartment()).current;
   const editorThemeName = getCurrentEditorTheme();
   (0, import_react2.useEffect)(() => {
     onChangeRef.current = onChange;
@@ -9372,7 +10678,7 @@ var EditorCore = ({
       };
       window.addEventListener("error", errorHandler);
       const themeExtension = getTheme(editorThemeName, theme === "dark" ? "dark" : "light");
-      const changeListener = import_view24.EditorView.updateListener.of((update) => {
+      const changeListener = import_view30.EditorView.updateListener.of((update) => {
         if (update.docChanged && onChangeRef.current) {
           if (update.transactions.some((tr) => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
             const doc = update.state.doc;
@@ -9380,7 +10686,7 @@ var EditorCore = ({
           }
         }
       });
-      const errorHandlingExtension = import_view24.EditorView.domEventHandlers({
+      const errorHandlingExtension = import_view30.EditorView.domEventHandlers({
         error: (event, view2) => {
           console.warn("DOM error event in editor:", event);
           return false;
@@ -9397,8 +10703,8 @@ var EditorCore = ({
         changeListener,
         errorHandlingExtension
       ];
-      const view = new import_view24.EditorView({
-        state: import_state11.EditorState.create({
+      const view = new import_view30.EditorView({
+        state: import_state15.EditorState.create({
           doc: safeInitialValue,
           extensions
         }),
@@ -9444,7 +10750,7 @@ var EditorCore = ({
         });
         const isEditable = mode === "live" && !readOnly;
         editorViewRef.current.dispatch({
-          effects: editableCompartment.reconfigure(import_view24.EditorView.editable.of(isEditable))
+          effects: editableCompartment.reconfigure(import_view30.EditorView.editable.of(isEditable))
         });
       } catch (error) {
         console.error("Error updating editor mode:", error);
@@ -9492,7 +10798,7 @@ var EditorCore = ({
 var EditorCore_default = EditorCore;
 
 // src/app/obsidian-editor/utils/formatting/markdownFormatting.ts
-var import_state12 = require("@codemirror/state");
+var import_state16 = require("@codemirror/state");
 function toggleBold(selection, doc) {
   const changes = [];
   let newSelection;
@@ -9504,7 +10810,7 @@ function toggleBold(selection, doc) {
         insert: "**bold text**"
       });
       const cursorPos = range.from + 2;
-      newSelection = import_state12.EditorSelection.cursor(cursorPos);
+      newSelection = import_state16.EditorSelection.cursor(cursorPos);
     } else {
       const selectedText = doc.slice(range.from, range.to);
       if (selectedText.startsWith("**") && selectedText.endsWith("**")) {
@@ -9535,7 +10841,7 @@ function toggleItalic(selection, doc) {
         insert: "*italic text*"
       });
       const cursorPos = range.from + 1;
-      newSelection = import_state12.EditorSelection.cursor(cursorPos);
+      newSelection = import_state16.EditorSelection.cursor(cursorPos);
     } else {
       const selectedText = doc.slice(range.from, range.to);
       if (selectedText.startsWith("*") && selectedText.endsWith("*") && !(selectedText.startsWith("**") && selectedText.endsWith("**"))) {
@@ -9970,7 +11276,7 @@ function ThemeToggle() {
 }
 
 // src/app/obsidian-editor/utils/filesystem.ts
-var import_view25 = require("@codemirror/view");
+var import_view31 = require("@codemirror/view");
 var FileSystemError = class extends Error {
   constructor(message) {
     super(message);
@@ -10041,7 +11347,7 @@ var createFileSystem = (options = {}) => {
   };
 };
 var createFileSystemExtension = (fileSystem) => {
-  return import_view25.EditorView.domEventHandlers({
+  return import_view31.EditorView.domEventHandlers({
     keydown: (event, view) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();

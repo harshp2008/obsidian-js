@@ -1667,3 +1667,114 @@ html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !important;
   letter-spacing: 0.03em !important;
 }
+
+/* Add specific CSS rules to prevent markdown rendering inside HTML tags */
+.cm-html-content {
+  /* Add a subtle background to make HTML content visually distinct */
+  background-color: rgba(240, 240, 240, 0.5);
+  border-radius: 3px;
+}
+
+/* Override any markdown styling inside HTML content */
+.cm-html-content .cm-strong,
+.cm-html-content .cm-emphasis,
+.cm-html-content .cm-heading,
+.cm-html-content .cm-link,
+.cm-html-content .cm-url,
+.cm-html-content .cm-list,
+.cm-html-content .cm-quote {
+  /* Reset all markdown styling */
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  text-decoration: inherit !important;
+  background-color: inherit !important;
+}
+
+/* Ensure HTML tags are clearly visible */
+.cm-html-tag {
+  color: #0550ae !important;
+  font-family: monospace;
+}
+
+/* Ensure the cm-disable-markdown-parsing class works */
+.cm-disable-markdown-parsing * {
+  /* Reset all markdown styling */
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+}
+
+/* Ensure plain text markers work */
+.cm-plain-text-marker {
+  /* Make it a higher z-index than other decorations */
+  z-index: 5;
+}
+
+/* Specific override for list bullets */
+.cm-html-content .cm-list-bullet {
+  font-weight: normal !important;
+}
+
+/* Keep HTML tags looking like code even when inside HTML content */
+.cm-html-content .cm-tag,
+.cm-html-content .cm-bracket,
+.cm-html-content .cm-attribute,
+.cm-html-content .cm-attribute-value {
+  color: #0550ae !important;
+  font-family: monospace;
+}
+
+/* Preserve the HTML syntax highlighting */
+.cm-html-code-mode {
+  font-family: monospace;
+}
+
+/* Ensure H1-H6 tags in HTML don't get markdown styling */
+.cm-html-content h1,
+.cm-html-content h2,
+.cm-html-content h3,
+.cm-html-content h4,
+.cm-html-content h5,
+.cm-html-content h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* Add more aggressive list-specific overrides */
+.cm-no-list-rendering .cm-list,
+.cm-no-list-rendering .cm-list-bullet,
+.cm-no-list-rendering .cm-list-marker,
+.cm-no-list-rendering .cm-hmd-list-indent,
+.cm-no-list-rendering .cm-formatting-list,
+.cm-no-list-rendering .cm-formatting-list-ul,
+.cm-no-list-rendering .cm-formatting-list-ol {
+  /* Reset all list-related styling */
+  font-weight: normal !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  /* Ensure bullets don't show up as list bullets */
+  display: inline !important;
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Override the actual list bullet characters */
+.cm-no-list-rendering .cm-list-bullet::before,
+.cm-no-list-rendering .cm-formatting-list::before,
+.cm-no-list-rendering .cm-formatting-list-ul::before,
+.cm-no-list-rendering .cm-formatting-list-ol::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* Make sure markdown list indentation doesn't apply */
+.cm-no-list-rendering .cm-hmd-list-indent {
+  display: inline !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}

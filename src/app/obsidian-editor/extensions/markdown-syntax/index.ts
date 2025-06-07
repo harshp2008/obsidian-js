@@ -23,6 +23,7 @@ import { BlockquoteDecorator } from './rules/blockquoteDecorator';
 import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { Compartment } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
 
 /**
  * Represents a decoration item with its position and decoration object
@@ -82,9 +83,8 @@ function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'previ
   // Determine which ranges of the document to process
   const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
 
-  // We no longer attempt to find HTML regions here to avoid cyclic dependencies
-  // The individual syntax rules will need to check for HTML regions if needed
-  const htmlEditRegions: {from: number, to: number}[] = [];
+  // Find HTML regions to exclude from markdown processing
+  const htmlRegions = findHtmlRegions(state);
   
   // Process each visible range
   for (const { from, to } of rangesToProcess) {
@@ -100,7 +100,7 @@ function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'previ
       view: view,
       decorations: allDecorations,
       currentMode: currentMode,
-      htmlEditRegions: htmlEditRegions // Empty array, but preserved for API compatibility
+      htmlEditRegions: htmlRegions // Pass HTML regions to avoid processing markdown inside them
     };
 
     // Apply each syntax rule
@@ -117,9 +117,27 @@ function buildLegacyDecorations(state: EditorState, currentMode: 'live' | 'previ
     }
   }
 
+  // Add decorations to explicitly mark HTML regions as plain text
+  for (const region of htmlRegions) {
+    allDecorations.push({
+      from: region.from,
+      to: region.to,
+      decoration: Decoration.mark({ 
+        class: 'cm-plain-text cm-html-content cm-disable-markdown-parsing cm-no-list-rendering',
+        attributes: { 'data-html-content': 'true', 'data-no-markdown': 'true' }
+      })
+    });
+  }
+
   // Sort and add decorations to the builder to handle overlaps correctly
   const groupedDecorations = new Map<number, DecorationItem[]>();
   for (const item of allDecorations) {
+    // Skip decorations inside HTML unless they are HTML-specific decorations
+    if (!item.decoration.spec.class?.includes('cm-html-content') && 
+        isInsideHtml(item.from, item.to, htmlRegions)) {
+      continue;
+    }
+    
     if (!groupedDecorations.has(item.from)) {
       groupedDecorations.set(item.from, []);
     }
@@ -290,5 +308,37 @@ export function toggleMarkdownSyntaxVisibility(view: EditorView, mode: 'visible'
   });
   
   currentMode = mode;
+}
+
+// Find HTML regions to avoid processing markdown inside them
+// This is a simple helper that will be used when building decorations
+function findHtmlRegions(state: EditorState): {from: number, to: number}[] {
+  const regions: {from: number, to: number}[] = [];
+  const tree = syntaxTree(state);
+  
+  tree.iterate({
+    enter: (node) => {
+      if (node.name.includes('HtmlTag') || 
+          node.name.includes('HtmlBlock') || 
+          node.name.includes('OpenTag') || 
+          node.name.includes('CloseTag') || 
+          node.name.includes('SelfClosingTag') ||
+          node.name.includes('Element')) {
+        regions.push({from: node.from, to: node.to});
+      }
+    }
+  });
+  
+  return regions;
+}
+
+// Helper to check if a region is inside any HTML region
+function isInsideHtml(from: number, to: number, htmlRegions: {from: number, to: number}[]): boolean {
+  for (const region of htmlRegions) {
+    if (from >= region.from && to <= region.to) {
+      return true;
+    }
+  }
+  return false;
 }
 

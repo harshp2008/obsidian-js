@@ -16,6 +16,8 @@ import { htmlDecorator } from '../extensions/markdown-syntax/html-decorator';
 import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler.ts';
 // Import our Lezer safety plugin
 import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
+// Import the no markdown in HTML extension
+import { createNoMarkdownInHtmlExtension } from '../extensions/markdown/no-formatting';
 
 // Import formatting functions from our new modular structure
 import { 
@@ -222,6 +224,8 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
       codeLanguages: languages,
       addKeymap: false,
     }),
+    // Add the extension to prevent markdown in HTML with high precedence
+    Prec.high(createNoMarkdownInHtmlExtension()),
     createMarkdownSyntaxPlugin(),
     htmlDecorator(), // Add HTML decorator extension for HTML rendering
     markdownPasteHandler,

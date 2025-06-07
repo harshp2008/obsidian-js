@@ -1404,3 +1404,84 @@ html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
     monospace !important;
   letter-spacing: 0.03em !important;
 }
+.cm-html-content {
+  background-color: rgba(240, 240, 240, 0.5);
+  border-radius: 3px;
+}
+.cm-html-content .cm-strong,
+.cm-html-content .cm-emphasis,
+.cm-html-content .cm-heading,
+.cm-html-content .cm-link,
+.cm-html-content .cm-url,
+.cm-html-content .cm-list,
+.cm-html-content .cm-quote {
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  text-decoration: inherit !important;
+  background-color: inherit !important;
+}
+.cm-html-tag {
+  color: #0550ae !important;
+  font-family: monospace;
+}
+.cm-disable-markdown-parsing * {
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+}
+.cm-plain-text-marker {
+  z-index: 5;
+}
+.cm-html-content .cm-list-bullet {
+  font-weight: normal !important;
+}
+.cm-html-content .cm-tag,
+.cm-html-content .cm-bracket,
+.cm-html-content .cm-attribute,
+.cm-html-content .cm-attribute-value {
+  color: #0550ae !important;
+  font-family: monospace;
+}
+.cm-html-code-mode {
+  font-family: monospace;
+}
+.cm-html-content h1,
+.cm-html-content h2,
+.cm-html-content h3,
+.cm-html-content h4,
+.cm-html-content h5,
+.cm-html-content h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+}
+.cm-no-list-rendering .cm-list,
+.cm-no-list-rendering .cm-list-bullet,
+.cm-no-list-rendering .cm-list-marker,
+.cm-no-list-rendering .cm-hmd-list-indent,
+.cm-no-list-rendering .cm-formatting-list,
+.cm-no-list-rendering .cm-formatting-list-ul,
+.cm-no-list-rendering .cm-formatting-list-ol {
+  font-weight: normal !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  display: inline !important;
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.cm-no-list-rendering .cm-list-bullet::before,
+.cm-no-list-rendering .cm-formatting-list::before,
+.cm-no-list-rendering .cm-formatting-list-ul::before,
+.cm-no-list-rendering .cm-formatting-list-ol::before {
+  content: none !important;
+  display: none !important;
+}
+.cm-no-list-rendering .cm-hmd-list-indent {
+  display: inline !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
+}
