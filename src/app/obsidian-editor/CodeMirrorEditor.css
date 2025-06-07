@@ -1534,7 +1534,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 2px;
 }
 
-/* Ultra aggressive reset for HTML code mode */
+/* Ultra aggressive reset for HTML code mode - maintain markdown neutralization */
 .cm-editor .cm-scroller .cm-content .cm-line .cm-html-code-mode,
 .cm-editor .cm-scroller .cm-content .cm-line .cm-html-code-mode *,
 .cm-html-code-mode,
@@ -1563,6 +1563,126 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   width: auto !important;
   opacity: 1 !important;
   position: static !important;
+}
+
+/* CRITICAL OVERRIDE - Highest priority HTML syntax highlighting */
+html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
+  color: #9c64de !important;
+  font-weight: 500 !important;
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-attribute {
+  color: #49abb5 !important;
+  font-weight: normal !important;
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-attribute-value {
+  color: #dd672c !important;
+  font-weight: normal !important;
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-bracket {
+  color: #7999bb !important;
+  font-weight: normal !important;
+}
+
+/* Nesting levels with highest specificity */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-0 {
+  color: #9c64de !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-1 {
+  color: #4e88d5 !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-2 {
+  color: #3ba85d !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-3 {
+  color: #d2922c !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-4 {
+  color: #cf456c !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-5 {
+  color: #6d7893 !important;
+}
+
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-0 {
+  color: #9c64de !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-1 {
+  color: #4e88d5 !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-2 {
+  color: #3ba85d !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-3 {
+  color: #d2922c !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-4 {
+  color: #cf456c !important;
+}
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-5 {
+  color: #6d7893 !important;
 }
 
 /* Direct targeting of formatted elements */
@@ -1642,32 +1762,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   background: none !important;
 }
 
-/* Specifically restore HTML syntax highlighting only */
-.cm-html-code-mode .cm-html-tag-name {
-  color: #6f5abb !important; /* Purple for tag names */
-  font-weight: normal !important;
-  background-color: transparent !important;
-}
-
-.cm-html-code-mode .cm-html-attribute {
-  color: #49abb5 !important; /* Teal for attributes */
-  font-weight: normal !important;
-  background-color: transparent !important;
-}
-
-.cm-html-code-mode .cm-html-attribute-value {
-  color: #dd672c !important; /* Orange for attribute values */
-  font-weight: normal !important;
-  background-color: transparent !important;
-}
-
-.cm-html-code-mode .cm-html-bracket {
-  color: #7999bb !important; /* Blue for brackets */
-  font-weight: normal !important;
-  background-color: transparent !important;
-}
-
-/* Show markdown syntax as literal text */
+/* Show markdown syntax as literal text with soft colors */
 .cm-html-code-mode .cm-formatting-header-1,
 .cm-html-code-mode .cm-formatting-header-2,
 .cm-html-code-mode .cm-formatting-header-3,

@@ -25,16 +25,23 @@ export class HtmlSyntaxHighlighter {
         return Decoration.none;
       }
       
-      // Use simple mark for the region instead of building complex decorations
-      // This will be enough to prevent markdown parsing and provide basic styling
-      const baseDecorations = Decoration.set([
-        Decoration.mark({
+      // Create a builder for decorations
+      const builder = new RangeSetBuilder<Decoration>();
+      
+      // Add base HTML code highlighting decoration
+      builder.add(
+        region.from, 
+        region.to, 
+        Decoration.mark({ 
           class: 'cm-html-code-mode cm-disable-markdown-parsing cm-plain-text',
           inclusive: true
-        }).range(region.from, region.to)
-      ]);
+        })
+      );
       
-      return baseDecorations;
+      // Add token-level decorations for HTML syntax highlighting
+      this.addHtmlTokens(builder, region.content, region.from);
+      
+      return builder.finish();
     } catch (error) {
       console.error("Error in HTML syntax highlighter:", error);
       return Decoration.none;
