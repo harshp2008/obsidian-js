@@ -109,19 +109,38 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
       // Check if cursor is near this region
       let nearCursor = false;
       for (const range of cursorRanges) {
-        // Consider cursor near if it's within the region or very close to its boundaries
-        const closeToBoundary = 
-          Math.abs(range.head - region.from) < 5 || 
-          Math.abs(range.head - region.to) < 5;
-          
-        if ((range.head >= region.from && range.head <= region.to) || closeToBoundary) {
+        // Check if cursor is directly adjacent to or in this region 
+        // using the stricter isCursorNearRegion logic
+        if (isCursorNearRegion(view, region)) {
           nearCursor = true;
           break;
         }
       }
       
-      // If we're in preview mode or cursor is not near, show HTML preview
-      if (inPreviewMode || !nearCursor) {
+      // If cursor is near, show editable code with syntax highlighting
+      // Otherwise show HTML preview
+      if (nearCursor) {
+        console.log(`Creating editable syntax highlighting for ${region.tagName}`);
+        
+        // Get syntax highlighting decorations
+        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
+        
+        // Collect decorations from the decoration set into our array
+        const syntaxDecorations: DecorationItem[] = [];
+        
+        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
+          syntaxDecorations.push({
+            from,
+            to,
+            decoration: deco
+          });
+        });
+        
+        // If we have syntax decorations, add them to our collection
+        if (syntaxDecorations.length > 0) {
+          allDecorations.push(...syntaxDecorations);
+        }
+      } else {
         console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
         
         // Extract just the HTML content for preview
@@ -147,46 +166,14 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
           }
         }
         
-        // Create a DOM element with the HTML preview
-        const previewElement = createHtmlPreview(htmlContent);
-        
-        // Convert the element to HTML string for the replace decoration
-        const tempContainer = document.createElement('div');
-        tempContainer.appendChild(previewElement);
-        const htmlString = tempContainer.innerHTML;
-        
-        // Add a replace decoration for this region to our collection
+        // Completely hide the original HTML code
         allDecorations.push({
           from: region.from,
           to: region.to,
           decoration: Decoration.replace({
-            widget: new HtmlReplaceWidget(htmlString),
-            inclusive: true
+            widget: new HtmlPreviewWidget(htmlContent, region.isMultiline),
           })
         });
-      } 
-      // If cursor is near, show editable code with syntax highlighting
-      else {
-        console.log(`Creating editable syntax highlighting for ${region.tagName}`);
-        
-        // Get syntax highlighting decorations
-        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
-        
-        // Collect decorations from the decoration set into our array
-        const syntaxDecorations: DecorationItem[] = [];
-        
-        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
-          syntaxDecorations.push({
-            from,
-            to,
-            decoration: deco
-          });
-        });
-        
-        // If we have syntax decorations, add them to our collection
-        if (syntaxDecorations.length > 0) {
-          allDecorations.push(...syntaxDecorations);
-        }
       }
     } catch (error) {
       console.error('Error processing region:', error, region);
@@ -198,6 +185,15 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
     if (a.from !== b.from) {
       return a.from - b.from;
     }
+    
+    // For same position, prioritize replace decorations over mark decorations
+    const aIsReplace = a.decoration.spec?.widget !== undefined;
+    const bIsReplace = b.decoration.spec?.widget !== undefined;
+    
+    if (aIsReplace !== bIsReplace) {
+      return aIsReplace ? -1 : 1;
+    }
+    
     return a.to - b.to;
   });
   

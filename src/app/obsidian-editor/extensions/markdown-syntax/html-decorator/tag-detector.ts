@@ -150,38 +150,30 @@ export function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolea
   const selection = view.state.selection.main;
   const cursor = selection.head;
   
-  // 1. Precise check - cursor is inside the HTML region
+  // Only consider cursor as "near" when it's directly within the HTML region
+  // or exactly adjacent to it (same line, directly before or after)
   if (cursor >= region.from && cursor <= region.to) {
     return true;
   }
   
-  // 2. Line proximity check - cursor is on the first or last line of the region
+  // Check if cursor is exactly adjacent to the region on the same line
   const doc = view.state.doc;
-  const startLine = doc.lineAt(region.from);
-  const endLine = doc.lineAt(region.to);
   const cursorLine = doc.lineAt(cursor);
+  const regionStartLine = doc.lineAt(region.from);
+  const regionEndLine = doc.lineAt(region.to);
   
-  // If cursor is on same line as start or end of HTML, consider it near
-  if (cursorLine.number === startLine.number || 
-      cursorLine.number === endLine.number) {
-    return true;
+  // Must be on the same line as either the start or end of the region
+  if (cursorLine.number === regionStartLine.number) {
+    // Must be directly before the region (within 1 character)
+    return cursor === region.from - 1;
   }
   
-  // 3. Character proximity check - cursor is very close to the region boundaries
-  const proximityThreshold = 5; // characters
-  if (Math.abs(cursor - region.from) <= proximityThreshold || 
-      Math.abs(cursor - region.to) <= proximityThreshold) {
-    return true;
+  if (cursorLine.number === regionEndLine.number) {
+    // Must be directly after the region (within 1 character)
+    return cursor === region.to + 1;
   }
   
-  // 4. Selection overlap check - any part of the selection overlaps with the region
-  for (const range of view.state.selection.ranges) {
-    if (range.from <= region.to && range.to >= region.from) {
-      return true;
-    }
-  }
-  
-  // If none of the above, the cursor is not near the region
+  // Not adjacent to the HTML region
   return false;
 }
 
