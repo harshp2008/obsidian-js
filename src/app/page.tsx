@@ -6,7 +6,7 @@ import { ThemeToggle } from '../components/ThemeToggle';
 import debounce from 'lodash/debounce';
 
 // Load the default content from the markdown file
-import defaultContentString from './defaultText.md';
+import defaultContentString from './defaultText-html.md';
 
 const initialContent = defaultContentString;
 
