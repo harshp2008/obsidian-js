@@ -13,6 +13,8 @@ import { defaultKeymap, historyKeymap, history } from '@codemirror/commands';
 import { atomicIndents } from '../extensions/AtomicIndents';
 import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax/index';
 import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler';
+// Import our Lezer safety plugin
+import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
 
 // Import formatting functions from our new modular structure
 import { 
@@ -212,6 +214,8 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
     history(),
     atomicIndents,
     createCustomEnterKeymap(),
+    // Add our Lezer safety plugin with highest precedence to run first
+    Prec.highest(createLezerSafetyPlugin()),
     markdown({
       base: markdownLanguage,
       codeLanguages: languages,

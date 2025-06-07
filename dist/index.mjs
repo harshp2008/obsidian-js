@@ -57,8 +57,48 @@ function applyHighlightStyleFix() {
   }
 }
 
+// src/app/obsidian-editor/utils/lezer-patch.ts
+function applyLezerPatches() {
+  try {
+    if (!patchesApplied) {
+      console.log("Attempting to patch Lezer hasChild function");
+      const applyPatch = () => {
+        if (typeof window !== "undefined") {
+          const scripts = document.querySelectorAll("script");
+          if (scripts.length > 0) {
+            window.__patchedLezerHasChild = function(type, node, predicate) {
+              if (!node || !node.children) {
+                console.warn("Lezer node or node.children is undefined, returning false");
+                return false;
+              }
+              return node.children.some((ch) => ch.type.is(type) && (!predicate || predicate(ch)));
+            };
+            const originalCreateView = window.__originalCreateView || window.CodeMirror && window.CodeMirror.EditorView && window.CodeMirror.EditorView.constructor;
+            if (originalCreateView) {
+              console.log("Found CodeMirror View constructor, attempting to patch");
+              if (!window.__originalCreateView) {
+                window.__originalCreateView = originalCreateView;
+              }
+            }
+            patchesApplied = true;
+            console.log("Lezer patches prepared successfully");
+          }
+        }
+      };
+      applyPatch();
+      if (typeof window !== "undefined") {
+        window.addEventListener("load", applyPatch);
+      }
+    }
+  } catch (error) {
+    console.error("Error preparing Lezer patches:", error);
+  }
+}
+var patchesApplied = false;
+applyLezerPatches();
+
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { useState as useState2 } from "react";
+import { useState as useState3 } from "react";
 
 // src/contexts/ThemeContext.tsx
 import { createContext, useContext, useEffect, useState } from "react";
@@ -120,9 +160,9 @@ function applyThemeToHTML(theme, isMounted = false) {
 }
 
 // src/app/obsidian-editor/components/EditorCore.tsx
-import { useEffect as useEffect2, useRef } from "react";
+import { useEffect as useEffect2, useRef, useState as useState2 } from "react";
 import { EditorState as EditorState5, Compartment } from "@codemirror/state";
-import { EditorView as EditorView12 } from "@codemirror/view";
+import { EditorView as EditorView13 } from "@codemirror/view";
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 import { EditorView as EditorView6 } from "@codemirror/view";
@@ -1402,7 +1442,7 @@ function createMarkdownSyntaxPlugin() {
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 import { Prec as Prec3 } from "@codemirror/state";
-import { keymap as keymap2, highlightActiveLine, highlightActiveLineGutter, EditorView as EditorView10 } from "@codemirror/view";
+import { keymap as keymap2, highlightActiveLine, highlightActiveLineGutter, EditorView as EditorView11 } from "@codemirror/view";
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
 import { EditorSelection as EditorSelection3, countColumn, Prec, EditorState as EditorState4 } from "@codemirror/state";
@@ -8641,6 +8681,47 @@ var markdownPasteHandler = Prec2.highest(EditorView9.domEventHandlers({
   }
 }));
 
+// src/app/obsidian-editor/extensions/lezer-safety-plugin.ts
+import { EditorView as EditorView10 } from "@codemirror/view";
+function createLezerSafetyPlugin() {
+  return EditorView10.updateListener.of((update) => {
+    if (!update.view.state.field(EditorView10.decorations)) {
+      console.log("Applying Lezer safety patches");
+      try {
+        const view = update.view;
+        if (view && view.plugin && view.dispatch) {
+          const plugins = view.state.facet(EditorView10.plugins);
+          if (plugins && Array.isArray(plugins)) {
+            plugins.forEach((plugin) => {
+              if (plugin && plugin.extension && plugin.extension.parser) {
+                const parser5 = plugin.extension.parser;
+                const originalHasChild = parser5.hasChild;
+                if (typeof originalHasChild === "function") {
+                  parser5.hasChild = function safeHasChild(type, node, predicate) {
+                    if (!node || !node.children) {
+                      console.warn("SafeHasChild: node or node.children is undefined");
+                      return false;
+                    }
+                    try {
+                      return originalHasChild(type, node, predicate);
+                    } catch (e) {
+                      console.warn("SafeHasChild: caught error", e);
+                      return false;
+                    }
+                  };
+                  console.log("Successfully patched parser.hasChild");
+                }
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.warn("Error applying Lezer safety patches:", error);
+      }
+    }
+  });
+}
+
 // src/app/obsidian-editor/utils/formatting/basicFormatting.ts
 var insertBold = (editorView) => {
   if (!editorView) return;
@@ -9000,7 +9081,7 @@ var createMarkdownKeymaps = (onSaveRef) => {
   ]);
 };
 var createEditorStyling = () => {
-  return EditorView10.theme({
+  return EditorView11.theme({
     "&": {
       height: "100%"
     },
@@ -9023,6 +9104,8 @@ var createEditorExtensions = (options) => {
     history(),
     atomicIndents,
     createCustomEnterKeymap(),
+    // Add our Lezer safety plugin with highest precedence to run first
+    Prec3.highest(createLezerSafetyPlugin()),
     markdown({
       base: markdownLanguage,
       codeLanguages: languages,
@@ -9032,9 +9115,9 @@ var createEditorExtensions = (options) => {
     markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    EditorView10.lineWrapping,
+    EditorView11.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
-    editableCompartment.of(EditorView10.editable.of(true)),
+    editableCompartment.of(EditorView11.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
@@ -9054,7 +9137,7 @@ var createEditorExtensions = (options) => {
 };
 
 // src/app/obsidian-editor/utils/theme.ts
-import { EditorView as EditorView11 } from "@codemirror/view";
+import { EditorView as EditorView12 } from "@codemirror/view";
 var getCurrentDocumentTheme = () => {
   if (typeof window !== "undefined") {
     const storedTheme = localStorage.getItem("obsidian-theme");
@@ -9114,7 +9197,7 @@ var applyThemeVariables = (theme) => {
     });
   }
 };
-var lightTheme = EditorView11.theme({
+var lightTheme = EditorView12.theme({
   "&": {
     backgroundColor: "var(--background-primary, #ffffff)",
     color: "var(--text-normal, #2e3338)"
@@ -9135,7 +9218,7 @@ var lightTheme = EditorView11.theme({
     backgroundColor: "var(--background-secondary, #f5f6f8)"
   }
 }, { dark: false });
-var darkTheme = EditorView11.theme({
+var darkTheme = EditorView12.theme({
   "&": {
     backgroundColor: "var(--background-primary, #202020)",
     color: "var(--text-normal, #dcddde)"
@@ -9172,7 +9255,7 @@ if (typeof window !== "undefined") {
 }
 
 // src/app/obsidian-editor/components/EditorCore.tsx
-import { jsx as jsx3 } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs } from "react/jsx-runtime";
 var EditorCore = ({
   initialValue,
   readOnly,
@@ -9184,6 +9267,7 @@ var EditorCore = ({
   const editorRef = useRef(null);
   const editorViewRef = useRef(null);
   const { theme, mounted } = useTheme();
+  const [initializationError, setInitializationError] = useState2(null);
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
   const editableCompartment = useRef(new Compartment()).current;
@@ -9204,14 +9288,30 @@ var EditorCore = ({
       };
     }
   }, []);
+  const sanitizeInitialValue = (content) => {
+    try {
+      return content;
+    } catch (e) {
+      console.warn("Error sanitizing content:", e);
+      return content;
+    }
+  };
   useEffect2(() => {
     if (!mounted || !editorRef.current) return;
     if (editorViewRef.current) {
       editorViewRef.current.destroy();
     }
     try {
+      const safeInitialValue = sanitizeInitialValue(initialValue);
+      const errorHandler = (error) => {
+        if (error.message?.includes("CodeMirror") || error.message?.includes("Cannot read properties of undefined")) {
+          console.warn("Caught editor initialization error:", error);
+          setInitializationError(error.error);
+        }
+      };
+      window.addEventListener("error", errorHandler);
       const themeExtension = theme === "dark" ? darkTheme : lightTheme;
-      const changeListener = EditorView12.updateListener.of((update) => {
+      const changeListener = EditorView13.updateListener.of((update) => {
         if (update.docChanged && onChangeRef.current) {
           if (update.transactions.some((tr) => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
             const doc = update.state.doc;
@@ -9219,19 +9319,26 @@ var EditorCore = ({
           }
         }
       });
+      const errorHandlingExtension = EditorView13.domEventHandlers({
+        error: (event, view2) => {
+          console.warn("DOM error event in editor:", event);
+          return false;
+        }
+      });
       const extensions = [
         ...createEditorExtensions({
-          markdown: initialValue,
+          markdown: safeInitialValue,
           editableCompartment,
           isDark: theme === "dark",
           themeExtension: themeCompartment.of(themeExtension),
           onSave: () => onSaveRef.current?.()
         }),
-        changeListener
+        changeListener,
+        errorHandlingExtension
       ];
-      const view = new EditorView12({
+      const view = new EditorView13({
         state: EditorState5.create({
-          doc: initialValue,
+          doc: safeInitialValue,
           extensions
         }),
         parent: editorRef.current
@@ -9241,11 +9348,12 @@ var EditorCore = ({
         onEditorViewCreated(view);
       }
       return () => {
+        window.removeEventListener("error", errorHandler);
         view.destroy();
       };
     } catch (error) {
       console.error("Error initializing CodeMirror:", error);
-      throw error;
+      setInitializationError(error instanceof Error ? error : new Error(String(error)));
     }
   }, [mounted]);
   useEffect2(() => {
@@ -9270,7 +9378,7 @@ var EditorCore = ({
         });
         const isEditable = mode === "live" && !readOnly;
         editorViewRef.current.dispatch({
-          effects: editableCompartment.reconfigure(EditorView12.editable.of(isEditable))
+          effects: editableCompartment.reconfigure(EditorView13.editable.of(isEditable))
         });
       } catch (error) {
         console.error("Error updating editor mode:", error);
@@ -9281,10 +9389,11 @@ var EditorCore = ({
     if (editorViewRef.current && mounted) {
       try {
         const currentContent = editorViewRef.current.state.doc.toString();
-        if (currentContent !== initialValue) {
+        const safeInitialValue = sanitizeInitialValue(initialValue);
+        if (currentContent !== safeInitialValue) {
           const prevSelection = editorViewRef.current.state.selection;
           const transaction = editorViewRef.current.state.update({
-            changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: initialValue },
+            changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: safeInitialValue },
             selection: prevSelection
             // Keep cursor position
           });
@@ -9295,6 +9404,23 @@ var EditorCore = ({
       }
     }
   }, [initialValue, mounted]);
+  if (initializationError) {
+    return /* @__PURE__ */ jsxs("div", { className: "obsidian-editor-error", children: [
+      /* @__PURE__ */ jsxs("p", { children: [
+        "Error initializing editor: ",
+        initializationError.message
+      ] }),
+      /* @__PURE__ */ jsx3(
+        "textarea",
+        {
+          defaultValue: initialValue,
+          onChange: (e) => onChangeRef.current?.(e.target.value),
+          readOnly,
+          className: "obsidian-editor-fallback"
+        }
+      )
+    ] });
+  }
   return /* @__PURE__ */ jsx3("div", { ref: editorRef, className: "obsidian-editor-core" });
 };
 var EditorCore_default = EditorCore;
@@ -9404,7 +9530,7 @@ function toggleHeading(selection, doc, level) {
 }
 
 // src/app/obsidian-editor/components/EditorToolbar.tsx
-import { jsx as jsx4, jsxs } from "react/jsx-runtime";
+import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
 var EditorToolbar = ({
   editorView,
   mode,
@@ -9423,8 +9549,8 @@ var EditorToolbar = ({
       editorView.focus();
     }
   };
-  return /* @__PURE__ */ jsxs("div", { className: "obsidian-editor-toolbar", children: [
-    /* @__PURE__ */ jsxs("div", { className: "mode-toggle", children: [
+  return /* @__PURE__ */ jsxs2("div", { className: "obsidian-editor-toolbar", children: [
+    /* @__PURE__ */ jsxs2("div", { className: "mode-toggle", children: [
       /* @__PURE__ */ jsx4(
         "button",
         {
@@ -9448,7 +9574,7 @@ var EditorToolbar = ({
         }
       )
     ] }),
-    mode === "live" && /* @__PURE__ */ jsxs("div", { className: "format-buttons", children: [
+    mode === "live" && /* @__PURE__ */ jsxs2("div", { className: "format-buttons", children: [
       /* @__PURE__ */ jsx4(
         "button",
         {
@@ -9505,15 +9631,15 @@ var EditorToolbar = ({
 var EditorToolbar_default = EditorToolbar;
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-import { Fragment, jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
 var CodeMirrorEditor = ({
   initialValue = "",
   readOnly = false,
   onChange,
   onSave
 }) => {
-  const [editorView, setEditorView] = useState2(null);
-  const [currentMode, setCurrentMode] = useState2("live");
+  const [editorView, setEditorView] = useState3(null);
+  const [currentMode, setCurrentMode] = useState3("live");
   const { mounted } = useTheme();
   const handleEditorViewCreated = (view) => {
     setEditorView(view);
@@ -9521,7 +9647,7 @@ var CodeMirrorEditor = ({
   const handleModeChange = (mode) => {
     setCurrentMode(mode);
   };
-  return /* @__PURE__ */ jsx5("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ jsxs2(Fragment, { children: [
+  return /* @__PURE__ */ jsx5("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ jsxs3(Fragment, { children: [
     /* @__PURE__ */ jsx5(
       EditorToolbar_default,
       {
@@ -9573,7 +9699,7 @@ function ThemeToggle() {
 }
 
 // src/app/obsidian-editor/utils/filesystem.ts
-import { EditorView as EditorView13 } from "@codemirror/view";
+import { EditorView as EditorView14 } from "@codemirror/view";
 var FileSystemError = class extends Error {
   constructor(message) {
     super(message);
@@ -9644,7 +9770,7 @@ var createFileSystem = (options = {}) => {
   };
 };
 var createFileSystemExtension = (fileSystem) => {
-  return EditorView13.domEventHandlers({
+  return EditorView14.domEventHandlers({
     keydown: (event, view) => {
       if ((event.ctrlKey || event.metaKey) && event.key === "s") {
         event.preventDefault();

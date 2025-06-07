@@ -1366,3 +1366,96 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   width: 100%;
   overflow: hidden;
 }
+
+/* HTML rendering styles */
+.cm-html-rendered {
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 6px;
+  margin: 4px 0;
+  overflow: auto;
+  max-width: 100%;
+}
+
+.cm-html-inline {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 2px 4px;
+}
+
+.cm-html-block {
+  display: block;
+  width: 100%;
+}
+
+/* Special element styling */
+.cm-html-rendered iframe {
+  border: none;
+  width: 100%;
+  min-height: 300px;
+  background: #f5f5f5;
+}
+
+.cm-html-rendered audio,
+.cm-html-rendered video {
+  max-width: 100%;
+  display: block;
+}
+
+.cm-html-rendered img {
+  max-width: 100%;
+  height: auto;
+}
+
+.cm-html-rendered table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.cm-html-rendered td,
+.cm-html-rendered th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.cm-html-rendered blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 16px;
+  margin: 0;
+  color: #666;
+}
+
+/* Script tag display */
+.script-tag {
+  color: #905;
+  font-family: monospace;
+}
+
+.script-tag-content {
+  color: #690;
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px;
+  border-radius: 2px;
+}
+
+/* Enhanced HTML element styling */
+.cm-html-span {
+  display: inline;
+}
+
+/* Error styling */
+.obsidian-editor-error {
+  padding: 8px;
+  border: 1px solid #f88;
+  background-color: #fee;
+  border-radius: 4px;
+}
+
+.obsidian-editor-fallback {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-family: monospace;
+}

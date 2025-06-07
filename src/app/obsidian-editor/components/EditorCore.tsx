@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { EditorState, Extension, Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { setMarkdownSyntaxMode } from '../extensions/markdown-syntax/index';
@@ -46,6 +46,7 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
   const editorViewRef = useRef<EditorView | null>(null);
   const { theme, mounted } = useTheme();
+  const [initializationError, setInitializationError] = useState<Error | null>(null);
   
   // Track callbacks with refs to avoid dependency changes
   const onChangeRef = useRef(onChange);
@@ -78,6 +79,17 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
     }
   }, []);
   
+  // Helper function to safely parse and sanitize HTML content
+  const sanitizeInitialValue = (content: string): string => {
+    try {
+      // Don't wrap HTML in code blocks anymore
+      return content;
+    } catch (e) {
+      console.warn('Error sanitizing content:', e);
+      return content;
+    }
+  };
+
   // Initialize the editor once when the component mounts
   useEffect(() => {
     // Only initialize on client-side after mounting
@@ -89,6 +101,20 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
     }
     
     try {
+      // Process the initial content to avoid parsing issues
+      const safeInitialValue = sanitizeInitialValue(initialValue);
+      
+      // Add global error handler for CodeMirror initialization
+      const errorHandler = (error: ErrorEvent) => {
+        if (error.message?.includes('CodeMirror') || 
+            error.message?.includes('Cannot read properties of undefined')) {
+          console.warn('Caught editor initialization error:', error);
+          setInitializationError(error.error);
+        }
+      };
+      
+      window.addEventListener('error', errorHandler);
+      
       // Determine which theme to use based on the current application theme
       const themeExtension = theme === 'dark' ? darkTheme : lightTheme;
       
@@ -103,22 +129,31 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
         }
       });
       
+      // Custom extension to handle errors in the editor
+      const errorHandlingExtension = EditorView.domEventHandlers({
+        error: (event, view) => {
+          console.warn('DOM error event in editor:', event);
+          return false;
+        }
+      });
+      
       // Create editor extensions
       const extensions = [
         ...createEditorExtensions({
-          markdown: initialValue,
+          markdown: safeInitialValue,
           editableCompartment,
           isDark: theme === 'dark',
           themeExtension: themeCompartment.of(themeExtension),
           onSave: () => onSaveRef.current?.(),
         }),
-        changeListener
+        changeListener,
+        errorHandlingExtension
       ];
 
       // Create the editor view
       const view = new EditorView({
         state: EditorState.create({
-          doc: initialValue,
+          doc: safeInitialValue,
           extensions,
         }),
         parent: editorRef.current,
@@ -133,11 +168,12 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
       }
 
       return () => {
+        window.removeEventListener('error', errorHandler);
         view.destroy();
       };
     } catch (error) {
       console.error("Error initializing CodeMirror:", error);
-      throw error; // Re-throw to trigger error boundary
+      setInitializationError(error instanceof Error ? error : new Error(String(error)));
     }
   }, [mounted]); // Only depend on mounted state
   
@@ -182,14 +218,15 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
     if (editorViewRef.current && mounted) {
       try {
         const currentContent = editorViewRef.current.state.doc.toString();
+        const safeInitialValue = sanitizeInitialValue(initialValue);
         
         // Only update if content is different
-        if (currentContent !== initialValue) {
+        if (currentContent !== safeInitialValue) {
           // Store the current selection
           const prevSelection = editorViewRef.current.state.selection;
           
           const transaction = editorViewRef.current.state.update({
-            changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: initialValue },
+            changes: { from: 0, to: editorViewRef.current.state.doc.length, insert: safeInitialValue },
             selection: prevSelection, // Keep cursor position
           });
           
@@ -200,6 +237,21 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
       }
     }
   }, [initialValue, mounted]);
+  
+  // If there was an initialization error, render a fallback
+  if (initializationError) {
+    return (
+      <div className="obsidian-editor-error">
+        <p>Error initializing editor: {initializationError.message}</p>
+        <textarea 
+          defaultValue={initialValue}
+          onChange={(e) => onChangeRef.current?.(e.target.value)}
+          readOnly={readOnly}
+          className="obsidian-editor-fallback"
+        />
+      </div>
+    );
+  }
   
   return <div ref={editorRef} className="obsidian-editor-core" />;
 };

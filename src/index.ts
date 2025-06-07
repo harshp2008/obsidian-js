@@ -1,5 +1,6 @@
 // Main entry point for the obsidian-js package
 import { applyHighlightStyleFix } from './app/obsidian-editor/utils/highlightStyleFix';
+import './app/obsidian-editor/utils/lezer-patch'; // Import the Lezer patch
 
 // Apply the fix as early as possible
 if (typeof window !== 'undefined') {
