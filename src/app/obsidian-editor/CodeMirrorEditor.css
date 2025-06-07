@@ -801,34 +801,34 @@ html.light {
 
 /* Inline HTML Preview Widget Styles */
 .cm-html-preview-widget {
-  display: inline-block; /* Changed to inline-block for better vertical-align control */
-  vertical-align: bottom; /* Align widget itself to bottom */
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.cm-html-preview-widget iframe {
-  display: inline-block; /* Allows setting width/height but flows inline */
-  vertical-align: bottom; /* Align iframe to bottom */
-  border: none; /* Remove default iframe border if not desired */
-  /* Consider adding max-width/max-height for very large inline iframes */
-  /* max-width: 400px; */
-  /* max-height: 250px; */
+.cm-html-content-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Preview widget classes */
+.cm-html-preview-multiline {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cm-html-preview-inline {
+  display: inline;
 }
 
 /* New HTML content rendered widget */
 .cm-html-rendered {
-  display: inline-block;
-  vertical-align: middle;
-  background-color: rgba(247, 250, 252, 0.6);
-  border-radius: 4px;
-  padding: 8px;
-  margin: 4px 0;
-  max-width: 100%;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   background-color: var(--cm-background-primary);
   transition: background-color 0.2s ease;
   font-family: inherit;
   color: var(--cm-text-normal);
+  width: 100%;
 }
 
 /* Specialized containers for different HTML elements */
@@ -1051,6 +1051,7 @@ html.light {
   transition: background-color 0.2s ease;
   font-family: inherit;
   color: var(--cm-text-normal);
+  width: 100%;
 }
 
 /* Inline HTML */
@@ -1065,9 +1066,11 @@ html.light {
 /* Block HTML */
 .cm-html-block {
   display: block;
+  width: 100%;
   margin: 1em 0;
   padding: 0;
   border: none;
+  box-sizing: border-box;
 }
 
 /* Multi-line HTML handling - more subtle styling */
@@ -1075,10 +1078,35 @@ html.light {
 .cm-html-multiline-middle,
 .cm-html-multiline-end {
   display: block;
+  width: 100%;
   background-color: transparent;
   padding: 0;
   margin: 0;
   border: none;
+  box-sizing: border-box;
+}
+
+/* HTML preview widget styles */
+.cm-html-preview-widget {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cm-html-content-container {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Preview widget classes */
+.cm-html-preview-multiline {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cm-html-preview-inline {
+  display: inline;
 }
 
 /* HTML syntax highlighting - subtle colors */

@@ -13,24 +13,24 @@ interface DecorationItem {
 }
 
 // Logging control
-const DEBUG = true;
+const DEBUG = false;
 
 /**
  * Builds HTML decorations for the editor
  */
 export function buildHtmlDecorations(view: EditorView): DecorationSet {
   try {
-    console.log("Building HTML decorations");
+    if (DEBUG) console.log("Building HTML decorations");
     
     // Detect HTML regions in the document
     const regions = detectHtmlRegions(view);
     
     if (!regions.length) {
-      console.log("No HTML regions found");
+      if (DEBUG) console.log("No HTML regions found");
       return Decoration.none;
     }
     
-    console.log(`Found ${regions.length} HTML regions:`, regions);
+    if (DEBUG) console.log(`Found ${regions.length} HTML regions:`, regions);
     
     // Check if editor is in read-only/preview mode
     const inPreviewMode = isEditorInPreviewMode(view);
@@ -139,7 +139,7 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
     }
   }
   
-  console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
+  if (DEBUG) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
   
   // Process each HTML region
   for (let i = 0; i < regions.length; i++) {
@@ -147,7 +147,7 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
     try {
       // If this region should be in edit mode
       if (editModeRegions.has(i)) {
-        console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
+        if (DEBUG) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
         
         // Get syntax highlighting decorations
         const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
@@ -168,7 +168,7 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
           allDecorations.push(...syntaxDecorations);
         }
       } else {
-        console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
+        if (DEBUG) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
         
         // Extract just the HTML content for preview
         let htmlContent = region.content;

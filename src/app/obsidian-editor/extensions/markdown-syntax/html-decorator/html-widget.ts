@@ -2,7 +2,7 @@ import { WidgetType } from '@codemirror/view';
 import { DANGEROUS_TAGS } from './types';
 
 // Debug helper
-const DEBUG = true;
+const DEBUG = false;
 
 /**
  * Widget for rendering HTML content in preview mode
@@ -16,10 +16,12 @@ export class HtmlPreviewWidget extends WidgetType {
     this.content = content;
     this.isMultiline = isMultiline;
     
-    console.log("Creating HTML widget:", { 
-      content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-      isMultiline 
-    });
+    if (DEBUG) {
+      console.log("Creating HTML widget:", { 
+        content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+        isMultiline 
+      });
+    }
   }
 
   eq(other: HtmlPreviewWidget): boolean {
@@ -32,7 +34,7 @@ export class HtmlPreviewWidget extends WidgetType {
    */
   toDOM(): HTMLElement {
     try {
-      console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
+      if (DEBUG) console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
       
       // Create container
       const wrapper = document.createElement('div');
@@ -117,6 +119,7 @@ export class HtmlPreviewWidget extends WidgetType {
             if (this.isBlockElement(element.tagName)) {
               element.style.display = 'block';
               element.style.width = '100%';
+              element.style.boxSizing = 'border-box';
               
               // Remove excessive margins to match Obsidian's rendering
               if (!element.style.marginTop) element.style.marginTop = '0';
@@ -141,6 +144,8 @@ export class HtmlPreviewWidget extends WidgetType {
             } else if (element.tagName === 'DIV') {
               element.style.width = '100%';
               element.style.boxSizing = 'border-box';
+              element.style.margin = '0';
+              element.style.padding = '0';
             } else if (element.tagName === 'P') {
               // Reduce paragraph spacing to match Obsidian
               element.style.marginTop = '0.2em';
@@ -266,7 +271,7 @@ export class HtmlPreviewWidget extends WidgetType {
         button.addEventListener('click', e => e.preventDefault());
       });
     } catch (error: any) {
-      console.error('Error disabling interactive elements:', error);
+      if (DEBUG) console.error('Error disabling interactive elements:', error);
     }
   }
 

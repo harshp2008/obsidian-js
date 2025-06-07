@@ -7,20 +7,15 @@ import { HtmlRegion, VOID_TAGS } from './types';
  */
 export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
   try {
-    console.log("Detecting HTML regions");
     const regions: HtmlRegion[] = [];
     const { state } = view;
     const doc = state.doc;
     
     // Get the entire document text for proper tag matching
     const fullText = doc.toString();
-    console.log("Document length:", fullText.length);
     
     // First, identify HTML comments and exclude them from tag processing
     const commentRegions = findHtmlComments(fullText);
-    if (commentRegions.length) {
-      console.log(`Found ${commentRegions.length} HTML comments`);
-    }
     
     // Parse HTML using a more robust stack-based approach
     const parsedRegions = parseHtmlHierarchy(fullText, commentRegions);
@@ -29,8 +24,6 @@ export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
     for (const region of parsedRegions) {
       try {
         const { from, to, tagName, content, isMultiline, isSelfClosing, openTagEnd, closeTagStart } = region;
-        
-        console.log(`Found HTML tag: ${tagName} at pos ${from}-${to}, multiline: ${isMultiline}`);
         
         regions.push({
           from,
@@ -49,8 +42,6 @@ export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
     
     // Sort regions by start position
     regions.sort((a, b) => a.from - b.from);
-    
-    console.log(`Total HTML regions detected: ${regions.length}`);
     
     return regions;
   } catch (error) {
@@ -130,7 +121,7 @@ function parseHtmlHierarchy(text: string, commentRegions: Array<{from: number, t
       
       // If we didn't find a matching opening tag, this closing tag is orphaned
       if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
-        console.log(`Orphaned closing tag: ${lowerTagName} at position ${position}`);
+        // Orphaned closing tag, no need to log
       }
     } else if (isSelfClosingTag) {
       // This is a self-closing tag, add it directly to regions
@@ -219,17 +210,18 @@ export function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolea
   const cursor = selection.head;
   const doc = view.state.doc;
   
-  // Only consider cursor as "near" when it's directly within the HTML region
+  // Check if cursor is within the HTML region
   if (cursor > region.from && cursor < region.to) {
     return true;
   }
   
-  // Only consider exactly at tag boundaries, not even 1 character away
+  // Check if cursor is exactly at the boundary of the HTML region
   if (cursor === region.from || cursor === region.to) {
     return true;
   }
   
-  // Not adjacent to or within the HTML region
+  // Not near the HTML region - removed the line-before/line-after detection
+  // that was causing edit mode to activate on adjacent lines
   return false;
 }
 

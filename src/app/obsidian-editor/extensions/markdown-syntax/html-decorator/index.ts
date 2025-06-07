@@ -10,7 +10,7 @@ import { DANGEROUS_TAGS } from './types';
 class HtmlDecoratorPlugin implements PluginValue {
   private view: EditorView;
   private enabled = true;
-  private debug = true;
+  private debug = false;
   private updateScheduled = false;
   private isDestroyed = false;
   private lastSelectionHead = -1;
@@ -32,7 +32,7 @@ class HtmlDecoratorPlugin implements PluginValue {
       this.updateDecorations();
     }, 100);
     
-    console.log('HtmlDecorator plugin initialized');
+    if (this.debug) console.log('HtmlDecorator plugin initialized');
   }
 
   /**
@@ -85,17 +85,16 @@ class HtmlDecoratorPlugin implements PluginValue {
     // Check if cursor moved to/from HTML region
     let cursorMovedToFromHtml = false;
     if (cursorMoved) {
-      // Simple check for now - if cursor is within any known HTML region
-      // or was within one before, consider it relevant
+      // Check if cursor is within any known HTML region
       const currentPosition = update.state.selection.main.head;
       const cursorInHtmlRegion = this.htmlRegions.some(
         region => currentPosition >= region.from && currentPosition <= region.to
       );
       
-      // Check if cursor moved to an adjacent position within 1 character of any region
+      // Only consider exact boundaries, not adjacent positions
       if (!cursorInHtmlRegion) {
         cursorMovedToFromHtml = this.htmlRegions.some(
-          region => Math.abs(currentPosition - region.from) <= 1 || Math.abs(currentPosition - region.to) <= 1
+          region => currentPosition === region.from || currentPosition === region.to
         );
       } else {
         cursorMovedToFromHtml = true;
@@ -106,7 +105,7 @@ class HtmlDecoratorPlugin implements PluginValue {
     // IMPORTANT: Always use setTimeout to avoid updating during an update cycle
     if ((contentChanged && htmlContentChanged) || cursorMoved) {
       const reason = contentChanged ? 'HTML content change' : 'cursor movement';
-      console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
+      if (this.debug) console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
       
       // Always schedule updates at the end of the current update cycle to avoid errors
       if (!this.updateScheduled) {
@@ -126,7 +125,7 @@ class HtmlDecoratorPlugin implements PluginValue {
     if (this.isDestroyed) return;
     
     try {
-      console.log("Updating HTML decorations");
+      if (this.debug) console.log("Updating HTML decorations");
       // Build decorations
       const decorations = buildHtmlDecorations(this.view);
       
@@ -176,7 +175,7 @@ class HtmlDecoratorPlugin implements PluginValue {
     this.updateScheduled = false;
     this.isDestroyed = true;
     
-    console.log('HtmlDecorator plugin destroyed');
+    if (this.debug) console.log('HtmlDecorator plugin destroyed');
   }
 }
 
