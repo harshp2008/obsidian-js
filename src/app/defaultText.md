@@ -2,7 +2,7 @@
 
 <!-- This is a test comment before HTML -->
 
-<div>Plain div without comments before it</div>
+Test words <div>Plain div without comments before it</div>
 
 ---
 

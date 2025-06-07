@@ -59,25 +59,8 @@ function createHtmlPreview(html: string): HTMLElement {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     position: relative;
   `;
-  
-  // Add label
-  const label = document.createElement('div');
-  label.textContent = 'HTML PREVIEW';
-  label.style.cssText = `
-    position: absolute;
-    top: -12px;
-    left: 10px;
-    background: #4285f4;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 11px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-  `;
-  container.appendChild(label);
 
-  // Create content container
+  // Create content container (removed the label)
   const content = document.createElement('div');
   content.style.cssText = `
     background: white;

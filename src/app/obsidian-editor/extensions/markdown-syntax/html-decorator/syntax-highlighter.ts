@@ -37,7 +37,7 @@ export class HtmlSyntaxHighlighter {
       from: region.from,
       to: region.to,
       decoration: Decoration.mark({ 
-        class: 'cm-html-code-mode cm-editing-html' 
+        class: 'cm-html-code-mode' 
       })
     });
     

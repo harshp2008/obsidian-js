@@ -55,7 +55,7 @@ class HtmlDecoratorPlugin implements PluginValue {
     
     // Only update if:
     // 1. Content changed AND might affect HTML (we'll check this below)
-    // 2. Cursor moved near an HTML region
+    // 2. Cursor moved near or away from an HTML region
     
     // Quick check - if content changed, is it affecting any known HTML region?
     let htmlContentChanged = false;
@@ -102,12 +102,13 @@ class HtmlDecoratorPlugin implements PluginValue {
       }
     }
     
-    // Only update if HTML content changed or cursor moved to/from HTML region
-    if ((contentChanged && htmlContentChanged) || cursorMovedToFromHtml) {
-      console.log('HtmlDecorator: Scheduling update due to', 
-        contentChanged ? 'HTML content change' : 'cursor movement near HTML');
+    // Schedule updates for both content changes and cursor movements
+    // IMPORTANT: Always use setTimeout to avoid updating during an update cycle
+    if ((contentChanged && htmlContentChanged) || cursorMoved) {
+      const reason = contentChanged ? 'HTML content change' : 'cursor movement';
+      console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
       
-      // Schedule decoration update at the end of the current event loop
+      // Always schedule updates at the end of the current update cycle to avoid errors
       if (!this.updateScheduled) {
         this.updateScheduled = true;
         setTimeout(() => {

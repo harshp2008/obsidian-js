@@ -149,25 +149,25 @@ function findHtmlComments(text: string): Array<{from: number, to: number}> {
 export function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolean {
   const selection = view.state.selection.main;
   const cursor = selection.head;
+  const doc = view.state.doc;
   
-  // Only consider cursor as "near" when it's directly within the HTML region
-  // or exactly adjacent to it (same line, directly before or after)
+  // 1. Check if cursor is directly within the HTML region
   if (cursor >= region.from && cursor <= region.to) {
     return true;
   }
   
-  // Check if cursor is exactly adjacent to the region on the same line
-  const doc = view.state.doc;
+  // 2. Check if cursor is on the same line and directly adjacent to the region
   const cursorLine = doc.lineAt(cursor);
   const regionStartLine = doc.lineAt(region.from);
   const regionEndLine = doc.lineAt(region.to);
   
-  // Must be on the same line as either the start or end of the region
+  // If on same line as region start, must be directly before it
   if (cursorLine.number === regionStartLine.number) {
     // Must be directly before the region (within 1 character)
     return cursor === region.from - 1;
   }
   
+  // If on same line as region end, must be directly after it
   if (cursorLine.number === regionEndLine.number) {
     // Must be directly after the region (within 1 character)
     return cursor === region.to + 1;

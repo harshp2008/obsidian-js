@@ -45,12 +45,6 @@ export class HtmlPreviewWidget extends WidgetType {
         wrapper.classList.add('cm-html-preview-inline');
       }
       
-      // Add label
-      const label = document.createElement('div');
-      label.className = 'cm-html-preview-label';
-      label.textContent = 'HTML PREVIEW';
-      wrapper.appendChild(label);
-      
       // Create content container
       const contentContainer = document.createElement('div');
       contentContainer.className = 'cm-html-content-container';
@@ -127,13 +121,6 @@ export class HtmlPreviewWidget extends WidgetType {
       }
       
       wrapper.appendChild(contentContainer);
-      
-      // Add extra debugging info in development
-      const debugInfo = document.createElement('div');
-      debugInfo.className = 'cm-html-debug-info';
-      debugInfo.style.cssText = 'font-size: 9px; color: #666; margin-top: 4px; font-family: monospace;';
-      debugInfo.textContent = `HTML length: ${this.content.length}, Multiline: ${this.isMultiline}`;
-      wrapper.appendChild(debugInfo);
       
       return wrapper;
     } catch (error: any) {
