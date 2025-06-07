@@ -13,7 +13,7 @@ import { ListDecorator } from './rules/listDecorator';
 import { FencedCodeBlockDecorator } from './rules/FencedCodeBlockDecorator';
 import { HorizontalRuleDecorator } from './rules/horizontalRuleDecorator';
 import { LineBreakDecorator } from './rules/lineBreakDecorator';
-import { HTMLTagDecorator } from './html-decorator';
+import { htmlDecorator } from './html-decorator';
 import { BlockquoteDecorator } from './rules/blockquoteDecorator';
 
 /**
@@ -217,7 +217,7 @@ export function createMarkdownSyntaxPlugin(): Extension[] {
   return [
     markdownSyntaxStateField,
     LineBreakDecorator,
-    HTMLTagDecorator,
+    htmlDecorator(),
     HorizontalRuleDecorator
   ];
 }

@@ -1,6 +1,9 @@
 import { WidgetType } from '@codemirror/view';
 import { DANGEROUS_TAGS } from './types';
 
+// Debug helper
+const DEBUG = true;
+
 /**
  * Widget for rendering HTML content in preview mode
  */
@@ -12,6 +15,11 @@ export class HtmlPreviewWidget extends WidgetType {
     super();
     this.content = content;
     this.isMultiline = isMultiline;
+    
+    console.log("Creating HTML widget:", { 
+      content: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+      isMultiline 
+    });
   }
 
   eq(other: HtmlPreviewWidget): boolean {
@@ -24,9 +32,18 @@ export class HtmlPreviewWidget extends WidgetType {
    */
   toDOM(): HTMLElement {
     try {
+      console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
+      
       // Create container
       const wrapper = document.createElement('div');
       wrapper.className = 'cm-html-preview-widget';
+      
+      // Add special class for multiline widgets
+      if (this.isMultiline) {
+        wrapper.classList.add('cm-html-preview-multiline');
+      } else {
+        wrapper.classList.add('cm-html-preview-inline');
+      }
       
       // Add label
       const label = document.createElement('div');
@@ -37,13 +54,19 @@ export class HtmlPreviewWidget extends WidgetType {
       // Create content container
       const contentContainer = document.createElement('div');
       contentContainer.className = 'cm-html-content-container';
+      contentContainer.style.cssText = `
+        padding: 10px;
+        border: 1px solid #e0e0e0;
+        background: white;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        border-radius: 4px;
+      `;
       
-      // Apply sanitized HTML content
       try {
-        // Check for potential security issues first
+        // Process content and check for security issues
         const securityWarnings = this.checkSecurityIssues(this.content);
         if (securityWarnings.length > 0) {
-          // Add security warnings if any found
+          // Add security warnings if found
           securityWarnings.forEach(warning => {
             const warningElement = document.createElement('div');
             warningElement.className = 'cm-html-security-warning';
@@ -52,17 +75,50 @@ export class HtmlPreviewWidget extends WidgetType {
           });
         }
         
-        // Render the sanitized HTML
-        const sanitized = this.sanitizeHtml(this.content);
+        // Extract content from the HTML if we have both opening and closing tags
+        let htmlToRender = this.content;
+        const match = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(this.content);
+        if (match) {
+          // Only render the inner content for specific tags that have wrappers
+          const tagName = match[1].toLowerCase();
+          const attributes = match[2];
+          const innerContent = match[3];
+          
+          if (tagName === 'div' || tagName === 'span') {
+            // Keep attributes for styling
+            const attributesObj: Record<string, string> = {};
+            const styleMatch = /style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/i.exec(attributes);
+            if (styleMatch) {
+              const styleContent = styleMatch[1] || styleMatch[2] || styleMatch[3];
+              contentContainer.setAttribute('style', contentContainer.getAttribute('style') + '; ' + styleContent);
+            }
+            
+            // For these wrapper elements, we want to render the inner content
+            htmlToRender = innerContent;
+          }
+        }
         
-        // Create an inner container for the actual HTML content
+        // Create a container for the actual rendered HTML
         const htmlContainer = document.createElement('div');
-        htmlContainer.innerHTML = sanitized;
+        htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
+        
+        // Make sure we can see the content by applying extra styles directly
+        htmlContainer.querySelectorAll('*').forEach(element => {
+          if (element instanceof HTMLElement) {
+            if (!element.style.color) {
+              element.style.color = 'black';
+            }
+            if (!element.style.backgroundColor && element.tagName === 'DIV') {
+              element.style.backgroundColor = 'white';
+            }
+          }
+        });
+        
         contentContainer.appendChild(htmlContainer);
         
-        // Disable interactive elements
+        // Disable any interactive elements
         this.disableInteractiveElements(htmlContainer);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error rendering HTML:', error);
         const errorDiv = document.createElement('div');
         errorDiv.className = 'cm-html-error';
@@ -71,40 +127,46 @@ export class HtmlPreviewWidget extends WidgetType {
       }
       
       wrapper.appendChild(contentContainer);
+      
+      // Add extra debugging info in development
+      const debugInfo = document.createElement('div');
+      debugInfo.className = 'cm-html-debug-info';
+      debugInfo.style.cssText = 'font-size: 9px; color: #666; margin-top: 4px; font-family: monospace;';
+      debugInfo.textContent = `HTML length: ${this.content.length}, Multiline: ${this.isMultiline}`;
+      wrapper.appendChild(debugInfo);
+      
       return wrapper;
-    } catch (error) {
-      // Create a minimal error display if the main rendering fails
+    } catch (error: any) {
       console.error('Fatal error in HTML widget:', error);
       const errorElement = document.createElement('div');
       errorElement.className = 'cm-html-error';
-      errorElement.textContent = 'Fatal error rendering HTML content';
+      errorElement.textContent = 'Error rendering HTML content';
       return errorElement;
     }
   }
 
   /**
-   * Checks for security issues in HTML content
-   * Returns array of warning messages
+   * Check for potential security issues in HTML content
    */
   private checkSecurityIssues(html: string): string[] {
-    const warnings = [];
+    const warnings: string[] = [];
     
     // Check for dangerous tags
     DANGEROUS_TAGS.forEach(tag => {
       const tagRegex = new RegExp(`<${tag}[\\s>]`, 'i');
       if (tagRegex.test(html)) {
-        warnings.push(`${tag.toUpperCase()} tag detected and will be sanitized for security`);
+        warnings.push(`${tag.toUpperCase()} tag detected and will be sanitized`);
       }
     });
     
     // Check for event handlers
     if (/\son\w+\s*=/i.test(html)) {
-      warnings.push('Event handlers (onclick, onload, etc.) detected and will be removed');
+      warnings.push('Event handlers detected and removed');
     }
     
     // Check for javascript: URLs
     if (/javascript:/i.test(html)) {
-      warnings.push('JavaScript URLs detected and will be removed');
+      warnings.push('JavaScript URLs detected and removed');
     }
     
     return warnings;
@@ -131,14 +193,13 @@ export class HtmlPreviewWidget extends WidgetType {
       // Handle opening/closing tag pairs
       const regex = new RegExp(`<${tag}([^>]*)>([\\s\\S]*?)<\\/${tag}>`, 'gi');
       sanitized = sanitized.replace(regex, (match, attrs, content) => {
-        return `<div style="color:#d73a49;border-left:3px solid #d73a49;padding-left:8px;margin:5px 0;">
-                  [${tagName} tag removed]
-                </div>`;
+        return `<div class="cm-html-removed-tag">[${tagName} removed]</div>`;
       });
       
       // Handle self-closing versions
       const selfClosingRegex = new RegExp(`<${tag}([^>]*?)\\s*\\/>`, 'gi');
-      sanitized = sanitized.replace(selfClosingRegex, `<div style="color:#d73a49;">[${tagName} tag removed]</div>`);
+      sanitized = sanitized.replace(selfClosingRegex, 
+        `<div class="cm-html-removed-tag">[${tagName} removed]</div>`);
     });
     
     return sanitized;
@@ -148,30 +209,34 @@ export class HtmlPreviewWidget extends WidgetType {
    * Disable interactive elements like links and forms
    */
   private disableInteractiveElements(container: HTMLElement): void {
-    // Disable links
-    const links = container.querySelectorAll('a');
-    links.forEach(link => {
-      link.addEventListener('click', e => e.preventDefault());
-      link.style.pointerEvents = 'none';
-      if (link.hasAttribute('href')) {
-        link.setAttribute('data-href', link.getAttribute('href') || '');
-        link.removeAttribute('href');
-      }
-    });
-    
-    // Disable forms
-    const forms = container.querySelectorAll('form');
-    forms.forEach(form => {
-      form.addEventListener('submit', e => e.preventDefault());
-      form.setAttribute('onsubmit', 'return false;');
-    });
-    
-    // Disable buttons
-    const buttons = container.querySelectorAll('button, input[type="submit"], input[type="button"]');
-    buttons.forEach(button => {
-      button.setAttribute('disabled', 'disabled');
-      button.addEventListener('click', e => e.preventDefault());
-    });
+    try {
+      // Disable links
+      const links = container.querySelectorAll('a');
+      links.forEach(link => {
+        link.addEventListener('click', e => e.preventDefault());
+        link.style.pointerEvents = 'none';
+        if (link.hasAttribute('href')) {
+          link.setAttribute('data-href', link.getAttribute('href') || '');
+          link.removeAttribute('href');
+        }
+      });
+      
+      // Disable forms
+      const forms = container.querySelectorAll('form');
+      forms.forEach(form => {
+        form.addEventListener('submit', e => e.preventDefault());
+        form.setAttribute('onsubmit', 'return false;');
+      });
+      
+      // Disable buttons
+      const buttons = container.querySelectorAll('button, input[type="submit"], input[type="button"]');
+      buttons.forEach(button => {
+        button.setAttribute('disabled', 'disabled');
+        button.addEventListener('click', e => e.preventDefault());
+      });
+    } catch (error: any) {
+      console.error('Error disabling interactive elements:', error);
+    }
   }
 
   /**

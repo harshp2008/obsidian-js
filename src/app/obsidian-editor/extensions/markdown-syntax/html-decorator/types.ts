@@ -3,31 +3,51 @@
  */
 
 /**
- * Represents an HTML region in the document
+ * Type definitions for HTML decorator extension
+ */
+
+/**
+ * Represents an HTML region in the document with positions and metadata
  */
 export interface HtmlRegion {
-  /** Start position in the document */
+  /**
+   * Start position (inclusive)
+   */
   from: number;
-  
-  /** End position in the document */
+
+  /**
+   * End position (inclusive)
+   */
   to: number;
-  
-  /** The HTML tag name (lowercase) */
+
+  /**
+   * Tag name, like 'div', 'span', etc.
+   */
   tagName: string;
-  
-  /** Whether this region spans multiple lines */
+
+  /**
+   * Whether this HTML spans multiple lines
+   */
   isMultiline: boolean;
-  
-  /** Raw HTML content including tags */
+
+  /**
+   * The entire HTML content as a string
+   */
   content: string;
-  
-  /** Position where the opening tag ends */
+
+  /**
+   * Position where the opening tag ends (where content starts)
+   */
   openTagEnd: number;
-  
-  /** Position where the closing tag starts (if not self-closing) */
+
+  /**
+   * Position where the closing tag starts
+   */
   closeTagStart: number;
-  
-  /** Whether this is a self-closing/void tag */
+
+  /**
+   * Whether this is a self-closing tag like <br/> or <img/>
+   */
   isSelfClosing: boolean;
 }
 
@@ -43,18 +63,38 @@ export enum HtmlRenderMode {
 }
 
 /**
- * Standard HTML void elements that don't need closing tags
- * @see https://html.spec.whatwg.org/multipage/syntax.html#void-elements
+ * Set of HTML void elements (self-closing tags)
+ * These tags do not have closing tags in HTML
  */
 export const VOID_TAGS = new Set([
-  'area', 'base', 'br', 'col', 'embed',
-  'hr', 'img', 'input', 'link', 'meta',
-  'source', 'track', 'wbr'
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
 ]);
 
 /**
- * Potentially dangerous HTML tags that should be handled with care
+ * Set of potentially dangerous HTML tags that might execute scripts
+ * These will be sanitized when rendering HTML
  */
 export const DANGEROUS_TAGS = new Set([
-  'script', 'iframe', 'object', 'embed', 'applet'
+  'script',
+  'iframe',
+  'object',
+  'embed',
+  'applet',
+  'base',
+  'form',
+  'frame',
+  'frameset'
 ]); 

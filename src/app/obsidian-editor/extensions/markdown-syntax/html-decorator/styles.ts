@@ -9,7 +9,15 @@ export function addHtmlStyles(): void {
   if (typeof document === 'undefined') return;
   
   // Check if styles already exist
-  if (document.getElementById('cm-html-decorator-styles')) return;
+  if (document.getElementById('cm-html-decorator-styles')) {
+    // Remove existing styles to ensure we have the latest
+    const oldStyles = document.getElementById('cm-html-decorator-styles');
+    if (oldStyles && oldStyles.parentNode) {
+      oldStyles.parentNode.removeChild(oldStyles);
+    }
+  }
+  
+  console.log("Adding HTML decorator styles");
   
   // Create style element
   const style = document.createElement('style');
@@ -19,26 +27,58 @@ export function addHtmlStyles(): void {
     .cm-editor {
       position: relative !important;
       z-index: 1 !important;
-      overflow: visible !important;
     }
     
-    /* Editor content - ensure proper positioning for widgets */
-    .cm-content {
-      position: relative !important;
-      z-index: 1 !important;
-      overflow: visible !important;
+    /* HTML decoration core styles */
+    .cm-html-preview {
+      position: relative;
+      background-color: #f5f5f5;
+      border: 2px solid #4285f4;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 5px 0;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      min-height: 20px;
+      max-width: 100%;
+      width: calc(100% - 20px);
+      display: block;
+      visibility: visible !important;
+      color: black;
+      z-index: 9999;
     }
     
-    /* HTML Code Edit Mode - when cursor is near or in HTML */
+    /* HTML preview label */
+    .cm-html-preview-label {
+      position: absolute;
+      top: -12px;
+      left: 10px;
+      background: #4285f4;
+      color: white;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: bold;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+      z-index: 10000;
+    }
+    
+    /* HTML content container */
+    .cm-html-content {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      color: black;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      min-height: 10px;
+    }
+    
+    /* HTML code syntax highlighting */
     .cm-html-code-mode {
       color: #a626a4 !important;
       font-family: monospace !important;
-      background-color: rgba(166, 38, 164, 0.06) !important; 
-      border-radius: 3px !important;
-      padding: 0 1px !important;
     }
     
-    /* Special syntax highlighting classes */
     .cm-html-tag-name {
       color: #e45649 !important;
       font-weight: bold !important;
@@ -57,121 +97,52 @@ export function addHtmlStyles(): void {
       font-weight: bold !important;
     }
     
-    /* HTML Rendered Preview Widget */
-    .cm-html-preview-widget {
-      background-color: #ffffff !important;
-      border: 1px solid #e0e0e0 !important;
-      border-left: 4px solid #4285f4 !important;
-      border-radius: 4px !important;
-      padding: 15px !important;
-      margin: 15px 0 !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-      position: relative !important;
-      font-size: 16px !important;
-      width: 100% !important;
-      max-width: calc(100% - 30px) !important;
-      display: block !important;
-      z-index: 5 !important;
+    /* Force visibility of HTML elements inside the preview */
+    .cm-html-preview * {
       visibility: visible !important;
       opacity: 1 !important;
-      min-height: 30px !important;
-      box-sizing: border-box !important;
-      overflow: visible !important;
     }
     
-    /* HTML Preview Label */
-    .cm-html-preview-label {
-      position: absolute !important;
-      top: -10px !important;
-      left: 10px !important;
-      background-color: #4285f4 !important;
-      color: white !important;
-      font-size: 12px !important;
+    /* Block element defaults */
+    .cm-html-preview div,
+    .cm-html-preview p,
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6,
+    .cm-html-preview ul,
+    .cm-html-preview ol {
+      display: block !important;
+      margin: 0.5em 0 !important;
+    }
+    
+    /* Heading styles */
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6 {
       font-weight: bold !important;
-      padding: 2px 8px !important;
-      border-radius: 3px !important;
-      z-index: 6 !important;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+      color: #333 !important;
     }
     
-    /* HTML Content Container */
-    .cm-html-content-container {
-      width: 100% !important;
-      min-height: 20px !important;
-      overflow: auto !important;
-      max-width: 100% !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      display: block !important;
-      box-sizing: border-box !important;
-    }
+    .cm-html-preview h1 { font-size: 1.5em !important; }
+    .cm-html-preview h2 { font-size: 1.3em !important; }
+    .cm-html-preview h3 { font-size: 1.2em !important; }
     
-    /* Fix for images */
-    .cm-html-content-container img {
-      max-width: 100% !important;
-      height: auto !important;
-      display: block !important;
-      margin: 5px 0 !important;
-    }
-    
-    /* Fix for media elements */
-    .cm-html-content-container audio,
-    .cm-html-content-container video {
-      max-width: 100% !important;
-      display: block !important;
-      margin: 10px 0 !important;
-    }
-    
-    /* Fix for iframes */
-    .cm-html-content-container iframe {
-      max-width: 100% !important;
-      border: 1px solid #e0e0e0 !important;
-      border-radius: 3px !important;
-    }
-    
-    /* Multiline HTML - style when showing original code but not editing */
-    .cm-html-multiline-code {
-      opacity: 0.4 !important;
-      color: #666 !important;
-      font-family: monospace !important;
-      white-space: pre-wrap !important;
-      font-size: 0.9em !important;
-      position: relative !important;
-      z-index: 1 !important;
-    }
-    
-    /* Inline HTML code - style when showing original code but rendered above */
-    .cm-html-inline-code {
-      opacity: 0.4 !important;
-      color: #666 !important;
-      font-family: monospace !important;
-      font-size: 0.9em !important;
-      position: relative !important;
-      z-index: 1 !important;
-    }
-    
-    /* Error messages in HTML widgets */
-    .cm-html-error {
-      color: #f44336 !important;
-      padding: 8px !important;
-      margin: 5px 0 !important;
-      border: 1px solid #f44336 !important;
-      border-radius: 3px !important;
-      background-color: #ffebee !important;
-      font-family: monospace !important;
-      white-space: pre-wrap !important;
-    }
-    
-    /* Security warning for dangerous elements */
-    .cm-html-security-warning {
-      padding: 5px 10px !important;
-      margin: 5px 0 !important;
-      border: 1px solid #f57c00 !important;
-      border-left-width: 5px !important;
-      border-radius: 3px !important;
-      background-color: #fff3e0 !important;
-      color: #f57c00 !important;
-      font-weight: bold !important;
+    /* Debug info */
+    .cm-html-debug-info {
+      position: absolute;
+      bottom: -15px;
+      right: 5px;
+      font-size: 8px;
+      color: #666;
+      background: rgba(255,255,255,0.7);
+      padding: 1px 3px;
+      border-radius: 2px;
     }
   `;
   
