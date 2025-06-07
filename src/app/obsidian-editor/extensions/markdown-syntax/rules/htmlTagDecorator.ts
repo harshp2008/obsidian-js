@@ -9,6 +9,13 @@ import { formatHTML } from '../../../utils/formatting/html-formatter';
  * Register DOMPurify hooks only on the client-side for security
  */
 if (typeof window !== 'undefined') {
+  // Set default DOMPurify configuration with stricter security
+  DOMPurify.setConfig({
+    ALLOW_UNKNOWN_PROTOCOLS: false,
+    FORBID_TAGS: ['iframe', 'script', 'style', 'link', 'meta', 'object', 'embed'],
+    FORBID_ATTR: ['onerror', 'onload', 'onunload', 'onclick', 'ondblclick', 'onmousedown', 'onmouseup', 'onmouseover', 'onmousemove', 'onmouseout', 'onkeypress', 'onkeydown', 'onkeyup']
+  });
+
   DOMPurify.addHook('afterSanitizeAttributes', function (node: Element) {
     // Set all elements owning target to target=_blank
     if ('target' in node) {
@@ -69,25 +76,41 @@ class HTMLContentWidget extends WidgetType {
     wrapper.className = `cm-html-rendered ${this.inline ? 'cm-html-inline' : 'cm-html-block'}`;
     
     try {
+      // Safety check for html content
+      if (!this.html || typeof this.html !== 'string') {
+        console.warn("Invalid HTML content in HTMLContentWidget:", this.html);
+        wrapper.textContent = String(this.html);
+        return wrapper;
+      }
+      
       // Check if we should handle this element specially
       if (this.hasSpecialElement(this.html)) {
         this.renderSpecialElement(wrapper, this.html);
       } else {
         // Standard HTML rendering with sanitization
-        const sanitizedHtml = formatHTML(this.html);
-        wrapper.innerHTML = sanitizedHtml;
-        
-        // If wrapper is empty after sanitization, show the raw HTML
-        if (wrapper.innerHTML === '') {
+        try {
+          const sanitizedHtml = formatHTML(this.html);
+          wrapper.innerHTML = sanitizedHtml;
+          
+          // If wrapper is empty after sanitization, show the raw HTML
+          if (wrapper.innerHTML === '') {
+            wrapper.textContent = this.html;
+          }
+        } catch (sanitizeError) {
+          console.error("Error sanitizing HTML:", sanitizeError);
           wrapper.textContent = this.html;
         }
         
         // Add extra styling to embedded elements
-        this.enhanceEmbeddedElements(wrapper);
+        try {
+          this.enhanceEmbeddedElements(wrapper);
+        } catch (enhanceError) {
+          console.error("Error enhancing embedded elements:", enhanceError);
+        }
       }
     } catch (error) {
       console.error('Error rendering HTML:', error);
-      wrapper.textContent = this.html;
+      wrapper.textContent = this.html || '';
     }
     
     return wrapper;
@@ -110,9 +133,20 @@ class HTMLContentWidget extends WidgetType {
    * Render special HTML elements with enhanced styling
    */
   private renderSpecialElement(container: HTMLElement, html: string) {
+    if (!html || typeof html !== 'string') {
+      console.warn("Invalid HTML passed to renderSpecialElement");
+      container.textContent = String(html);
+      return;
+    }
+    
     // Handle script tags with the formatter
     if (html.toLowerCase().includes('<script')) {
-      container.innerHTML = formatHTML(html);
+      try {
+        container.innerHTML = formatHTML(html);
+      } catch (e) {
+        console.error("Error formatting script HTML:", e);
+        container.textContent = html;
+      }
       return;
     }
     
@@ -124,8 +158,12 @@ class HTMLContentWidget extends WidgetType {
       if (html.toLowerCase().includes('<audio')) {
         const audioElements = doc.getElementsByTagName('audio');
         if (audioElements.length > 0) {
-          this.renderAudio(container, audioElements[0] as HTMLAudioElement);
-          return;
+          try {
+            this.renderAudio(container, audioElements[0] as HTMLAudioElement);
+            return;
+          } catch (e) {
+            console.error("Error rendering audio:", e);
+          }
         }
       }
       
@@ -133,8 +171,12 @@ class HTMLContentWidget extends WidgetType {
       if (html.toLowerCase().includes('<video')) {
         const videoElements = doc.getElementsByTagName('video');
         if (videoElements.length > 0) {
-          this.renderVideo(container, videoElements[0] as HTMLVideoElement);
-          return;
+          try {
+            this.renderVideo(container, videoElements[0] as HTMLVideoElement);
+            return;
+          } catch (e) {
+            console.error("Error rendering video:", e);
+          }
         }
       }
       
@@ -142,8 +184,12 @@ class HTMLContentWidget extends WidgetType {
       if (html.toLowerCase().includes('<iframe')) {
         const iframeElements = doc.getElementsByTagName('iframe');
         if (iframeElements.length > 0) {
-          this.renderIframe(container, iframeElements[0] as HTMLIFrameElement);
-          return;
+          try {
+            this.renderIframe(container, iframeElements[0] as HTMLIFrameElement);
+            return;
+          } catch (e) {
+            console.error("Error rendering iframe:", e);
+          }
         }
       }
       
@@ -151,7 +197,13 @@ class HTMLContentWidget extends WidgetType {
       container.innerHTML = formatHTML(html);
     } catch (error) {
       console.error("Error parsing HTML:", error);
-      container.innerHTML = formatHTML(html);
+      // Safe fallback
+      try {
+        container.innerHTML = formatHTML(html);
+      } catch (e) {
+        console.error("Error in fallback HTML formatting:", e);
+        container.textContent = html;
+      }
     }
   }
   
@@ -400,111 +452,174 @@ class MultiLineHtmlEndWidget extends WidgetType {
  */
 function identifyHtmlRegions(view: EditorView): HtmlRegion[] {
   const regions: HtmlRegion[] = [];
-  const { state } = view;
-  const doc = state.doc;
-  
-  // Get the entire document content for better matching across lines
-  const fullText = doc.toString();
-  
-  // Match paired HTML tags
   try {
-    HTML_TAG_REGEX.lastIndex = 0;
-    let match;
-    while ((match = HTML_TAG_REGEX.exec(fullText))) {
-      const fullMatch = match[0];
-      const tagName = match[1];
-      const tagAttrs = match[2];
-      const tagContent = match[3];
-      
-      if (!fullMatch || !tagName) continue;
-      
-      // Calculate absolute positions in the document
-      const tagStart = match.index;
-      const tagEnd = tagStart + fullMatch.length;
-      
-      if (tagEnd <= tagStart) continue;
-      
-      const openTagEnd = tagStart + `<${tagName}${tagAttrs}>`.length;
-      const closeTagStart = tagEnd - `</${tagName}>`.length;
-      
-      if (openTagEnd >= closeTagStart) continue;
-      
-      const startLine = doc.lineAt(tagStart);
-      const endLine = doc.lineAt(tagEnd - 1);
-      const isMultiLine = startLine.number !== endLine.number;
-      
-      regions.push({
-        from: tagStart,
-        to: tagEnd,
-        isMultiLine,
-        content: fullMatch,
-        tagName,
-        openTagEnd,
-        closeTagStart,
-        isSelfClosing: false
-      });
+    const { state } = view;
+    if (!state || !state.doc) {
+      console.warn("Invalid editor state in identifyHtmlRegions");
+      return regions;
     }
-  } catch (e) {
-    console.error("Error processing HTML tags:", e);
-  }
-  
-  // Match self-closing/void HTML tags
-  try {
-    HTML_VOID_TAG_REGEX.lastIndex = 0;
-    let match;
-    while ((match = HTML_VOID_TAG_REGEX.exec(fullText))) {
-      const fullMatch = match[0];
-      const tagName = match[1];
-      const tagAttrs = match[2];
-      
-      // Skip if not a known void tag
-      if (!tagName || !VOID_TAGS.has(tagName.toLowerCase())) {
-        continue;
+    
+    const doc = state.doc;
+    
+    // Get the entire document content for better matching across lines
+    const fullText = doc.toString();
+    if (!fullText || typeof fullText !== 'string') {
+      console.warn("Invalid document text in identifyHtmlRegions");
+      return regions;
+    }
+    
+    // Debug document content
+    console.debug("Document content length:", fullText.length);
+    
+    // Match paired HTML tags
+    try {
+      HTML_TAG_REGEX.lastIndex = 0;
+      let match;
+      while ((match = HTML_TAG_REGEX.exec(fullText))) {
+        if (!match || !Array.isArray(match) || match.length < 4) {
+          console.warn("Invalid match in HTML_TAG_REGEX:", match);
+          continue;
+        }
+        
+        const fullMatch = match[0];
+        const tagName = match[1];
+        const tagAttrs = match[2];
+        const tagContent = match[3];
+        
+        if (!fullMatch || !tagName) {
+          console.debug("Skipping match with invalid tag name:", match);
+          continue;
+        }
+        
+        // Calculate absolute positions in the document
+        const tagStart = match.index;
+        const tagEnd = tagStart + fullMatch.length;
+        
+        if (tagEnd <= tagStart) {
+          console.debug("Skipping match with invalid positions:", tagStart, tagEnd);
+          continue;
+        }
+        
+        const openTagEnd = tagStart + `<${tagName}${tagAttrs}>`.length;
+        const closeTagStart = tagEnd - `</${tagName}>`.length;
+        
+        if (openTagEnd >= closeTagStart) {
+          console.debug("Skipping match with overlapping open/close tags:", openTagEnd, closeTagStart);
+          continue;
+        }
+        
+        try {
+          const startLine = doc.lineAt(tagStart);
+          const endLine = doc.lineAt(tagEnd - 1);
+          const isMultiLine = startLine.number !== endLine.number;
+          
+          console.debug(`Found ${isMultiLine ? 'multiline' : 'single-line'} HTML tag:`, tagName, `at line ${startLine.number}-${endLine.number}`);
+          
+          regions.push({
+            from: tagStart,
+            to: tagEnd,
+            isMultiLine,
+            content: fullMatch,
+            tagName,
+            openTagEnd,
+            closeTagStart,
+            isSelfClosing: false
+          });
+        } catch (docErr) {
+          console.error("Error getting line info:", docErr);
+        }
       }
-      
-      const tagStart = match.index;
-      const tagEnd = tagStart + fullMatch.length;
-      
-      if (tagEnd <= tagStart) continue;
-      
-      const startLine = doc.lineAt(tagStart);
-      const endLine = doc.lineAt(tagEnd - 1);
-      const isMultiLine = startLine.number !== endLine.number;
-      
-      regions.push({
-        from: tagStart,
-        to: tagEnd,
-        isMultiLine,
-        content: fullMatch,
-        tagName,
-        openTagEnd: tagEnd,
-        closeTagStart: tagEnd,
-        isSelfClosing: true
-      });
+    } catch (e) {
+      console.error("Error processing HTML tags:", e);
     }
-  } catch (e) {
-    console.error("Error processing void HTML tags:", e);
+    
+    // Match self-closing/void HTML tags
+    try {
+      HTML_VOID_TAG_REGEX.lastIndex = 0;
+      let match;
+      while ((match = HTML_VOID_TAG_REGEX.exec(fullText))) {
+        if (!match || !Array.isArray(match) || match.length < 3) {
+          console.warn("Invalid match in HTML_VOID_TAG_REGEX:", match);
+          continue;
+        }
+        
+        const fullMatch = match[0];
+        const tagName = match[1];
+        const tagAttrs = match[2];
+        
+        if (!tagName) {
+          console.debug("Skipping void tag match with invalid tag name:", match);
+          continue;
+        }
+        
+        // Skip if not a known void tag
+        if (!VOID_TAGS.has(tagName.toLowerCase())) {
+          continue;
+        }
+        
+        const tagStart = match.index;
+        const tagEnd = tagStart + fullMatch.length;
+        
+        if (tagEnd <= tagStart) {
+          console.debug("Skipping void tag match with invalid positions:", tagStart, tagEnd);
+          continue;
+        }
+        
+        try {
+          const startLine = doc.lineAt(tagStart);
+          const endLine = doc.lineAt(tagEnd - 1);
+          const isMultiLine = startLine.number !== endLine.number;
+          
+          console.debug(`Found ${isMultiLine ? 'multiline' : 'single-line'} void HTML tag:`, tagName, `at line ${startLine.number}`);
+          
+          regions.push({
+            from: tagStart,
+            to: tagEnd,
+            isMultiLine,
+            content: fullMatch,
+            tagName,
+            openTagEnd: tagEnd,
+            closeTagStart: tagEnd,
+            isSelfClosing: true
+          });
+        } catch (docErr) {
+          console.error("Error getting line info for void tag:", docErr);
+        }
+      }
+    } catch (e) {
+      console.error("Error processing void HTML tags:", e);
+    }
+  } catch (err) {
+    console.error("Fatal error in identifyHtmlRegions:", err);
   }
   
   return regions;
 }
 
 /**
- * Checks if the cursor is near an HTML region
+ * Checks if the cursor is directly within or adjacent to an HTML region
  */
 function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolean {
   const { state } = view;
   const selection = state.selection.main;
   const cursor = selection.head;
-  const doc = state.doc;
   
-  const cursorLine = doc.lineAt(cursor);
-  const startLine = doc.lineAt(region.from);
-  const endLine = doc.lineAt(region.to - 1);
+  // Check if cursor is inside the HTML region
+  if (cursor >= region.from && cursor <= region.to) {
+    return true;
+  }
   
-  // Consider the cursor near if it's within one line of the region
-  return cursorLine.number >= startLine.number - 1 && 
-         cursorLine.number <= endLine.number + 1;
+  // Check if cursor is immediately before the opening tag
+  if (cursor === region.from - 1) {
+    return true;
+  }
+  
+  // Check if cursor is immediately after the closing tag
+  if (cursor === region.to) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -528,148 +643,157 @@ function isInPreviewMode(view: EditorView): boolean {
  * Builds HTML tag decorations for the editor
  */
 function buildHTMLTagDecorations(view: EditorView): DecorationSet {
+  if (!view || !view.state || !view.state.doc) {
+    console.warn("Invalid view in buildHTMLTagDecorations");
+    return Decoration.none;
+  }
+
   // Collect all decorations in an array first so we can sort them
   const decorations: Array<{from: number, to: number, decoration: Decoration}> = [];
   
-  // Identify HTML regions
-  const htmlRegions = identifyHtmlRegions(view);
-  if (htmlRegions.length === 0) {
-    return Decoration.none;
-  }
-  
-  // Sort regions by 'from' position
-  htmlRegions.sort((a, b) => a.from - b.from);
-  
-  // Preview mode state
-  const inPreviewMode = isInPreviewMode(view);
-  
-  // Process each HTML region
-  for (const region of htmlRegions) {
-    try {
-      if (region.to <= region.from) continue;
-      
-      const isCursorNear = isCursorNearRegion(view, region);
-      
-      // If it's a multiline region, we need to handle each line separately
-      if (region.isMultiLine) {
-        const doc = view.state.doc;
-        const startLine = doc.lineAt(region.from);
-        const endLine = doc.lineAt(region.to - 1);
+  try {
+    // Identify HTML regions
+    const htmlRegions = identifyHtmlRegions(view);
+    if (!htmlRegions || htmlRegions.length === 0) {
+      return Decoration.none;
+    }
+    
+    // Sort regions by 'from' position
+    htmlRegions.sort((a, b) => a.from - b.from);
+    
+    // Preview mode state
+    const inPreviewMode = isInPreviewMode(view);
+    
+    // Process each HTML region
+    for (const region of htmlRegions) {
+      try {
+        if (!region || region.to <= region.from) continue;
         
-        // Show raw HTML when cursor is nearby
-        if (isCursorNear) {
-          // Add styling to opening tag
-          const openTagEnd = Math.min(region.openTagEnd, startLine.to);
-          if (openTagEnd > region.from) {
+        const isCursorNear = isCursorNearRegion(view, region);
+        const doc = view.state.doc;
+        
+        // If it's a multiline region, we need special handling
+        if (region.isMultiLine) {
+          const startLine = doc.lineAt(region.from);
+          const endLine = doc.lineAt(region.to - 1);
+          
+          // Show raw HTML when cursor is nearby
+          if (isCursorNear) {
+            // Apply decoration to the entire HTML region using mark instead of replace
             decorations.push({
               from: region.from,
-              to: openTagEnd,
-              decoration: htmlTagMark
-            });
-          }
-          
-          // Add styling to closing tag if it's on the last line
-          if (region.closeTagStart >= endLine.from && region.closeTagStart < region.to) {
-            decorations.push({
-              from: Math.max(region.closeTagStart, endLine.from),
               to: region.to,
               decoration: htmlTagMark
             });
           }
+          // In preview/read mode, show rendered HTML
+          else {
+            // First we need to hide all the lines with empty widgets
+            for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+              const line = doc.line(lineNum);
+              
+              // Skip lines that would yield empty decorations
+              if (line.from >= line.to) continue;
+              
+              // If it's the first line, create a placeholder for the HTML content
+              if (lineNum === startLine.number) {
+                decorations.push({
+                  from: line.from,
+                  to: line.to,
+                  decoration: Decoration.replace({
+                    widget: new HTMLContentWidget(region.content, false)
+                  })
+                });
+              }
+              // Hide all other lines that are part of this HTML block
+              else {
+                decorations.push({
+                  from: line.from,
+                  to: line.to,
+                  decoration: Decoration.replace({
+                    widget: new class extends WidgetType {
+                      toDOM() {
+                        const span = document.createElement('span');
+                        span.style.display = 'none';
+                        return span;
+                      }
+                      eq() { return true; }
+                    }
+                  })
+                });
+              }
+            }
+          }
         }
-        // In preview mode, create a widget at the start of the HTML block
-        else if (inPreviewMode) {
-          decorations.push({
-            from: region.from,
-            to: startLine.to,
-            decoration: Decoration.replace({
-              widget: new HTMLContentWidget(region.content, false)
-            })
-          });
-          
-          // Hide subsequent lines of the HTML block
-          for (let lineNum = startLine.number + 1; lineNum <= endLine.number; lineNum++) {
-            const line = doc.line(lineNum);
+        // For single-line HTML, simpler handling
+        else {
+          if (isCursorNear) {
+            // Show syntax highlighting for the entire HTML tag
             decorations.push({
-              from: line.from,
-              to: line.to,
+              from: region.from,
+              to: region.to,
+              decoration: htmlTagMark
+            });
+          } else {
+            // Render HTML in place
+            decorations.push({
+              from: region.from,
+              to: region.to,
               decoration: Decoration.replace({
-                widget: new class extends WidgetType {
-                  toDOM() {
-                    return document.createElement('span');
-                  }
-                }
+                widget: new HTMLContentWidget(region.content, true)
               })
             });
           }
         }
+      } catch (e) {
+        console.error("Error processing HTML region:", e, region);
       }
-      // For single-line HTML, much simpler handling
-      else {
-        if (isCursorNear) {
-          // Show syntax highlighting for the tags
-          if (region.isSelfClosing) {
-            decorations.push({
-              from: region.from,
-              to: region.to, 
-              decoration: htmlTagMark
-            });
-          } else {
-            if (region.openTagEnd > region.from) {
-              decorations.push({
-                from: region.from,
-                to: region.openTagEnd,
-                decoration: htmlTagMark
-              });
-            }
-            
-            if (region.closeTagStart < region.to) {
-              decorations.push({
-                from: region.closeTagStart,
-                to: region.to,
-                decoration: htmlTagMark
-              });
-            }
-          }
-        } else {
-          // Render HTML in place
-          decorations.push({
-            from: region.from,
-            to: region.to,
-            decoration: Decoration.replace({
-              widget: new HTMLContentWidget(region.content, true)
-            })
-          });
-        }
-      }
-    } catch (e) {
-      console.error("Error processing HTML region:", e);
     }
+    
+    // Sort the decorations by from position before adding to builder
+    decorations.sort((a, b) => {
+      if (a.from !== b.from) return a.from - b.from;
+      return a.to - b.to;
+    });
+  } catch (e) {
+    console.error("Error in buildHTMLTagDecorations:", e);
+    return Decoration.none;
   }
-  
-  // Sort the decorations by from position before adding to builder
-  decorations.sort((a, b) => {
-    if (a.from !== b.from) return a.from - b.from;
-    return a.to - b.to;
-  });
   
   // Now add them to the builder in sorted order
   const builder = new RangeSetBuilder<Decoration>();
   for (const {from, to, decoration} of decorations) {
-    if (from < to) {
-      // Make sure decorations don't span line boundaries
-      const fromLine = view.state.doc.lineAt(from);
-      const toLine = view.state.doc.lineAt(to);
-      
-      if (fromLine.number === toLine.number) {
-        builder.add(from, to, decoration);
-      } else {
-        console.warn("Skipping decoration that would cross line boundaries", from, to);
+    if (from < to && decoration) {
+      try {
+        // For replace decorations, make sure they don't span line boundaries
+        // Use a safer property check instead of instanceof
+        const isReplaceDecoration = decoration.spec?.widget !== undefined;
+        
+        if (isReplaceDecoration) {
+          const fromLine = view.state.doc.lineAt(from);
+          const toLine = view.state.doc.lineAt(to);
+          
+          if (fromLine.number === toLine.number) {
+            builder.add(from, to, decoration);
+          } else {
+            console.warn("Skipping replace decoration that would cross line boundaries", from, to);
+          }
+        } else {
+          // Non-replace decorations (like marks) can span lines
+          builder.add(from, to, decoration);
+        }
+      } catch (err) {
+        console.error("Error adding decoration:", err, { from, to, decoration });
       }
     }
   }
   
-  return builder.finish();
+  try {
+    return builder.finish();
+  } catch (e) {
+    console.error("Error finishing decoration builder:", e);
+    return Decoration.none;
+  }
 }
 
 /**
@@ -680,12 +804,22 @@ export const HTMLTagDecorator = ViewPlugin.fromClass(
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
-      this.decorations = buildHTMLTagDecorations(view);
+      try {
+        this.decorations = buildHTMLTagDecorations(view);
+      } catch (e) {
+        console.error("Error initializing HTML tag decorations:", e);
+        this.decorations = Decoration.none;
+      }
     }
 
     update(update: ViewUpdate) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet) {
-        this.decorations = buildHTMLTagDecorations(update.view);
+      try {
+        if (update.docChanged || update.viewportChanged || update.selectionSet) {
+          this.decorations = buildHTMLTagDecorations(update.view);
+        }
+      } catch (e) {
+        console.error("Error updating HTML tag decorations:", e);
+        this.decorations = Decoration.none;
       }
     }
   },

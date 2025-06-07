@@ -12,7 +12,7 @@ import { defaultKeymap, historyKeymap, history } from '@codemirror/commands';
 // Import custom extensions
 import { atomicIndents } from '../extensions/AtomicIndents';
 import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax/index';
-import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler';
+import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler.ts';
 // Import our Lezer safety plugin
 import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
 

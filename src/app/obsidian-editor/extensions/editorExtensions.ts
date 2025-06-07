@@ -9,6 +9,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { obsidianKeymap } from './keymaps/obsidianKeymap';
 import { obsidianTheme } from './themes/obsidianTheme';
 import { createMarkdownSyntaxPlugin } from './markdown-syntax';
+import { markdownPasteHandler } from './MarkdownPasteHandler.ts';
 
 /**
  * Creates the base extensions for the CodeMirror editor with Obsidian-like functionality.
@@ -44,6 +45,9 @@ export function createBaseExtensions(themeCompartment: Compartment): Extension[]
     // Language support (using default markdown and custom syntax plugin)
     markdown(),
     createMarkdownSyntaxPlugin(),
+    
+    // Paste handler
+    markdownPasteHandler,
 
     // Editor features
     bracketMatching(),
