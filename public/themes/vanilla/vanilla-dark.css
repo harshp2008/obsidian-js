@@ -1,0 +1,99 @@
+/* 
+ * VANILLA DARK THEME
+ * A clean, minimal dark theme with neutral colors
+ */
+
+:root {
+  /* Default variables if not overridden */
+  --vanilla-dark-background-primary: #262626; /* Main editor background */
+  --vanilla-dark-background-secondary: #2d2d2d; /* Secondary backgrounds like gutters */
+  --vanilla-dark-text-normal: #e0e0e0; /* Main text color */
+  --vanilla-dark-text-muted: #a0a0a0; /* Subdued text color */
+  --vanilla-dark-text-accent: #bfb1d5; /* Accent color for highlights */
+  --vanilla-dark-cursor: #bfb1d5; /* Cursor color */
+
+  /* === SELECTION & HIGHLIGHTS === */
+  --vanilla-dark-selection-bg: rgba(
+    191,
+    177,
+    213,
+    0.2
+  ); /* Selected text background */
+  --vanilla-dark-active-line: rgba(
+    255,
+    255,
+    255,
+    0.05
+  ); /* Active line background */
+  --vanilla-dark-active-line-gutter: rgba(
+    255,
+    255,
+    255,
+    0.08
+  ); /* Active line gutter */
+
+  /* === SYNTAX HIGHLIGHTING === */
+  --vanilla-dark-heading-color: #e6e0f0; /* Heading text color */
+  --vanilla-dark-emphasis-color: #e0e0e0; /* Italic text color */
+  --vanilla-dark-strong-color: #ffffff; /* Bold text color */
+  --vanilla-dark-link-color: #bfb1d5; /* Link text color */
+  --vanilla-dark-code-color: #bfb1d5; /* Inline code color */
+  --vanilla-dark-quote-color: #a0a0a0; /* Blockquote text color */
+
+  /* === BORDERS & SHADOWS === */
+  --vanilla-dark-border-color: #3d3d3d; /* Border color */
+  --vanilla-dark-shadow: 0 2px 6px rgba(0, 0, 0, 0.25); /* Default shadow */
+}
+
+/* Apply stronger colors when vanilla theme is selected */
+html[data-theme="vanilla-dark"] {
+  --vanilla-dark-background-primary: #2a2536; /* Dark purple background */
+  --vanilla-dark-background-secondary: #332d3e; /* Dark purple secondary */
+  --vanilla-dark-text-normal: #e9e4f0; /* Slightly purple-tinted text */
+  --vanilla-dark-text-muted: #a8a0b0; /* Purple-tinted muted text */
+  --vanilla-dark-text-accent: #c4b3e0; /* Brighter purple accent */
+  --vanilla-dark-cursor: #c4b3e0; /* Brighter purple cursor */
+  --vanilla-dark-selection-bg: rgba(
+    196,
+    179,
+    224,
+    0.3
+  ); /* Stronger selection */
+  --vanilla-dark-active-line: rgba(
+    196,
+    179,
+    224,
+    0.1
+  ); /* Purple tinted active line */
+  --vanilla-dark-active-line-gutter: rgba(
+    196,
+    179,
+    224,
+    0.15
+  ); /* Purple tinted gutter */
+  --vanilla-dark-heading-color: #e6e0f0;
+  --vanilla-dark-emphasis-color: #e9e4f0;
+  --vanilla-dark-strong-color: #ffffff;
+  --vanilla-dark-link-color: #c4b3e0; /* Brighter purple links */
+  --vanilla-dark-code-color: #c4b3e0; /* Brighter purple code */
+  --vanilla-dark-quote-color: #a8a0b0;
+  --vanilla-dark-border-color: #4a4252; /* Purple-tinted border */
+  --vanilla-dark-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+/* Add a special highlight color to show the theme is working */
+html[data-theme="vanilla-dark"] .cm-editor {
+  border: 4px solid #c4b3e0;
+  background-color: #2a2536 !important; /* Force background color */
+}
+
+/* Force background color on content area */
+html[data-theme="vanilla-dark"] .cm-content {
+  background-color: #2a2536 !important;
+}
+
+/* More visible gutter */
+html[data-theme="vanilla-dark"] .cm-gutters {
+  background-color: #332d3e !important;
+  border-right: 1px solid #4a4252 !important;
+}

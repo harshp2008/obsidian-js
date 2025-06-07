@@ -1,9 +1,7 @@
 "use strict";
-var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __export = (target, all) => {
   for (var name in all)
@@ -17,14 +15,6 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/index.ts
@@ -44,23 +34,23 @@ var import_language = require("@codemirror/language");
 function applyHighlightStyleFix() {
   try {
     if (import_language.HighlightStyle.__patched) return;
-    const originalDefine = import_language.HighlightStyle.define;
+    const originalDefine2 = import_language.HighlightStyle.define;
     import_language.HighlightStyle.define = function(specs) {
       try {
-        const style = originalDefine.call(this, specs);
+        const style = originalDefine2.call(this, specs);
         const originalStyleFn = style.style;
         Object.defineProperty(style, "style", {
-          value: function(tags6) {
-            if (!tags6) return "";
+          value: function(tags8) {
+            if (!tags8) return "";
             try {
-              if (typeof tags6.some !== "function") {
-                if (Array.isArray(tags6)) {
-                  return originalStyleFn.call(this, tags6);
+              if (typeof tags8.some !== "function") {
+                if (Array.isArray(tags8)) {
+                  return originalStyleFn.call(this, tags8);
                 }
-                console.warn("Tags object doesn't have .some method", tags6);
+                console.warn("Tags object doesn't have .some method", tags8);
                 return "";
               }
-              return originalStyleFn.call(this, tags6);
+              return originalStyleFn.call(this, tags8);
             } catch (e) {
               console.warn("Error in highlight style:", e);
               return "";
@@ -88,7 +78,7 @@ function applyHighlightStyleFix() {
         return style;
       } catch (error) {
         console.error("Error creating HighlightStyle:", error);
-        return originalDefine.call(this, []);
+        return originalDefine2.call(this, []);
       }
     };
     import_language.HighlightStyle.__patched = true;
@@ -139,7 +129,7 @@ var patchesApplied = false;
 applyLezerPatches();
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-var import_react3 = require("react");
+var import_react4 = require("react");
 
 // src/contexts/ThemeContext.tsx
 var import_react = require("react");
@@ -200,17 +190,588 @@ function applyThemeToHTML(theme, isMounted = false) {
   }
 }
 
+// src/app/obsidian-editor/utils/theme.ts
+var import_view4 = require("@codemirror/view");
+
+// src/app/obsidian-editor/themes/vanilla/themeConnector.ts
+var import_view = require("@codemirror/view");
+var import_language2 = require("@codemirror/language");
+var import_highlight = require("@lezer/highlight");
+function createVanillaLightTheme() {
+  return import_view.EditorView.theme(
+    {
+      "&": {
+        color: "var(--vanilla-light-text-normal, #2c2c2c)",
+        backgroundColor: "var(--vanilla-light-background-primary, #fcfcfc)"
+      },
+      "&.cm-editor": {
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          pointerEvents: "none"
+        }
+      },
+      ".cm-content": {
+        caretColor: "var(--vanilla-light-cursor, #625772)",
+        fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace"
+      },
+      ".cm-gutters": {
+        backgroundColor: "var(--vanilla-light-background-secondary, #f5f5f5)",
+        color: "var(--vanilla-light-text-muted, #707070)",
+        border: "none"
+      },
+      ".cm-activeLine": {
+        backgroundColor: "var(--vanilla-light-active-line, rgba(0, 0, 0, 0.03))"
+      },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--vanilla-light-active-line-gutter, rgba(0, 0, 0, 0.05))"
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "var(--vanilla-light-selection-bg, rgba(98, 87, 114, 0.15))"
+      },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--vanilla-light-cursor, #625772)"
+      },
+      "&.cm-focused .cm-cursor": {
+        borderLeftColor: "var(--vanilla-light-cursor, #625772)"
+      },
+      "&.cm-focused .cm-selectionBackground": {
+        backgroundColor: "var(--vanilla-light-selection-bg, rgba(98, 87, 114, 0.15))"
+      },
+      ".cm-tooltip": {
+        backgroundColor: "var(--vanilla-light-background-primary, #fcfcfc)",
+        border: "1px solid var(--vanilla-light-border-color, #e2e2e2)",
+        boxShadow: "var(--vanilla-light-shadow, 0 1px 3px rgba(0, 0, 0, 0.08))"
+      }
+    },
+    { dark: false }
+  );
+}
+function createVanillaDarkTheme() {
+  return import_view.EditorView.theme(
+    {
+      "&": {
+        color: "var(--vanilla-dark-text-normal, #e0e0e0)",
+        backgroundColor: "var(--vanilla-dark-background-primary, #262626)"
+      },
+      "&.cm-editor": {
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          pointerEvents: "none"
+        }
+      },
+      ".cm-content": {
+        caretColor: "var(--vanilla-dark-cursor, #bfb1d5)",
+        fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace"
+      },
+      ".cm-gutters": {
+        backgroundColor: "var(--vanilla-dark-background-secondary, #2d2d2d)",
+        color: "var(--vanilla-dark-text-muted, #a0a0a0)",
+        border: "none"
+      },
+      ".cm-activeLine": {
+        backgroundColor: "var(--vanilla-dark-active-line, rgba(255, 255, 255, 0.05))"
+      },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--vanilla-dark-active-line-gutter, rgba(255, 255, 255, 0.08))"
+      },
+      ".cm-selectionBackground": {
+        backgroundColor: "var(--vanilla-dark-selection-bg, rgba(191, 177, 213, 0.2))"
+      },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--vanilla-dark-cursor, #bfb1d5)"
+      },
+      "&.cm-focused .cm-cursor": {
+        borderLeftColor: "var(--vanilla-dark-cursor, #bfb1d5)"
+      },
+      "&.cm-focused .cm-selectionBackground": {
+        backgroundColor: "var(--vanilla-dark-selection-bg, rgba(191, 177, 213, 0.2))"
+      },
+      ".cm-tooltip": {
+        backgroundColor: "var(--vanilla-dark-background-primary, #262626)",
+        border: "1px solid var(--vanilla-dark-border-color, #3d3d3d)",
+        boxShadow: "var(--vanilla-dark-shadow, 0 2px 6px rgba(0, 0, 0, 0.25))"
+      }
+    },
+    { dark: true }
+  );
+}
+function createVanillaHighlightStyle() {
+  return import_language2.HighlightStyle.define([
+    // Light theme styles
+    {
+      tag: import_highlight.tags.heading1,
+      fontSize: "1.6em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.heading2,
+      fontSize: "1.4em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.heading3,
+      fontSize: "1.2em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.heading4,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.heading5,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.heading6,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-light-heading-color, #42404d)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.emphasis,
+      fontStyle: "italic",
+      color: "var(--vanilla-light-emphasis-color, #2c2c2c)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.strong,
+      fontWeight: "bold",
+      color: "var(--vanilla-light-strong-color, #222222)",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.link,
+      color: "var(--vanilla-light-link-color, #625772)",
+      textDecoration: "underline",
+      class: "light-mode"
+    },
+    {
+      tag: import_highlight.tags.monospace,
+      fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
+      fontSize: "0.9em",
+      color: "var(--vanilla-light-code-color, #625772)",
+      class: "light-mode"
+    },
+    // Dark theme styles
+    {
+      tag: import_highlight.tags.heading1,
+      fontSize: "1.6em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.heading2,
+      fontSize: "1.4em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.heading3,
+      fontSize: "1.2em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.heading4,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.heading5,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.heading6,
+      fontSize: "1.1em",
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-heading-color, #e6e0f0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.emphasis,
+      fontStyle: "italic",
+      color: "var(--vanilla-dark-emphasis-color, #e0e0e0)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.strong,
+      fontWeight: "bold",
+      color: "var(--vanilla-dark-strong-color, #ffffff)",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.link,
+      color: "var(--vanilla-dark-link-color, #bfb1d5)",
+      textDecoration: "underline",
+      class: "dark-mode"
+    },
+    {
+      tag: import_highlight.tags.monospace,
+      fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
+      fontSize: "0.9em",
+      color: "var(--vanilla-dark-code-color, #bfb1d5)",
+      class: "dark-mode"
+    }
+  ]);
+}
+
+// src/app/obsidian-editor/themes/vanilla/index.ts
+var vanillaLightTheme = createVanillaLightTheme();
+var vanillaDarkTheme = createVanillaDarkTheme();
+var vanillaHighlightStyle = createVanillaHighlightStyle();
+
+// src/app/obsidian-editor/utils/applyTheme.ts
+var import_view3 = require("@codemirror/view");
+
+// src/app/obsidian-editor/themes/editorThemes.ts
+var import_language4 = require("@codemirror/language");
+
+// src/app/obsidian-editor/themes/themeVariables.ts
+var import_view2 = require("@codemirror/view");
+var import_language3 = require("@codemirror/language");
+var import_highlight2 = require("@lezer/highlight");
+function createLightThemeFromCssVars() {
+  return import_view2.EditorView.theme(
+    {
+      "&": {
+        color: "var(--light-text-normal, #1a1a1a)",
+        backgroundColor: "var(--light-background-primary, #ffffff)"
+      },
+      ".cm-content": { caretColor: "var(--light-cursor, #3b82f6)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--light-background-secondary, #f8f9fa)",
+        color: "var(--light-text-muted, #6c757d)",
+        border: "none"
+      },
+      ".cm-activeLine": { backgroundColor: "var(--light-active-line, rgba(0, 0, 0, 0.03))" },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--light-active-line-gutter, rgba(0, 0, 0, 0.05))"
+      },
+      ".cm-selectionBackground": { backgroundColor: "var(--light-selection-bg, #b3d7ff)" },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--light-cursor, #3b82f6)"
+      }
+    },
+    { dark: false }
+  );
+}
+function createDarkThemeFromCssVars() {
+  return import_view2.EditorView.theme(
+    {
+      "&": {
+        color: "var(--dark-text-normal, #e0e0e0)",
+        backgroundColor: "var(--dark-background-primary, #1e1e1e)"
+      },
+      ".cm-content": { caretColor: "var(--dark-cursor, #3b82f6)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--dark-background-secondary, #252525)",
+        color: "var(--dark-text-muted, #858585)",
+        border: "none"
+      },
+      ".cm-activeLine": { backgroundColor: "var(--dark-active-line, rgba(255, 255, 255, 0.05))" },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--dark-active-line-gutter, rgba(255, 255, 255, 0.1))"
+      },
+      ".cm-selectionBackground": { backgroundColor: "var(--dark-selection-bg, #3a4b6d)" },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--dark-cursor, #3b82f6)"
+      }
+    },
+    { dark: true }
+  );
+}
+function createHighlightStyleFromCssVars() {
+  return import_language3.HighlightStyle.define([
+    {
+      tag: import_highlight2.tags.heading1,
+      fontSize: "1.6em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: import_highlight2.tags.heading2,
+      fontSize: "1.4em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: import_highlight2.tags.heading3,
+      fontSize: "1.2em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: import_highlight2.tags.emphasis,
+      fontStyle: "italic",
+      color: "var(--light-emphasis-color, #1a1a1a)"
+    },
+    {
+      tag: import_highlight2.tags.strong,
+      fontWeight: "bold",
+      color: "var(--light-strong-color, #1a1a1a)"
+    },
+    {
+      tag: import_highlight2.tags.link,
+      color: "var(--light-link-color, #2563eb)",
+      textDecoration: "underline"
+    },
+    {
+      tag: import_highlight2.tags.monospace,
+      color: "var(--light-code-color, #10b981)",
+      fontFamily: "monospace"
+    }
+  ]);
+}
+
+// src/app/obsidian-editor/themes/editorThemes.ts
+var originalDefine = import_language4.HighlightStyle.define;
+import_language4.HighlightStyle.define = function(specs) {
+  try {
+    const style = originalDefine.call(this, specs);
+    const originalStyleFn = style.style;
+    Object.defineProperty(style, "style", {
+      value: function(tags8) {
+        if (!tags8) return "";
+        try {
+          return originalStyleFn.call(this, tags8);
+        } catch (e) {
+          console.warn("Error in highlight style:", e);
+          return "";
+        }
+      },
+      writable: false,
+      configurable: true
+    });
+    return style;
+  } catch (error) {
+    console.error("Error creating HighlightStyle:", error);
+    return originalDefine.call(this, []);
+  }
+};
+var lightTheme = createLightThemeFromCssVars();
+var darkTheme = createDarkThemeFromCssVars();
+var customHighlightStyle = createHighlightStyleFromCssVars();
+
+// src/app/obsidian-editor/utils/applyTheme.ts
+function loadThemeCSS(name) {
+  if (typeof document !== "undefined") {
+    const existingLinks = document.querySelectorAll("link[data-theme-css]");
+    existingLinks.forEach((link) => link.remove());
+    if (name === "vanilla") {
+      const lightCSS = document.createElement("link");
+      lightCSS.rel = "stylesheet";
+      lightCSS.href = "/vanilla-light.css";
+      lightCSS.setAttribute("data-theme-css", "vanilla-light");
+      document.head.appendChild(lightCSS);
+      const darkCSS = document.createElement("link");
+      darkCSS.rel = "stylesheet";
+      darkCSS.href = "/vanilla-dark.css";
+      darkCSS.setAttribute("data-theme-css", "vanilla-dark");
+      document.head.appendChild(darkCSS);
+      console.log("Loaded vanilla theme CSS");
+    } else {
+    }
+  }
+}
+
+// src/app/obsidian-editor/utils/theme.ts
+var THEME_STORAGE_KEY = "obsidian-editor-theme";
+var getCurrentDocumentTheme = () => {
+  if (typeof window !== "undefined") {
+    const storedTheme = localStorage.getItem("obsidian-theme");
+    if (storedTheme === "light" || storedTheme === "dark") {
+      return storedTheme;
+    }
+    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+  }
+  return "light";
+};
+function getCurrentEditorTheme() {
+  if (typeof window === "undefined") return "vanilla";
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  return savedTheme || "vanilla";
+}
+function setEditorTheme(theme) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  const isDarkMode = document.documentElement.classList.contains("dark");
+  const themeClass = isDarkMode ? `${theme}-dark` : `${theme}-light`;
+  document.documentElement.setAttribute("data-theme", themeClass);
+}
+var obsidianCssVariables = {
+  light: {
+    "--background-primary": "#ffffff",
+    "--background-secondary": "#f8f8f8",
+    "--text-normal": "#2e3338",
+    "--text-muted": "#888888",
+    "--text-faint": "#999999",
+    "--text-error": "#e75545",
+    "--text-accent": "#705dcf",
+    "--interactive-normal": "#f2f3f5",
+    "--interactive-hover": "#e9e9e9",
+    "--interactive-accent": "#7b6cd9",
+    "--interactive-accent-hover": "#8875ff",
+    "--link-color": "#5E81AC",
+    "--hr-color": "#dcddde",
+    "--tag-color": "#2991e3",
+    "--selection-background": "rgba(104, 134, 197, 0.3)",
+    "--code-background": "rgba(0, 0, 0, 0.03)"
+  },
+  dark: {
+    "--background-primary": "#2b2b2b",
+    "--background-secondary": "#363636",
+    "--text-normal": "#dcddde",
+    "--text-muted": "#999999",
+    "--text-faint": "#666666",
+    "--text-error": "#ff3333",
+    "--text-accent": "#a277ff",
+    "--interactive-normal": "#3f3f3f",
+    "--interactive-hover": "#4a4a4a",
+    "--interactive-accent": "#7b6cd9",
+    "--interactive-accent-hover": "#8875ff",
+    "--link-color": "#a8c0e0",
+    "--hr-color": "#444444",
+    "--tag-color": "#4097e3",
+    "--selection-background": "rgba(104, 134, 197, 0.2)",
+    "--code-background": "rgba(255, 255, 255, 0.05)"
+  }
+};
+var applyThemeVariables = (theme) => {
+  if (typeof document !== "undefined") {
+    const variables = obsidianCssVariables[theme];
+    const root = document.documentElement;
+    Object.entries(variables).forEach(([key, value]) => {
+      root.style.setProperty(key, value);
+    });
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+    }
+  }
+};
+var lightTheme2 = import_view4.EditorView.theme({
+  "&": {
+    backgroundColor: "var(--background-primary, #ffffff)",
+    color: "var(--text-normal, #2e3338)"
+  },
+  ".cm-content": {
+    caretColor: "var(--text-normal, #2e3338)"
+  },
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "var(--text-normal, #2e3338)"
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.3))"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary, #f5f6f8)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "var(--background-secondary, #f5f6f8)"
+  }
+}, { dark: false });
+var darkTheme2 = import_view4.EditorView.theme({
+  "&": {
+    backgroundColor: "var(--background-primary, #202020)",
+    color: "var(--text-normal, #dcddde)"
+  },
+  ".cm-content": {
+    caretColor: "var(--text-normal, #dcddde)"
+  },
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "var(--text-normal, #dcddde)"
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.2))"
+  },
+  ".cm-activeLine": {
+    backgroundColor: "var(--background-secondary, #161616)"
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "var(--background-secondary, #161616)"
+  }
+}, { dark: true });
+var getTheme = (themeName, mode) => {
+  if (themeName === "vanilla") {
+    return mode === "dark" ? vanillaDarkTheme : vanillaLightTheme;
+  } else {
+    return mode === "dark" ? darkTheme2 : lightTheme2;
+  }
+};
+if (typeof window !== "undefined") {
+  setTimeout(() => {
+    const initialTheme = getCurrentDocumentTheme();
+    applyThemeVariables(initialTheme);
+    const editorTheme = getCurrentEditorTheme();
+    loadThemeCSS(editorTheme === "vanilla" ? "vanilla" : "default");
+    if (window.matchMedia) {
+      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+        if (!localStorage.getItem("obsidian-theme")) {
+          const newTheme = e.matches ? "dark" : "light";
+          applyThemeVariables(newTheme);
+        }
+      });
+    }
+  }, 0);
+}
+
 // src/app/obsidian-editor/components/EditorCore.tsx
 var import_react2 = require("react");
-var import_state13 = require("@codemirror/state");
+var import_state11 = require("@codemirror/state");
 var import_view24 = require("@codemirror/view");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/index.ts
-var import_view15 = require("@codemirror/view");
+var import_view19 = require("@codemirror/view");
 var import_state4 = require("@codemirror/state");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
-var import_view = require("@codemirror/view");
+var import_view5 = require("@codemirror/view");
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/utils.ts
 function isCursorNearRange(cursorPositions, rangeFrom, rangeTo, proximity = 0) {
@@ -252,22 +813,22 @@ var HeadingDecorator = class {
         decorations.push({
           from: hashStartInDoc,
           to: spaceAfterHashInDoc,
-          decoration: import_view.Decoration.mark({ class: syntaxClass })
+          decoration: import_view5.Decoration.mark({ class: syntaxClass })
         });
         if (headingTextContent.trim().length > 0) {
           decorations.push({
             from: headingTextStartInDoc,
             to: headingTextEndInDoc,
-            decoration: import_view.Decoration.mark({ class: `markdown-heading-${hashCount}` })
+            decoration: import_view5.Decoration.mark({ class: `markdown-heading-${hashCount}` })
           });
         }
       } else {
-        builder.add(hashStartInDoc, spaceAfterHashInDoc, import_view.Decoration.mark({ class: syntaxClass }));
+        builder.add(hashStartInDoc, spaceAfterHashInDoc, import_view5.Decoration.mark({ class: syntaxClass }));
         if (headingTextContent.trim().length > 0) {
           builder.add(
             headingTextStartInDoc,
             headingTextEndInDoc,
-            import_view.Decoration.mark({ class: `markdown-heading-${hashCount}` })
+            import_view5.Decoration.mark({ class: `markdown-heading-${hashCount}` })
           );
         }
       }
@@ -276,81 +837,93 @@ var HeadingDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
-var import_view2 = require("@codemirror/view");
-var BoldDecorator = class {
-  constructor() {
-    /**
-     * Patterns for bold text in markdown
-     * Each pattern includes the marker string and a regex to match the pattern
-     */
-    this.boldPatterns = [
-      { marker: "**", regex: /(?<!\*)\*\*(?!\s)([^\*]+?)(?<!\s)\*\*(?!\*)/g },
-      // **bold**
-      { marker: "__", regex: /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g }
-      // __bold__
-    ];
+var import_view6 = require("@codemirror/view");
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/baseDecorator.ts
+var BaseDecorator = class {
+  /**
+   * Check if a position is within any HTML edit region
+   * @param pos - The position to check
+   * @param htmlEditRegions - Array of HTML edit regions
+   * @returns True if the position is within any HTML edit region
+   */
+  isWithinHtmlEditRegion(pos, htmlEditRegions) {
+    if (!htmlEditRegions || !htmlEditRegions.length) return false;
+    for (const region of htmlEditRegions) {
+      if (pos >= region.from && pos < region.to) {
+        return true;
+      }
+    }
+    return false;
   }
   /**
-   * Process the document text to find and decorate bold text
-   * @param context - The syntax rule context containing document information
+   * Check if a range overlaps with any HTML edit region
+   * @param from - Start position
+   * @param to - End position
+   * @param htmlEditRegions - Array of HTML edit regions
+   * @returns True if the range overlaps with any HTML edit region
+   */
+  rangeOverlapsHtmlEditRegion(from, to, htmlEditRegions) {
+    if (!htmlEditRegions || !htmlEditRegions.length) return false;
+    for (const region of htmlEditRegions) {
+      if (from < region.to && to > region.from) {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
+var BoldDecorator = class extends BaseDecorator {
+  constructor() {
+    super(...arguments);
+    /**
+     * Regular expression to match bold text
+     * Matches **bold text** or __bold text__
+     */
+    this.regex = /(\*\*|__)([^\s*_]|[^\s*_].*?[^\s*_])\1/g;
+  }
+  /**
+   * Process the document and add decorations for bold text
+   * @param context - Context containing document state and decoration builder
    */
   process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions } = context;
-    const extContext = context;
-    const decorations = extContext.decorations || [];
-    this.boldPatterns.forEach((patternInfo) => {
-      const marker = patternInfo.marker;
-      const markerLen = marker.length;
-      const localRegex = new RegExp(patternInfo.regex.source, "g");
-      let match;
-      while ((match = localRegex.exec(docText)) !== null) {
-        const matchStartIndexInSlice = match.index;
-        const fullMatchText = match[0];
-        if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-          continue;
-        }
-        const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-        const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-        const openMarkerStartInDoc = fullMatchStartInDoc;
-        const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-        const contentStartInDoc = openMarkerEndInDoc;
-        const contentEndInDoc = fullMatchEndInDoc - markerLen;
-        const closeMarkerStartInDoc = contentEndInDoc;
-        const closeMarkerEndInDoc = fullMatchEndInDoc;
-        const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-        const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-        if (decorations) {
-          decorations.push({
-            from: openMarkerStartInDoc,
-            to: openMarkerEndInDoc,
-            decoration: import_view2.Decoration.mark({ class: syntaxClass })
-          });
-          if (contentStartInDoc < contentEndInDoc) {
-            decorations.push({
-              from: contentStartInDoc,
-              to: contentEndInDoc,
-              decoration: import_view2.Decoration.mark({ class: "markdown-bold-active" })
-            });
-          }
-          decorations.push({
-            from: closeMarkerStartInDoc,
-            to: closeMarkerEndInDoc,
-            decoration: import_view2.Decoration.mark({ class: syntaxClass })
-          });
-        } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view2.Decoration.mark({ class: syntaxClass }));
-          if (contentStartInDoc < contentEndInDoc) {
-            builder.add(contentStartInDoc, contentEndInDoc, import_view2.Decoration.mark({ class: "markdown-bold-active" }));
-          }
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view2.Decoration.mark({ class: syntaxClass }));
-        }
+    const { docText, textSliceFrom, decorations, htmlEditRegions } = context;
+    let match;
+    while ((match = this.regex.exec(docText)) !== null) {
+      const matchFrom = textSliceFrom + match.index;
+      const matchTo = textSliceFrom + match.index + match[0].length;
+      if (this.rangeOverlapsHtmlEditRegion(matchFrom, matchTo, htmlEditRegions)) {
+        continue;
       }
-    });
+      const startMarkerFrom = matchFrom;
+      const startMarkerTo = startMarkerFrom + match[1].length;
+      const contentFrom = startMarkerTo;
+      const contentTo = matchTo - match[1].length;
+      const endMarkerFrom = contentTo;
+      const endMarkerTo = matchTo;
+      decorations.push({
+        from: startMarkerFrom,
+        to: startMarkerTo,
+        decoration: import_view6.Decoration.mark({ class: "cm-formatting-strong" })
+      });
+      decorations.push({
+        from: endMarkerFrom,
+        to: endMarkerTo,
+        decoration: import_view6.Decoration.mark({ class: "cm-formatting-strong" })
+      });
+      decorations.push({
+        from: contentFrom,
+        to: contentTo,
+        decoration: import_view6.Decoration.mark({ class: "cm-strong" })
+      });
+    }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/italicDecorator.ts
-var import_view3 = require("@codemirror/view");
+var import_view7 = require("@codemirror/view");
 var ItalicDecorator = class {
   constructor() {
     // Regex for *italic* and _italic_
@@ -406,22 +979,22 @@ var ItalicDecorator = class {
           decorations.push({
             from: openMarkerStartInDoc,
             to: openMarkerEndInDoc,
-            decoration: import_view3.Decoration.mark({ class: syntaxClass })
+            decoration: import_view7.Decoration.mark({ class: syntaxClass })
           });
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view3.Decoration.mark({ class: "markdown-italic-active" })
+            decoration: import_view7.Decoration.mark({ class: "markdown-italic-active" })
           });
           decorations.push({
             from: closeMarkerStartInDoc,
             to: closeMarkerEndInDoc,
-            decoration: import_view3.Decoration.mark({ class: syntaxClass })
+            decoration: import_view7.Decoration.mark({ class: syntaxClass })
           });
         } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view3.Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, import_view3.Decoration.mark({ class: "markdown-italic-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view3.Decoration.mark({ class: syntaxClass }));
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, import_view7.Decoration.mark({ class: "markdown-italic-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
         }
       }
     });
@@ -429,7 +1002,7 @@ var ItalicDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/strikethroughDecorator.ts
-var import_view4 = require("@codemirror/view");
+var import_view8 = require("@codemirror/view");
 var StrikethroughDecorator = class {
   constructor() {
     // Improved regex for ~~strikethrough~~ with proper boundary conditions
@@ -464,29 +1037,29 @@ var StrikethroughDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view4.Decoration.mark({ class: syntaxClass })
+          decoration: import_view8.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view4.Decoration.mark({ class: contentClass })
+          decoration: import_view8.Decoration.mark({ class: contentClass })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view4.Decoration.mark({ class: syntaxClass })
+          decoration: import_view8.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view4.Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, import_view4.Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view4.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, import_view8.Decoration.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/codeDecorator.ts
-var import_view5 = require("@codemirror/view");
+var import_view9 = require("@codemirror/view");
 var CodeDecorator = class {
   constructor() {
     // Regex for `code`
@@ -524,22 +1097,22 @@ var CodeDecorator = class {
           decorations.push({
             from: openMarkerStartInDoc,
             to: openMarkerEndInDoc,
-            decoration: import_view5.Decoration.mark({ class: syntaxClass })
+            decoration: import_view9.Decoration.mark({ class: syntaxClass })
           });
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view5.Decoration.mark({ class: "markdown-code-active" })
+            decoration: import_view9.Decoration.mark({ class: "markdown-code-active" })
           });
           decorations.push({
             from: closeMarkerStartInDoc,
             to: closeMarkerEndInDoc,
-            decoration: import_view5.Decoration.mark({ class: syntaxClass })
+            decoration: import_view9.Decoration.mark({ class: syntaxClass })
           });
         } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view5.Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, import_view5.Decoration.mark({ class: "markdown-code-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view5.Decoration.mark({ class: syntaxClass }));
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, import_view9.Decoration.mark({ class: "markdown-code-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view9.Decoration.mark({ class: syntaxClass }));
         }
       }
     } catch (error) {
@@ -550,7 +1123,7 @@ var CodeDecorator = class {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/highlightDecorator.ts
-var import_view6 = require("@codemirror/view");
+var import_view10 = require("@codemirror/view");
 var HighlightDecorator = class {
   constructor() {
     // Regex for ==highlight== with proper boundary conditions
@@ -585,29 +1158,29 @@ var HighlightDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view6.Decoration.mark({ class: syntaxClass })
+          decoration: import_view10.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view6.Decoration.mark({ class: contentClass })
+          decoration: import_view10.Decoration.mark({ class: contentClass })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view6.Decoration.mark({ class: syntaxClass })
+          decoration: import_view10.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view6.Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, import_view6.Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view6.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, import_view10.Decoration.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view10.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/oldBoldDecorator.ts
-var import_view7 = require("@codemirror/view");
+var import_view11 = require("@codemirror/view");
 var OldBoldDecorator = class {
   constructor() {
     // Regex for __bold__ (old style markdown)
@@ -638,13 +1211,13 @@ var OldBoldDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view7.Decoration.mark({ class: syntaxClass })
+          decoration: import_view11.Decoration.mark({ class: syntaxClass })
         });
         if (contentStartInDoc < contentEndInDoc) {
           decorations.push({
             from: contentStartInDoc,
             to: contentEndInDoc,
-            decoration: import_view7.Decoration.mark({
+            decoration: import_view11.Decoration.mark({
               class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
             })
           });
@@ -652,27 +1225,27 @@ var OldBoldDecorator = class {
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view7.Decoration.mark({ class: syntaxClass })
+          decoration: import_view11.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
         if (contentStartInDoc < contentEndInDoc) {
           builder.add(
             contentStartInDoc,
             contentEndInDoc,
-            import_view7.Decoration.mark({
+            import_view11.Decoration.mark({
               class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
             })
           );
         }
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view7.Decoration.mark({ class: syntaxClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view11.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/oldItalicDecorator.ts
-var import_view8 = require("@codemirror/view");
+var import_view12 = require("@codemirror/view");
 var OldItalicDecorator = class {
   constructor() {
     // Regex for *italic* (old style markdown)
@@ -719,37 +1292,37 @@ var OldItalicDecorator = class {
         decorations.push({
           from: openMarkerStartInDoc,
           to: openMarkerEndInDoc,
-          decoration: import_view8.Decoration.mark({ class: syntaxClass })
+          decoration: import_view12.Decoration.mark({ class: syntaxClass })
         });
         decorations.push({
           from: contentStartInDoc,
           to: contentEndInDoc,
-          decoration: import_view8.Decoration.mark({
+          decoration: import_view12.Decoration.mark({
             class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
           })
         });
         decorations.push({
           from: closeMarkerStartInDoc,
           to: closeMarkerEndInDoc,
-          decoration: import_view8.Decoration.mark({ class: syntaxClass })
+          decoration: import_view12.Decoration.mark({ class: syntaxClass })
         });
       } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, import_view12.Decoration.mark({ class: syntaxClass }));
         builder.add(
           contentStartInDoc,
           contentEndInDoc,
-          import_view8.Decoration.mark({
+          import_view12.Decoration.mark({
             class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
           })
         );
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view8.Decoration.mark({ class: syntaxClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, import_view12.Decoration.mark({ class: syntaxClass }));
       }
     }
   }
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/listDecorator.ts
-var import_view9 = require("@codemirror/view");
+var import_view13 = require("@codemirror/view");
 var ListDecorator = class {
   constructor() {
     // Regex to match list items at the beginning of a line
@@ -779,7 +1352,7 @@ var ListDecorator = class {
         (cursor) => cursor === markerStartInDoc || cursor === markerEndInDoc
       );
       if (isNumberedList) {
-        const decoration = import_view9.Decoration.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
+        const decoration = import_view13.Decoration.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
         if (decorations) {
           decorations.push({
             from: markerStartInDoc,
@@ -790,7 +1363,7 @@ var ListDecorator = class {
           builder.add(markerStartInDoc, markerEndInDoc, decoration);
         }
       } else if (isAdjacentToMarker) {
-        const decoration = import_view9.Decoration.mark({ class: "markdown-syntax-active" });
+        const decoration = import_view13.Decoration.mark({ class: "markdown-syntax-active" });
         if (decorations) {
           decorations.push({
             from: markerStartInDoc,
@@ -805,13 +1378,13 @@ var ListDecorator = class {
           decorations.push({
             from: markerStartInDoc,
             to: markerEndInDoc,
-            decoration: import_view9.Decoration.replace({
+            decoration: import_view13.Decoration.replace({
               widget: new ListBulletWidget(marker),
               class: "markdown-list-dim"
             })
           });
         } else {
-          builder.add(markerStartInDoc, markerEndInDoc, import_view9.Decoration.replace({
+          builder.add(markerStartInDoc, markerEndInDoc, import_view13.Decoration.replace({
             widget: new ListBulletWidget(marker),
             class: "markdown-list-dim"
           }));
@@ -820,7 +1393,7 @@ var ListDecorator = class {
     }
   }
 };
-var ListBulletWidget = class extends import_view9.WidgetType {
+var ListBulletWidget = class extends import_view13.WidgetType {
   constructor(originalMarker = "\u2022", isOrdered = false) {
     super();
     this.originalMarker = originalMarker;
@@ -841,7 +1414,7 @@ var ListBulletWidget = class extends import_view9.WidgetType {
 };
 
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/FencedCodeBlockDecorator.ts
-var import_view10 = require("@codemirror/view");
+var import_view14 = require("@codemirror/view");
 function createCopyButton(textToCopy) {
   const button = document.createElement("button");
   button.className = "cm-indent-copy-button";
@@ -861,7 +1434,7 @@ function createCopyButton(textToCopy) {
   });
   return button;
 }
-var CodeBlockWidget = class extends import_view10.WidgetType {
+var CodeBlockWidget = class extends import_view14.WidgetType {
   constructor(codeLines, language, fullBlockRawText) {
     super();
     this.codeLines = codeLines;
@@ -936,7 +1509,7 @@ var FencedCodeBlockDecorator = class {
               decorations.push({
                 from: blockStartPosInDoc,
                 to: blockEndPosInDoc,
-                decoration: import_view10.Decoration.replace({ widget, block: true })
+                decoration: import_view14.Decoration.replace({ widget, block: true })
               });
               break;
             } else {
@@ -970,14 +1543,14 @@ var FencedCodeBlockDecorator = class {
             from: currentLineActualStartInDoc,
             to: currentLineActualStartInDoc,
             // For Decoration.line
-            decoration: import_view10.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+            decoration: import_view14.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
           });
           if (langSpecifierRaw) {
             const langSpecOffsetInLine = leadingWhitespace.length + fenceType.length;
             decorations.push({
               from: currentLineActualStartInDoc + langSpecOffsetInLine,
               to: currentLineActualStartInDoc + langSpecOffsetInLine + langSpecifierRaw.length,
-              decoration: import_view10.Decoration.mark({ class: "cm-live-fenced-code-lang" })
+              decoration: import_view14.Decoration.mark({ class: "cm-live-fenced-code-lang" })
             });
           }
           let nextLineStartInSliceForInnerLoop = lineStartIndexInSlice + lineText.length + 1;
@@ -992,7 +1565,7 @@ var FencedCodeBlockDecorator = class {
                 from: innerLineActualStartInDoc,
                 to: innerLineActualStartInDoc,
                 // For Decoration.line
-                decoration: import_view10.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+                decoration: import_view14.Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
               });
               lineStartIndexInSlice = nextLineStartInSliceForInnerLoop + innerLineText.length + 1;
               i = j + 1;
@@ -1003,7 +1576,7 @@ var FencedCodeBlockDecorator = class {
                 from: innerLineActualStartInDoc,
                 to: innerLineActualStartInDoc,
                 // For Decoration.line, 'to' is same as 'from'
-                decoration: import_view10.Decoration.line({
+                decoration: import_view14.Decoration.line({
                   attributes: { class: "cm-live-fenced-code-content-line" },
                   atomic: true
                   // Prevent other Markdown rules from processing inside
@@ -1025,245 +1598,9 @@ var FencedCodeBlockDecorator = class {
   }
 };
 
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/horizontalRuleDecorator.ts
-var import_view11 = require("@codemirror/view");
-var import_state = require("@codemirror/state");
-var HR_REGEX = /^(?:---|___|\*\*\*)\s*$/;
-var HorizontalRuleWidget = class extends import_view11.WidgetType {
-  get estimatedHeight() {
-    return 26;
-  }
-  toDOM() {
-    const hr = document.createElement("hr");
-    hr.className = "cm-rendered-hr";
-    return hr;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-var HorizontalRuleDecorator = import_view11.ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = this.buildDecorations(view);
-    }
-    update(update) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet || // Rebuild if selection changes (cursor moves)
-      update.state.field(markdownSyntaxStateField, false) !== update.startState.field(markdownSyntaxStateField, false)) {
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    buildDecorations(view) {
-      const builder = new import_state.RangeSetBuilder();
-      const { state } = view;
-      const currentMode = state.field(markdownSyntaxStateField).currentMode;
-      const cursorPos = state.selection.main.head;
-      if (currentMode === "live") {
-        for (const { from, to } of view.visibleRanges) {
-          for (let pos = from; pos <= to; ) {
-            const line = state.doc.lineAt(pos);
-            if (line.length === 0 && pos === to && line.from !== line.to) {
-              pos = line.to + 1;
-              continue;
-            }
-            const match = HR_REGEX.exec(line.text);
-            if (match) {
-              const lineStart = line.from;
-              const lineEnd = line.to;
-              let showSyntaxAsText = false;
-              if (cursorPos >= lineStart && cursorPos <= lineEnd) {
-                showSyntaxAsText = true;
-              } else {
-                for (const selectionRange of state.selection.ranges) {
-                  if (selectionRange.from <= lineEnd && selectionRange.to >= lineStart) {
-                    showSyntaxAsText = true;
-                    break;
-                  }
-                }
-              }
-              if (showSyntaxAsText) {
-                builder.add(lineStart, lineEnd, import_view11.Decoration.mark({ class: "cm-hr-syntax-active" }));
-              } else {
-                builder.add(lineStart, lineEnd, import_view11.Decoration.replace({ widget: new HorizontalRuleWidget() }));
-              }
-            }
-            pos = line.to + 1;
-          }
-        }
-      } else if (currentMode === "preview") {
-        for (const { from, to } of view.visibleRanges) {
-          for (let pos = from; pos <= to; ) {
-            const line = state.doc.lineAt(pos);
-            if (line.length === 0 && pos === to && line.from !== line.to) {
-              pos = line.to + 1;
-              continue;
-            }
-            const match = HR_REGEX.exec(line.text);
-            if (match) {
-              builder.add(line.from, line.to, import_view11.Decoration.replace({ widget: new HorizontalRuleWidget() }));
-            }
-            pos = line.to + 1;
-          }
-        }
-      }
-      return builder.finish();
-    }
-  },
-  {
-    decorations: (v) => v.decorations
-  }
-);
-
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/lineBreakDecorator.ts
-var import_view12 = require("@codemirror/view");
-var import_state2 = require("@codemirror/state");
-var LINE_BREAK_REGEX = /\s{2,}$/m;
-var LineBreakVisualIndicator = class extends import_view12.WidgetType {
-  toDOM() {
-    const span = document.createElement("span");
-    span.className = "cm-line-break-indicator";
-    span.innerHTML = "\u21B5";
-    span.style.color = "#888";
-    span.style.fontSize = "0.85em";
-    span.style.verticalAlign = "text-top";
-    return span;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-var liveLineBreakMark = import_view12.Decoration.mark({
-  class: "cm-line-break-syntax"
-});
-function buildLineBreakDecorations(view) {
-  const builder = new import_state2.RangeSetBuilder();
-  const modeState = view.state.field(markdownSyntaxStateField, false);
-  const currentMode = modeState ? modeState.currentMode : "live";
-  for (const { from, to } of view.visibleRanges) {
-    for (let pos = from; pos < to; ) {
-      const line = view.state.doc.lineAt(pos);
-      const match = LINE_BREAK_REGEX.exec(line.text);
-      if (match) {
-        const lineBreakStart = line.from + match.index;
-        const lineBreakEnd = line.to;
-        if (currentMode === "preview") {
-          builder.add(
-            lineBreakEnd - 2,
-            lineBreakEnd,
-            liveLineBreakMark
-          );
-          builder.add(
-            lineBreakEnd,
-            lineBreakEnd,
-            import_view12.Decoration.widget({
-              widget: new LineBreakVisualIndicator(),
-              side: -1
-              // Position before the line break
-            })
-          );
-        } else {
-          builder.add(
-            lineBreakEnd - 2,
-            lineBreakEnd,
-            liveLineBreakMark
-          );
-        }
-      }
-      pos = line.to + 1;
-    }
-  }
-  return builder.finish();
-}
-var LineBreakDecorator = import_view12.ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = buildLineBreakDecorations(view);
-    }
-    update(update) {
-      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
-      if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
-        this.decorations = buildLineBreakDecorations(update.view);
-      }
-    }
-  },
-  {
-    decorations: (v) => v.decorations
-  }
-);
-
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/htmlTagDecorator.ts
-var import_view13 = require("@codemirror/view");
-var import_state3 = require("@codemirror/state");
-var import_dompurify2 = __toESM(require("dompurify"));
-
-// src/app/obsidian-editor/utils/formatting/html-formatter.ts
-var import_dompurify = __toESM(require("dompurify"));
-
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/htmlTagDecorator.ts
-if (typeof window !== "undefined") {
-  import_dompurify2.default.addHook("afterSanitizeAttributes", function(node) {
-    if ("target" in node) {
-      node.setAttribute("target", "_blank");
-      node.setAttribute("rel", "noopener noreferrer");
-    }
-    if (node.nodeName === "IFRAME") {
-      node.setAttribute("sandbox", "allow-scripts allow-popups allow-forms allow-same-origin");
-    }
-  });
-}
-var HTML_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*)>([\s\S]*?)<\/\1>/g;
-var htmlTagMark = import_view13.Decoration.mark({
-  class: "cm-html-tag-syntax"
-});
-var HTMLTagDecorator = import_view13.ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = this.buildDecorations(view);
-    }
-    update(update) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    buildDecorations(view) {
-      const builder = new import_state3.RangeSetBuilder();
-      try {
-        for (const { from, to } of view.visibleRanges) {
-          const text = view.state.doc.sliceString(from, to);
-          let match;
-          HTML_TAG_REGEX.lastIndex = 0;
-          while ((match = HTML_TAG_REGEX.exec(text)) !== null) {
-            if (!match || !match.index) {
-              continue;
-            }
-            const tagStart2 = from + match.index;
-            const tagEnd = tagStart2 + match[0].length;
-            try {
-              const decoration = import_view13.Decoration.mark({
-                class: "cm-html-tag"
-              });
-              if (decoration) {
-                builder.add(tagStart2, tagEnd, decoration);
-              }
-            } catch (decorationError) {
-              console.warn("Error creating HTML tag decoration:", decorationError);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error building HTML decorations:", error);
-      }
-      return builder.finish();
-    }
-  },
-  {
-    decorations: (v) => v.decorations
-  }
-);
-
 // src/app/obsidian-editor/extensions/markdown-syntax/rules/blockquoteDecorator.ts
-var import_view14 = require("@codemirror/view");
-var VerticalBarWidget = class extends import_view14.WidgetType {
+var import_view15 = require("@codemirror/view");
+var VerticalBarWidget = class extends import_view15.WidgetType {
   toDOM() {
     const bar = document.createElement("span");
     bar.className = "cm-blockquote-bar";
@@ -1273,7 +1610,7 @@ var VerticalBarWidget = class extends import_view14.WidgetType {
     return true;
   }
 };
-var BlockquoteBarWidget = class extends import_view14.WidgetType {
+var BlockquoteBarWidget = class extends import_view15.WidgetType {
   constructor(level) {
     super();
     this.level = level;
@@ -1309,7 +1646,7 @@ var BlockquoteDecorator = class {
           decorations.push({
             from: markerStart,
             to: markerStart + markerStr.length,
-            decoration: import_view14.Decoration.replace({ widget: new BlockquoteBarWidget(barCount) })
+            decoration: import_view15.Decoration.replace({ widget: new BlockquoteBarWidget(barCount) })
           });
         }
         charPos += lineText.length + 1;
@@ -1335,7 +1672,7 @@ var BlockquoteDecorator = class {
                 decorations.push({
                   from: markerStart + k,
                   to: markerStart + k + 1,
-                  decoration: import_view14.Decoration.replace({ widget: new VerticalBarWidget() })
+                  decoration: import_view15.Decoration.replace({ widget: new VerticalBarWidget() })
                 });
               }
             }
@@ -1347,148 +1684,10 @@ var BlockquoteDecorator = class {
   }
 };
 
-// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
-var syntaxRules = [
-  new HeadingDecorator(),
-  new BoldDecorator(),
-  new ItalicDecorator(),
-  new StrikethroughDecorator(),
-  new CodeDecorator(),
-  new HighlightDecorator(),
-  new OldBoldDecorator(),
-  new OldItalicDecorator(),
-  new ListDecorator(),
-  new BlockquoteDecorator(),
-  new FencedCodeBlockDecorator()
-  // HorizontalRuleDecorator is now a ViewPlugin and managed separately
-];
-var setMarkdownSyntaxMode = import_state4.StateEffect.define();
-function buildLegacyDecorations(state, currentMode, view) {
-  const builder = new import_state4.RangeSetBuilder();
-  const allDecorations = [];
-  const cursorPositions = [];
-  for (const range of state.selection.ranges) {
-    cursorPositions.push(range.head);
-  }
-  const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
-  for (const { from, to } of rangesToProcess) {
-    const docTextSlice = state.doc.sliceString(from, to);
-    const context = {
-      builder,
-      docText: docTextSlice,
-      textSliceFrom: from,
-      cursorPositions,
-      state,
-      view,
-      decorations: allDecorations,
-      currentMode
-    };
-    for (const rule of syntaxRules) {
-      try {
-        if (typeof rule.process === "function") {
-          rule.process(context);
-        } else {
-          console.warn(`Rule ${rule.constructor.name} does not have a process method.`);
-        }
-      } catch (error) {
-        console.error("Error processing legacy rule:", rule.constructor.name, error);
-      }
-    }
-  }
-  const groupedDecorations = /* @__PURE__ */ new Map();
-  for (const item of allDecorations) {
-    if (!groupedDecorations.has(item.from)) {
-      groupedDecorations.set(item.from, []);
-    }
-    if (item.decoration) {
-      groupedDecorations.get(item.from).push(item);
-    } else {
-      console.warn("Encountered an item with undefined decoration during legacy build:", item);
-    }
-  }
-  const sortedFromPositions = [...groupedDecorations.keys()].sort((a, b) => a - b);
-  for (const fromPos of sortedFromPositions) {
-    const group = groupedDecorations.get(fromPos);
-    group.sort((a, b) => a.to - b.to);
-    for (const item of group) {
-      builder.add(item.from, item.to, item.decoration);
-    }
-  }
-  return builder.finish();
-}
-var markdownSyntaxStateField = import_state4.StateField.define({
-  /**
-   * Creates the initial state for the field
-   * @param state - The editor state
-   * @returns The initial field value
-   */
-  create(state) {
-    const initialMode = "live";
-    return {
-      decorations: buildLegacyDecorations(state, initialMode, void 0),
-      currentMode: initialMode
-    };
-  },
-  /**
-   * Updates the field value based on transactions
-   * @param value - The current field value
-   * @param tr - The transaction to apply
-   * @returns The updated field value
-   */
-  update(value, tr) {
-    let newMode = value.currentMode;
-    let needsRebuild = false;
-    for (const effect of tr.effects) {
-      if (effect.is(setMarkdownSyntaxMode)) {
-        newMode = effect.value;
-        needsRebuild = true;
-      }
-    }
-    let modeChangedByEffect = false;
-    for (const effect of tr.effects) {
-      if (effect.is(setMarkdownSyntaxMode)) {
-        if (newMode !== effect.value) {
-          newMode = effect.value;
-          modeChangedByEffect = true;
-        }
-      }
-    }
-    if (tr.docChanged || tr.selection && !tr.startState.selection.eq(tr.selection) || modeChangedByEffect) {
-      return {
-        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
-        currentMode: newMode
-      };
-    }
-    if (value.currentMode !== newMode) {
-      return {
-        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
-        currentMode: newMode
-      };
-    }
-    return value;
-  },
-  /**
-   * Provides the decorations to the editor view
-   */
-  provide: (f) => import_view15.EditorView.decorations.from(f, (value) => value.decorations)
-});
-function createMarkdownSyntaxPlugin() {
-  return [
-    markdownSyntaxStateField,
-    LineBreakDecorator,
-    HTMLTagDecorator,
-    HorizontalRuleDecorator
-  ];
-}
-
-// src/app/obsidian-editor/utils/editorExtensions.ts
-var import_state12 = require("@codemirror/state");
-var import_view22 = require("@codemirror/view");
-
 // node_modules/@codemirror/lang-markdown/dist/index.js
-var import_state7 = require("@codemirror/state");
+var import_state3 = require("@codemirror/state");
 var import_view18 = require("@codemirror/view");
-var import_language5 = require("@codemirror/language");
+var import_language8 = require("@codemirror/language");
 var import_autocomplete2 = require("@codemirror/autocomplete");
 var import_markdown = require("@lezer/markdown");
 
@@ -5280,7 +5479,7 @@ function getSpecializer(spec) {
 }
 
 // node_modules/@lezer/html/dist/index.js
-var import_highlight = require("@lezer/highlight");
+var import_highlight3 = require("@lezer/highlight");
 var scriptText = 54;
 var StartCloseScriptTag = 1;
 var styleText = 55;
@@ -5529,18 +5728,18 @@ function contentTokenizer(tag, textToken, endToken) {
 var scriptTokens = contentTokenizer("script", scriptText, StartCloseScriptTag);
 var styleTokens = contentTokenizer("style", styleText, StartCloseStyleTag);
 var textareaTokens = contentTokenizer("textarea", textareaText, StartCloseTextareaTag);
-var htmlHighlighting = (0, import_highlight.styleTags)({
-  "Text RawText": import_highlight.tags.content,
-  "StartTag StartCloseTag SelfClosingEndTag EndTag": import_highlight.tags.angleBracket,
-  TagName: import_highlight.tags.tagName,
-  "MismatchedCloseTag/TagName": [import_highlight.tags.tagName, import_highlight.tags.invalid],
-  AttributeName: import_highlight.tags.attributeName,
-  "AttributeValue UnquotedAttributeValue": import_highlight.tags.attributeValue,
-  Is: import_highlight.tags.definitionOperator,
-  "EntityReference CharacterReference": import_highlight.tags.character,
-  Comment: import_highlight.tags.blockComment,
-  ProcessingInst: import_highlight.tags.processingInstruction,
-  DoctypeDecl: import_highlight.tags.documentMeta
+var htmlHighlighting = (0, import_highlight3.styleTags)({
+  "Text RawText": import_highlight3.tags.content,
+  "StartTag StartCloseTag SelfClosingEndTag EndTag": import_highlight3.tags.angleBracket,
+  TagName: import_highlight3.tags.tagName,
+  "MismatchedCloseTag/TagName": [import_highlight3.tags.tagName, import_highlight3.tags.invalid],
+  AttributeName: import_highlight3.tags.attributeName,
+  "AttributeValue UnquotedAttributeValue": import_highlight3.tags.attributeValue,
+  Is: import_highlight3.tags.definitionOperator,
+  "EntityReference CharacterReference": import_highlight3.tags.character,
+  Comment: import_highlight3.tags.blockComment,
+  ProcessingInst: import_highlight3.tags.processingInstruction,
+  DoctypeDecl: import_highlight3.tags.documentMeta
 });
 var parser = LRParser.deserialize({
   version: 14,
@@ -5577,17 +5776,17 @@ function findTagName(openTag, input) {
   let tagNameNode = openTag.getChild(TagName);
   return tagNameNode ? input.read(tagNameNode.from, tagNameNode.to) : " ";
 }
-function maybeNest(node, input, tags6) {
+function maybeNest(node, input, tags8) {
   let attrs;
-  for (let tag of tags6) {
+  for (let tag of tags8) {
     if (!tag.attrs || tag.attrs(attrs || (attrs = getAttrs(node.node.parent.firstChild, input))))
       return { parser: tag.parser };
   }
   return null;
 }
-function configureNesting(tags6 = [], attributes = []) {
+function configureNesting(tags8 = [], attributes = []) {
   let script = [], style = [], textarea = [], other = [];
-  for (let tag of tags6) {
+  for (let tag of tags8) {
     let array = tag.tag == "script" ? script : tag.tag == "style" ? style : tag.tag == "textarea" ? textarea : other;
     array.push(tag);
   }
@@ -5631,7 +5830,7 @@ function configureNesting(tags6 = [], attributes = []) {
 }
 
 // node_modules/@lezer/css/dist/index.js
-var import_highlight2 = require("@lezer/highlight");
+var import_highlight4 = require("@lezer/highlight");
 var descendantOp = 107;
 var Unit = 1;
 var callee = 108;
@@ -5724,39 +5923,39 @@ var unitToken = new ExternalTokenizer((input) => {
     }
   }
 });
-var cssHighlighting = (0, import_highlight2.styleTags)({
-  "AtKeyword import charset namespace keyframes media supports": import_highlight2.tags.definitionKeyword,
-  "from to selector": import_highlight2.tags.keyword,
-  NamespaceName: import_highlight2.tags.namespace,
-  KeyframeName: import_highlight2.tags.labelName,
-  KeyframeRangeName: import_highlight2.tags.operatorKeyword,
-  TagName: import_highlight2.tags.tagName,
-  ClassName: import_highlight2.tags.className,
-  PseudoClassName: import_highlight2.tags.constant(import_highlight2.tags.className),
-  IdName: import_highlight2.tags.labelName,
-  "FeatureName PropertyName": import_highlight2.tags.propertyName,
-  AttributeName: import_highlight2.tags.attributeName,
-  NumberLiteral: import_highlight2.tags.number,
-  KeywordQuery: import_highlight2.tags.keyword,
-  UnaryQueryOp: import_highlight2.tags.operatorKeyword,
-  "CallTag ValueName": import_highlight2.tags.atom,
-  VariableName: import_highlight2.tags.variableName,
-  Callee: import_highlight2.tags.operatorKeyword,
-  Unit: import_highlight2.tags.unit,
-  "UniversalSelector NestingSelector": import_highlight2.tags.definitionOperator,
-  "MatchOp CompareOp": import_highlight2.tags.compareOperator,
-  "ChildOp SiblingOp, LogicOp": import_highlight2.tags.logicOperator,
-  BinOp: import_highlight2.tags.arithmeticOperator,
-  Important: import_highlight2.tags.modifier,
-  Comment: import_highlight2.tags.blockComment,
-  ColorLiteral: import_highlight2.tags.color,
-  "ParenthesizedContent StringLiteral": import_highlight2.tags.string,
-  ":": import_highlight2.tags.punctuation,
-  "PseudoOp #": import_highlight2.tags.derefOperator,
-  "; ,": import_highlight2.tags.separator,
-  "( )": import_highlight2.tags.paren,
-  "[ ]": import_highlight2.tags.squareBracket,
-  "{ }": import_highlight2.tags.brace
+var cssHighlighting = (0, import_highlight4.styleTags)({
+  "AtKeyword import charset namespace keyframes media supports": import_highlight4.tags.definitionKeyword,
+  "from to selector": import_highlight4.tags.keyword,
+  NamespaceName: import_highlight4.tags.namespace,
+  KeyframeName: import_highlight4.tags.labelName,
+  KeyframeRangeName: import_highlight4.tags.operatorKeyword,
+  TagName: import_highlight4.tags.tagName,
+  ClassName: import_highlight4.tags.className,
+  PseudoClassName: import_highlight4.tags.constant(import_highlight4.tags.className),
+  IdName: import_highlight4.tags.labelName,
+  "FeatureName PropertyName": import_highlight4.tags.propertyName,
+  AttributeName: import_highlight4.tags.attributeName,
+  NumberLiteral: import_highlight4.tags.number,
+  KeywordQuery: import_highlight4.tags.keyword,
+  UnaryQueryOp: import_highlight4.tags.operatorKeyword,
+  "CallTag ValueName": import_highlight4.tags.atom,
+  VariableName: import_highlight4.tags.variableName,
+  Callee: import_highlight4.tags.operatorKeyword,
+  Unit: import_highlight4.tags.unit,
+  "UniversalSelector NestingSelector": import_highlight4.tags.definitionOperator,
+  "MatchOp CompareOp": import_highlight4.tags.compareOperator,
+  "ChildOp SiblingOp, LogicOp": import_highlight4.tags.logicOperator,
+  BinOp: import_highlight4.tags.arithmeticOperator,
+  Important: import_highlight4.tags.modifier,
+  Comment: import_highlight4.tags.blockComment,
+  ColorLiteral: import_highlight4.tags.color,
+  "ParenthesizedContent StringLiteral": import_highlight4.tags.string,
+  ":": import_highlight4.tags.punctuation,
+  "PseudoOp #": import_highlight4.tags.derefOperator,
+  "; ,": import_highlight4.tags.separator,
+  "( )": import_highlight4.tags.paren,
+  "[ ]": import_highlight4.tags.squareBracket,
+  "{ }": import_highlight4.tags.brace
 });
 var spec_callee = { __proto__: null, lang: 34, "nth-child": 34, "nth-last-child": 34, "nth-of-type": 34, "nth-last-of-type": 34, dir: 34, "host-context": 34, url: 62, "url-prefix": 62, domain: 62, regexp: 62 };
 var spec_AtKeyword = { __proto__: null, "@import": 120, "@media": 154, "@charset": 158, "@namespace": 162, "@keyframes": 168, "@supports": 180 };
@@ -5784,7 +5983,7 @@ var parser2 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-css/dist/index.js
-var import_language2 = require("@codemirror/language");
+var import_language5 = require("@codemirror/language");
 var _properties = null;
 function properties() {
   if (!_properties && typeof document == "object" && document.body) {
@@ -6433,7 +6632,7 @@ var values = /* @__PURE__ */ [
   "yellow",
   "yellowgreen"
 ].map((name) => ({ type: "constant", label: name })));
-var tags3 = /* @__PURE__ */ [
+var tags5 = /* @__PURE__ */ [
   "a",
   "abbr",
   "address",
@@ -6589,7 +6788,7 @@ function variableNames(doc, node, isVariable) {
   }
 }
 var defineCSSCompletionSource = (isVariable) => (context) => {
-  let { state, pos } = context, node = (0, import_language2.syntaxTree)(state).resolveInner(pos, -1);
+  let { state, pos } = context, node = (0, import_language5.syntaxTree)(state).resolveInner(pos, -1);
   let isDash = node.type.isError && node.from == node.to - 1 && state.doc.sliceString(node.from, node.to) == "-";
   if (node.name == "PropertyName" || (isDash || node.name == "TagName") && /^(Block|Styles)$/.test(node.resolve(node.to).name))
     return { from: node.from, options: properties(), validFor: identifier2 };
@@ -6607,7 +6806,7 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
     for (let { parent } = node; parent; parent = parent.parent)
       if (parent.name == "Block")
         return { from: node.from, options: properties(), validFor: identifier2 };
-    return { from: node.from, options: tags3, validFor: identifier2 };
+    return { from: node.from, options: tags5, validFor: identifier2 };
   }
   if (node.name == "AtKeyword")
     return { from: node.from, options: atRules, validFor: identifier2 };
@@ -6623,15 +6822,15 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
   return null;
 };
 var cssCompletionSource = /* @__PURE__ */ defineCSSCompletionSource((n) => n.name == "VariableName");
-var cssLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
+var cssLanguage = /* @__PURE__ */ import_language5.LRLanguage.define({
   name: "css",
   parser: /* @__PURE__ */ parser2.configure({
     props: [
-      /* @__PURE__ */ import_language2.indentNodeProp.add({
-        Declaration: /* @__PURE__ */ (0, import_language2.continuedIndent)()
+      /* @__PURE__ */ import_language5.indentNodeProp.add({
+        Declaration: /* @__PURE__ */ (0, import_language5.continuedIndent)()
       }),
-      /* @__PURE__ */ import_language2.foldNodeProp.add({
-        "Block KeyframeList": import_language2.foldInside
+      /* @__PURE__ */ import_language5.foldNodeProp.add({
+        "Block KeyframeList": import_language5.foldInside
       })
     ]
   }),
@@ -6642,11 +6841,11 @@ var cssLanguage = /* @__PURE__ */ import_language2.LRLanguage.define({
   }
 });
 function css() {
-  return new import_language2.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
+  return new import_language5.LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 }
 
 // node_modules/@lezer/javascript/dist/index.js
-var import_highlight3 = require("@lezer/highlight");
+var import_highlight5 = require("@lezer/highlight");
 var noSemi = 315;
 var noSemiType = 316;
 var incdec = 1;
@@ -6771,63 +6970,63 @@ var jsx2 = new ExternalTokenizer((input, stack) => {
   }
   input.acceptToken(JSXStartTag, -back);
 });
-var jsHighlight = (0, import_highlight3.styleTags)({
-  "get set async static": import_highlight3.tags.modifier,
-  "for while do if else switch try catch finally return throw break continue default case": import_highlight3.tags.controlKeyword,
-  "in of await yield void typeof delete instanceof as satisfies": import_highlight3.tags.operatorKeyword,
-  "let var const using function class extends": import_highlight3.tags.definitionKeyword,
-  "import export from": import_highlight3.tags.moduleKeyword,
-  "with debugger new": import_highlight3.tags.keyword,
-  TemplateString: import_highlight3.tags.special(import_highlight3.tags.string),
-  super: import_highlight3.tags.atom,
-  BooleanLiteral: import_highlight3.tags.bool,
-  this: import_highlight3.tags.self,
-  null: import_highlight3.tags.null,
-  Star: import_highlight3.tags.modifier,
-  VariableName: import_highlight3.tags.variableName,
-  "CallExpression/VariableName TaggedTemplateExpression/VariableName": import_highlight3.tags.function(import_highlight3.tags.variableName),
-  VariableDefinition: import_highlight3.tags.definition(import_highlight3.tags.variableName),
-  Label: import_highlight3.tags.labelName,
-  PropertyName: import_highlight3.tags.propertyName,
-  PrivatePropertyName: import_highlight3.tags.special(import_highlight3.tags.propertyName),
-  "CallExpression/MemberExpression/PropertyName": import_highlight3.tags.function(import_highlight3.tags.propertyName),
-  "FunctionDeclaration/VariableDefinition": import_highlight3.tags.function(import_highlight3.tags.definition(import_highlight3.tags.variableName)),
-  "ClassDeclaration/VariableDefinition": import_highlight3.tags.definition(import_highlight3.tags.className),
-  "NewExpression/VariableName": import_highlight3.tags.className,
-  PropertyDefinition: import_highlight3.tags.definition(import_highlight3.tags.propertyName),
-  PrivatePropertyDefinition: import_highlight3.tags.definition(import_highlight3.tags.special(import_highlight3.tags.propertyName)),
-  UpdateOp: import_highlight3.tags.updateOperator,
-  "LineComment Hashbang": import_highlight3.tags.lineComment,
-  BlockComment: import_highlight3.tags.blockComment,
-  Number: import_highlight3.tags.number,
-  String: import_highlight3.tags.string,
-  Escape: import_highlight3.tags.escape,
-  ArithOp: import_highlight3.tags.arithmeticOperator,
-  LogicOp: import_highlight3.tags.logicOperator,
-  BitOp: import_highlight3.tags.bitwiseOperator,
-  CompareOp: import_highlight3.tags.compareOperator,
-  RegExp: import_highlight3.tags.regexp,
-  Equals: import_highlight3.tags.definitionOperator,
-  Arrow: import_highlight3.tags.function(import_highlight3.tags.punctuation),
-  ": Spread": import_highlight3.tags.punctuation,
-  "( )": import_highlight3.tags.paren,
-  "[ ]": import_highlight3.tags.squareBracket,
-  "{ }": import_highlight3.tags.brace,
-  "InterpolationStart InterpolationEnd": import_highlight3.tags.special(import_highlight3.tags.brace),
-  ".": import_highlight3.tags.derefOperator,
-  ", ;": import_highlight3.tags.separator,
-  "@": import_highlight3.tags.meta,
-  TypeName: import_highlight3.tags.typeName,
-  TypeDefinition: import_highlight3.tags.definition(import_highlight3.tags.typeName),
-  "type enum interface implements namespace module declare": import_highlight3.tags.definitionKeyword,
-  "abstract global Privacy readonly override": import_highlight3.tags.modifier,
-  "is keyof unique infer asserts": import_highlight3.tags.operatorKeyword,
-  JSXAttributeValue: import_highlight3.tags.attributeValue,
-  JSXText: import_highlight3.tags.content,
-  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": import_highlight3.tags.angleBracket,
-  "JSXIdentifier JSXNameSpacedName": import_highlight3.tags.tagName,
-  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": import_highlight3.tags.attributeName,
-  "JSXBuiltin/JSXIdentifier": import_highlight3.tags.standard(import_highlight3.tags.tagName)
+var jsHighlight = (0, import_highlight5.styleTags)({
+  "get set async static": import_highlight5.tags.modifier,
+  "for while do if else switch try catch finally return throw break continue default case": import_highlight5.tags.controlKeyword,
+  "in of await yield void typeof delete instanceof as satisfies": import_highlight5.tags.operatorKeyword,
+  "let var const using function class extends": import_highlight5.tags.definitionKeyword,
+  "import export from": import_highlight5.tags.moduleKeyword,
+  "with debugger new": import_highlight5.tags.keyword,
+  TemplateString: import_highlight5.tags.special(import_highlight5.tags.string),
+  super: import_highlight5.tags.atom,
+  BooleanLiteral: import_highlight5.tags.bool,
+  this: import_highlight5.tags.self,
+  null: import_highlight5.tags.null,
+  Star: import_highlight5.tags.modifier,
+  VariableName: import_highlight5.tags.variableName,
+  "CallExpression/VariableName TaggedTemplateExpression/VariableName": import_highlight5.tags.function(import_highlight5.tags.variableName),
+  VariableDefinition: import_highlight5.tags.definition(import_highlight5.tags.variableName),
+  Label: import_highlight5.tags.labelName,
+  PropertyName: import_highlight5.tags.propertyName,
+  PrivatePropertyName: import_highlight5.tags.special(import_highlight5.tags.propertyName),
+  "CallExpression/MemberExpression/PropertyName": import_highlight5.tags.function(import_highlight5.tags.propertyName),
+  "FunctionDeclaration/VariableDefinition": import_highlight5.tags.function(import_highlight5.tags.definition(import_highlight5.tags.variableName)),
+  "ClassDeclaration/VariableDefinition": import_highlight5.tags.definition(import_highlight5.tags.className),
+  "NewExpression/VariableName": import_highlight5.tags.className,
+  PropertyDefinition: import_highlight5.tags.definition(import_highlight5.tags.propertyName),
+  PrivatePropertyDefinition: import_highlight5.tags.definition(import_highlight5.tags.special(import_highlight5.tags.propertyName)),
+  UpdateOp: import_highlight5.tags.updateOperator,
+  "LineComment Hashbang": import_highlight5.tags.lineComment,
+  BlockComment: import_highlight5.tags.blockComment,
+  Number: import_highlight5.tags.number,
+  String: import_highlight5.tags.string,
+  Escape: import_highlight5.tags.escape,
+  ArithOp: import_highlight5.tags.arithmeticOperator,
+  LogicOp: import_highlight5.tags.logicOperator,
+  BitOp: import_highlight5.tags.bitwiseOperator,
+  CompareOp: import_highlight5.tags.compareOperator,
+  RegExp: import_highlight5.tags.regexp,
+  Equals: import_highlight5.tags.definitionOperator,
+  Arrow: import_highlight5.tags.function(import_highlight5.tags.punctuation),
+  ": Spread": import_highlight5.tags.punctuation,
+  "( )": import_highlight5.tags.paren,
+  "[ ]": import_highlight5.tags.squareBracket,
+  "{ }": import_highlight5.tags.brace,
+  "InterpolationStart InterpolationEnd": import_highlight5.tags.special(import_highlight5.tags.brace),
+  ".": import_highlight5.tags.derefOperator,
+  ", ;": import_highlight5.tags.separator,
+  "@": import_highlight5.tags.meta,
+  TypeName: import_highlight5.tags.typeName,
+  TypeDefinition: import_highlight5.tags.definition(import_highlight5.tags.typeName),
+  "type enum interface implements namespace module declare": import_highlight5.tags.definitionKeyword,
+  "abstract global Privacy readonly override": import_highlight5.tags.modifier,
+  "is keyof unique infer asserts": import_highlight5.tags.operatorKeyword,
+  JSXAttributeValue: import_highlight5.tags.attributeValue,
+  JSXText: import_highlight5.tags.content,
+  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": import_highlight5.tags.angleBracket,
+  "JSXIdentifier JSXNameSpacedName": import_highlight5.tags.tagName,
+  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": import_highlight5.tags.attributeName,
+  "JSXBuiltin/JSXIdentifier": import_highlight5.tags.standard(import_highlight5.tags.tagName)
 });
 var spec_identifier = { __proto__: null, export: 20, as: 25, from: 33, default: 36, async: 41, function: 42, in: 52, out: 55, const: 56, extends: 60, this: 64, true: 72, false: 72, null: 84, void: 88, typeof: 92, super: 108, new: 142, delete: 154, yield: 163, await: 167, class: 172, public: 235, private: 235, protected: 235, readonly: 237, instanceof: 256, satisfies: 259, import: 292, keyof: 349, unique: 353, infer: 359, asserts: 395, is: 397, abstract: 417, implements: 419, type: 421, let: 424, var: 426, using: 429, interface: 435, enum: 439, namespace: 445, module: 447, declare: 451, global: 455, for: 474, of: 483, while: 486, with: 490, do: 494, if: 498, else: 500, switch: 504, case: 510, try: 516, catch: 520, finally: 524, return: 528, throw: 532, break: 536, continue: 540, debugger: 544 };
 var spec_word = { __proto__: null, async: 129, get: 131, set: 133, declare: 195, public: 197, private: 197, protected: 197, static: 199, abstract: 201, override: 203, readonly: 209, accessor: 211, new: 401 };
@@ -6859,8 +7058,8 @@ var parser3 = LRParser.deserialize({
 });
 
 // node_modules/@codemirror/lang-javascript/dist/index.js
-var import_language3 = require("@codemirror/language");
-var import_state5 = require("@codemirror/state");
+var import_language6 = require("@codemirror/language");
+var import_state = require("@codemirror/state");
 var import_view16 = require("@codemirror/view");
 var import_autocomplete = require("@codemirror/autocomplete");
 var snippets = [
@@ -7020,7 +7219,7 @@ var dontComplete = [
   "?."
 ];
 function localCompletionSource(context) {
-  let inner = (0, import_language3.syntaxTree)(context.state).resolveInner(context.pos, -1);
+  let inner = (0, import_language6.syntaxTree)(context.state).resolveInner(context.pos, -1);
   if (dontComplete.indexOf(inner.name) > -1)
     return null;
   let isWord = inner.name == "VariableName" || inner.to - inner.from < 20 && Identifier.test(context.state.sliceDoc(inner.from, inner.to));
@@ -7037,22 +7236,22 @@ function localCompletionSource(context) {
     validFor: Identifier
   };
 }
-var javascriptLanguage = /* @__PURE__ */ import_language3.LRLanguage.define({
+var javascriptLanguage = /* @__PURE__ */ import_language6.LRLanguage.define({
   name: "javascript",
   parser: /* @__PURE__ */ parser3.configure({
     props: [
-      /* @__PURE__ */ import_language3.indentNodeProp.add({
-        IfStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|else\b)/ }),
-        TryStatement: /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
-        LabeledStatement: import_language3.flatIndent,
+      /* @__PURE__ */ import_language6.indentNodeProp.add({
+        IfStatement: /* @__PURE__ */ (0, import_language6.continuedIndent)({ except: /^\s*({|else\b)/ }),
+        TryStatement: /* @__PURE__ */ (0, import_language6.continuedIndent)({ except: /^\s*({|catch\b|finally\b)/ }),
+        LabeledStatement: import_language6.flatIndent,
         SwitchBody: (context) => {
           let after = context.textAfter, closed = /^\s*\}/.test(after), isCase = /^\s*(case|default)\b/.test(after);
           return context.baseIndent + (closed ? 0 : isCase ? 1 : 2) * context.unit;
         },
-        Block: /* @__PURE__ */ (0, import_language3.delimitedIndent)({ closing: "}" }),
+        Block: /* @__PURE__ */ (0, import_language6.delimitedIndent)({ closing: "}" }),
         ArrowFunction: (cx) => cx.baseIndent + cx.unit,
         "TemplateString BlockComment": () => null,
-        "Statement Property": /* @__PURE__ */ (0, import_language3.continuedIndent)({ except: /^\s*{/ }),
+        "Statement Property": /* @__PURE__ */ (0, import_language6.continuedIndent)({ except: /^\s*{/ }),
         JSXElement(context) {
           let closed = /^\s*<\//.test(context.textAfter);
           return context.lineIndent(context.node.from) + (closed ? 0 : context.unit);
@@ -7065,8 +7264,8 @@ var javascriptLanguage = /* @__PURE__ */ import_language3.LRLanguage.define({
           return context.column(context.node.from) + context.unit;
         }
       }),
-      /* @__PURE__ */ import_language3.foldNodeProp.add({
-        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language3.foldInside,
+      /* @__PURE__ */ import_language6.foldNodeProp.add({
+        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": import_language6.foldInside,
         BlockComment(tree) {
           return { from: tree.from + 2, to: tree.to - 2 };
         }
@@ -7082,16 +7281,16 @@ var javascriptLanguage = /* @__PURE__ */ import_language3.LRLanguage.define({
 });
 var jsxSublanguage = {
   test: (node) => /^JSX/.test(node.name),
-  facet: /* @__PURE__ */ (0, import_language3.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
+  facet: /* @__PURE__ */ (0, import_language6.defineLanguageFacet)({ commentTokens: { block: { open: "{/*", close: "*/}" } } })
 };
 var typescriptLanguage = /* @__PURE__ */ javascriptLanguage.configure({ dialect: "ts" }, "typescript");
 var jsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx",
-  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language6.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 });
 var tsxLanguage = /* @__PURE__ */ javascriptLanguage.configure({
   dialect: "jsx ts",
-  props: [/* @__PURE__ */ import_language3.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
+  props: [/* @__PURE__ */ import_language6.sublanguageProp.add((n) => n.isTop ? [jsxSublanguage] : void 0)]
 }, "typescript");
 var kwCompletion = (name) => ({ label: name, type: "keyword" });
 var keywords = /* @__PURE__ */ "break case const continue default delete export extends false finally in instanceof let new return static super switch this throw true typeof var yield".split(" ").map(kwCompletion);
@@ -7099,7 +7298,7 @@ var typescriptKeywords = /* @__PURE__ */ keywords.concat(/* @__PURE__ */ ["decla
 function javascript(config = {}) {
   let lang = config.jsx ? config.typescript ? tsxLanguage : jsxLanguage : config.typescript ? typescriptLanguage : javascriptLanguage;
   let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords);
-  return new import_language3.LanguageSupport(lang, [
+  return new import_language6.LanguageSupport(lang, [
     javascriptLanguage.data.of({
       autocomplete: (0, import_autocomplete.ifNotIn)(dontComplete, (0, import_autocomplete.completeFromList)(completions))
     }),
@@ -7132,7 +7331,7 @@ var autoCloseTags = /* @__PURE__ */ import_view16.EditorView.inputHandler.of((vi
   let base = defaultInsert(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a;
-    let { head } = range, around = (0, import_language3.syntaxTree)(state).resolveInner(head - 1, -1), name;
+    let { head } = range, around = (0, import_language6.syntaxTree)(state).resolveInner(head - 1, -1), name;
     if (around.name == "JSXStartTag")
       around = around.parent;
     if (state.doc.sliceString(head - 1, head) != text || around.name == "JSXAttributeValue" && around.to > head) ;
@@ -7142,7 +7341,7 @@ var autoCloseTags = /* @__PURE__ */ import_view16.EditorView.inputHandler.of((vi
       let empty = around.parent, base2 = empty.parent;
       if (base2 && empty.from == head - 2 && ((name = elementName(state.doc, base2.firstChild, head)) || ((_a = base2.firstChild) === null || _a === void 0 ? void 0 : _a.name) == "JSXFragmentTag")) {
         let insert = `${name}>`;
-        return { range: import_state5.EditorSelection.cursor(head + insert.length, -1), changes: { from: head, insert } };
+        return { range: import_state.EditorSelection.cursor(head + insert.length, -1), changes: { from: head, insert } };
       }
     } else if (text == ">") {
       let openTag = findOpenTag(around);
@@ -7162,8 +7361,8 @@ var autoCloseTags = /* @__PURE__ */ import_view16.EditorView.inputHandler.of((vi
 
 // node_modules/@codemirror/lang-html/dist/index.js
 var import_view17 = require("@codemirror/view");
-var import_state6 = require("@codemirror/state");
-var import_language4 = require("@codemirror/language");
+var import_state2 = require("@codemirror/state");
+var import_language7 = require("@codemirror/language");
 var Targets = ["_blank", "_self", "_top", "_parent"];
 var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
 var Methods = ["get", "post", "put", "delete"];
@@ -7707,7 +7906,7 @@ function completeAttrValue(state, schema, tree, from, to) {
   return { from, to, options, validFor: token };
 }
 function htmlCompletionFor(schema, context) {
-  let { state, pos } = context, tree = (0, import_language4.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
+  let { state, pos } = context, tree = (0, import_language7.syntaxTree)(state).resolveInner(pos, -1), around = tree.resolve(pos);
   for (let scan = pos, before; around == tree && (before = tree.childBefore(scan)); ) {
     let last = before.lastChild;
     if (!last || !last.type.isError || last.from < last.to)
@@ -7784,11 +7983,11 @@ var defaultAttrs = /* @__PURE__ */ [
     parser: /* @__PURE__ */ cssLanguage.parser.configure({ top: "Styles" })
   }
 ].concat(/* @__PURE__ */ eventAttributes.map((name) => ({ name, parser: javascriptLanguage.parser })));
-var htmlPlain = /* @__PURE__ */ import_language4.LRLanguage.define({
+var htmlPlain = /* @__PURE__ */ import_language7.LRLanguage.define({
   name: "html",
   parser: /* @__PURE__ */ parser.configure({
     props: [
-      /* @__PURE__ */ import_language4.indentNodeProp.add({
+      /* @__PURE__ */ import_language7.indentNodeProp.add({
         Element(context) {
           let after = /^(\s*)(<\/)?/.exec(context.textAfter);
           if (context.node.to <= context.pos + after[0].length)
@@ -7813,7 +8012,7 @@ var htmlPlain = /* @__PURE__ */ import_language4.LRLanguage.define({
           return null;
         }
       }),
-      /* @__PURE__ */ import_language4.foldNodeProp.add({
+      /* @__PURE__ */ import_language7.foldNodeProp.add({
         Element(node) {
           let first = node.firstChild, last = node.lastChild;
           if (!first || first.name != "OpenTag")
@@ -7821,7 +8020,7 @@ var htmlPlain = /* @__PURE__ */ import_language4.LRLanguage.define({
           return { from: first.to, to: last.name == "CloseTag" ? last.from : node.to };
         }
       }),
-      /* @__PURE__ */ import_language4.bracketMatchingHandle.add({
+      /* @__PURE__ */ import_language7.bracketMatchingHandle.add({
         "OpenTag CloseTag": (node) => node.getChild("TagName")
       })
     ]
@@ -7844,7 +8043,7 @@ function html(config = {}) {
   if (config.nestedLanguages && config.nestedLanguages.length || config.nestedAttributes && config.nestedAttributes.length)
     wrap = configureNesting((config.nestedLanguages || []).concat(defaultNesting), (config.nestedAttributes || []).concat(defaultAttrs));
   let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
-  return new import_language4.LanguageSupport(lang, [
+  return new import_language7.LanguageSupport(lang, [
     htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config) }),
     config.autoCloseTags !== false ? autoCloseTags2 : [],
     javascript().support,
@@ -7859,7 +8058,7 @@ var autoCloseTags2 = /* @__PURE__ */ import_view17.EditorView.inputHandler.of((v
   let closeTags = state.changeByRange((range) => {
     var _a, _b, _c;
     let didType = state.doc.sliceString(range.from - 1, range.to) == text;
-    let { head } = range, after = (0, import_language4.syntaxTree)(state).resolveInner(head, -1), name;
+    let { head } = range, after = (0, import_language7.syntaxTree)(state).resolveInner(head, -1), name;
     if (didType && text == ">" && after.name == "EndTag") {
       let tag = after.parent;
       if (((_b = (_a = tag.parent) === null || _a === void 0 ? void 0 : _a.lastChild) === null || _b === void 0 ? void 0 : _b.name) != "CloseTag" && (name = elementName2(state.doc, tag.parent, head)) && !selfClosers2.has(name)) {
@@ -7873,7 +8072,7 @@ var autoCloseTags2 = /* @__PURE__ */ import_view17.EditorView.inputHandler.of((v
         let to2 = head + (state.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
         let insert = `${name}>`;
         return {
-          range: import_state6.EditorSelection.cursor(head + insert.length, -1),
+          range: import_state2.EditorSelection.cursor(head + insert.length, -1),
           changes: { from: head, to: to2, insert }
         };
       }
@@ -7893,18 +8092,18 @@ var autoCloseTags2 = /* @__PURE__ */ import_view17.EditorView.inputHandler.of((v
 });
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
-var data = /* @__PURE__ */ (0, import_language5.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
+var data = /* @__PURE__ */ (0, import_language8.defineLanguageFacet)({ commentTokens: { block: { open: "<!--", close: "-->" } } });
 var headingProp = /* @__PURE__ */ new NodeProp();
 var commonmark = /* @__PURE__ */ import_markdown.parser.configure({
   props: [
-    /* @__PURE__ */ import_language5.foldNodeProp.add((type) => {
+    /* @__PURE__ */ import_language8.foldNodeProp.add((type) => {
       return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to });
     }),
     /* @__PURE__ */ headingProp.add(isHeading),
-    /* @__PURE__ */ import_language5.indentNodeProp.add({
+    /* @__PURE__ */ import_language8.indentNodeProp.add({
       Document: () => null
     }),
-    /* @__PURE__ */ import_language5.languageDataProp.add({
+    /* @__PURE__ */ import_language8.languageDataProp.add({
       Document: data
     })
   ]
@@ -7926,8 +8125,8 @@ function findSectionEnd(headerNode, level) {
   }
   return last.to;
 }
-var headerIndent = /* @__PURE__ */ import_language5.foldService.of((state, start, end) => {
-  for (let node = (0, import_language5.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
+var headerIndent = /* @__PURE__ */ import_language8.foldService.of((state, start, end) => {
+  for (let node = (0, import_language8.syntaxTree)(state).resolveInner(end, -1); node; node = node.parent) {
     if (node.from < start)
       break;
     let heading = node.type.prop(headingProp);
@@ -7940,28 +8139,28 @@ var headerIndent = /* @__PURE__ */ import_language5.foldService.of((state, start
   return null;
 });
 function mkLang(parser5) {
-  return new import_language5.Language(data, parser5, [headerIndent], "markdown");
+  return new import_language8.Language(data, parser5, [headerIndent], "markdown");
 }
 var commonmarkLanguage = /* @__PURE__ */ mkLang(commonmark);
 var extended = /* @__PURE__ */ commonmark.configure([import_markdown.GFM, import_markdown.Subscript, import_markdown.Superscript, import_markdown.Emoji, {
   props: [
-    /* @__PURE__ */ import_language5.foldNodeProp.add({
+    /* @__PURE__ */ import_language8.foldNodeProp.add({
       Table: (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to })
     })
   ]
 }]);
 var markdownLanguage = /* @__PURE__ */ mkLang(extended);
-function getCodeParser(languages2, defaultLanguage) {
+function getCodeParser(languages3, defaultLanguage) {
   return (info) => {
-    if (info && languages2) {
+    if (info && languages3) {
       let found = null;
       info = /\S*/.exec(info)[0];
-      if (typeof languages2 == "function")
-        found = languages2(info);
+      if (typeof languages3 == "function")
+        found = languages3(info);
       else
-        found = import_language5.LanguageDescription.matchLanguageName(languages2, info, true);
-      if (found instanceof import_language5.LanguageDescription)
-        return found.support ? found.support.language.parser : import_language5.ParseContext.getSkippingParser(found.load());
+        found = import_language8.LanguageDescription.matchLanguageName(languages3, info, true);
+      if (found instanceof import_language8.LanguageDescription)
+        return found.support ? found.support.language.parser : import_language8.ParseContext.getSkippingParser(found.load());
       else if (found)
         return found.parser;
     }
@@ -8052,9 +8251,9 @@ function renumberList(after, doc, changes, offset = 0) {
 }
 function normalizeIndent(content, state) {
   let blank = /^[ \t]*/.exec(content)[0].length;
-  if (!blank || state.facet(import_language5.indentUnit) != "	")
+  if (!blank || state.facet(import_language8.indentUnit) != "	")
     return content;
-  let col = (0, import_state7.countColumn)(content, 4, blank);
+  let col = (0, import_state3.countColumn)(content, 4, blank);
   let space3 = "";
   for (let i = col; i > 0; ) {
     if (i >= 4) {
@@ -8068,7 +8267,7 @@ function normalizeIndent(content, state) {
   return space3 + content.slice(blank);
 }
 var insertNewlineContinueMarkup = ({ state, dispatch }) => {
-  let tree = (0, import_language5.syntaxTree)(state), { doc } = state;
+  let tree = (0, import_language8.syntaxTree)(state), { doc } = state;
   let dont = null, changes = state.changeByRange((range) => {
     if (!range.empty || !markdownLanguage.isActiveAt(state, range.from, 0))
       return dont = { range };
@@ -8098,11 +8297,11 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
           renumberList(inner.item, doc, changes3, -2);
         if (next && next.node.name == "OrderedList")
           renumberList(next.item, doc, changes3);
-        return { range: import_state7.EditorSelection.cursor(delTo + insert2.length), changes: changes3 };
+        return { range: import_state3.EditorSelection.cursor(delTo + insert2.length), changes: changes3 };
       } else {
         let insert2 = blankLine(context, state, line);
         return {
-          range: import_state7.EditorSelection.cursor(pos + insert2.length + 1),
+          range: import_state3.EditorSelection.cursor(pos + insert2.length + 1),
           changes: { from: line.from, insert: insert2 + state.lineBreak }
         };
       }
@@ -8124,7 +8323,7 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
     let insert = "";
     if (!continued || /^[\s\d.)\-+*>]*/.exec(line.text)[0].length >= inner.to) {
       for (let i = 0, e = context.length - 1; i <= e; i++) {
-        insert += i == e && !continued ? context[i].marker(doc, 1) : context[i].blank(i < e ? (0, import_state7.countColumn)(line.text, 4, context[i + 1].from) - insert.length : null);
+        insert += i == e && !continued ? context[i].marker(doc, 1) : context[i].blank(i < e ? (0, import_state3.countColumn)(line.text, 4, context[i + 1].from) - insert.length : null);
       }
     }
     let from = pos;
@@ -8134,7 +8333,7 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
     if (nonTightList(inner.node, state.doc))
       insert = blankLine(context, state, line) + state.lineBreak + insert;
     changes2.push({ from, to: pos, insert: state.lineBreak + insert });
-    return { range: import_state7.EditorSelection.cursor(from + insert.length + 1), changes: changes2 };
+    return { range: import_state3.EditorSelection.cursor(from + insert.length + 1), changes: changes2 };
   });
   if (dont)
     return false;
@@ -8157,7 +8356,7 @@ function nonTightList(node, doc) {
 function blankLine(context, state, line) {
   let insert = "";
   for (let i = 0, e = context.length - 2; i <= e; i++) {
-    insert += context[i].blank(i < e ? (0, import_state7.countColumn)(line.text, 4, Math.min(line.text.length, context[i + 1].from)) - insert.length : null, i < e);
+    insert += context[i].blank(i < e ? (0, import_state3.countColumn)(line.text, 4, Math.min(line.text.length, context[i + 1].from)) - insert.length : null, i < e);
   }
   return normalizeIndent(insert, state);
 }
@@ -8180,7 +8379,7 @@ function contextNodeForDelete(tree, pos) {
   return node;
 }
 var deleteMarkupBackward = ({ state, dispatch }) => {
-  let tree = (0, import_language5.syntaxTree)(state);
+  let tree = (0, import_language8.syntaxTree)(state);
   let dont = null, changes = state.changeByRange((range) => {
     let pos = range.from, { doc } = state;
     if (range.empty && markdownLanguage.isActiveAt(state, range.from)) {
@@ -8191,7 +8390,7 @@ var deleteMarkupBackward = ({ state, dispatch }) => {
         let spaceEnd = inner.to - inner.spaceAfter.length + (inner.spaceAfter ? 1 : 0);
         if (pos - line.from > spaceEnd && !/\S/.test(line.text.slice(spaceEnd, pos - line.from)))
           return {
-            range: import_state7.EditorSelection.cursor(line.from + spaceEnd),
+            range: import_state3.EditorSelection.cursor(line.from + spaceEnd),
             changes: { from: line.from + spaceEnd, to: pos }
           };
         if (pos - line.from == spaceEnd && // Only apply this if we're on the line that has the
@@ -8200,16 +8399,16 @@ var deleteMarkupBackward = ({ state, dispatch }) => {
         (!inner.item || line.from <= inner.item.from || !/\S/.test(line.text.slice(0, inner.to)))) {
           let start = line.from + inner.from;
           if (inner.item && inner.node.from < inner.item.from && /\S/.test(line.text.slice(inner.from, inner.to))) {
-            let insert = inner.blank((0, import_state7.countColumn)(line.text, 4, inner.to) - (0, import_state7.countColumn)(line.text, 4, inner.from));
+            let insert = inner.blank((0, import_state3.countColumn)(line.text, 4, inner.to) - (0, import_state3.countColumn)(line.text, 4, inner.from));
             if (start == line.from)
               insert = normalizeIndent(insert, state);
             return {
-              range: import_state7.EditorSelection.cursor(start + insert.length),
+              range: import_state3.EditorSelection.cursor(start + insert.length),
               changes: { from: start, to: line.from + inner.to, insert }
             };
           }
           if (start < pos)
-            return { range: import_state7.EditorSelection.cursor(start), changes: { from: start, to: pos } };
+            return { range: import_state3.EditorSelection.cursor(start), changes: { from: start, to: pos } };
         }
       }
     }
@@ -8231,7 +8430,7 @@ function markdown(config = {}) {
     throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
   let extensions = config.extensions ? [config.extensions] : [];
   let support = [htmlTagLanguage.support], defaultCode;
-  if (defaultCodeLanguage instanceof import_language5.LanguageSupport) {
+  if (defaultCodeLanguage instanceof import_language8.LanguageSupport) {
     support.push(defaultCodeLanguage.support);
     defaultCode = defaultCodeLanguage.language;
   } else if (defaultCodeLanguage) {
@@ -8240,17 +8439,17 @@ function markdown(config = {}) {
   let codeParser = codeLanguages || defaultCode ? getCodeParser(codeLanguages, defaultCode) : void 0;
   extensions.push((0, import_markdown.parseCode)({ codeParser, htmlParser: htmlTagLanguage.language.parser }));
   if (addKeymap)
-    support.push(import_state7.Prec.high(import_view18.keymap.of(markdownKeymap)));
+    support.push(import_state3.Prec.high(import_view18.keymap.of(markdownKeymap)));
   let lang = mkLang(parser5.configure(extensions));
   if (completeHTMLTags)
     support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
-  return new import_language5.LanguageSupport(lang, support);
+  return new import_language8.LanguageSupport(lang, support);
 }
 function htmlTagCompletion(context) {
   let { state, pos } = context, m = /<[:\-\.\w\u00b7-\uffff]*$/.exec(state.sliceDoc(pos - 25, pos));
   if (!m)
     return null;
-  let tree = (0, import_language5.syntaxTree)(state).resolveInner(pos, -1);
+  let tree = (0, import_language8.syntaxTree)(state).resolveInner(pos, -1);
   while (tree && !tree.type.isTop) {
     if (tree.name == "CodeBlock" || tree.name == "FencedCode" || tree.name == "ProcessingInstructionBlock" || tree.name == "CommentBlock" || tree.name == "Link" || tree.name == "Image")
       return null;
@@ -8267,302 +8466,194 @@ var _tagCompletions = null;
 function htmlTagCompletions() {
   if (_tagCompletions)
     return _tagCompletions;
-  let result = htmlCompletionSource(new import_autocomplete2.CompletionContext(import_state7.EditorState.create({ extensions: htmlNoMatch }), 0, true));
+  let result = htmlCompletionSource(new import_autocomplete2.CompletionContext(import_state3.EditorState.create({ extensions: htmlNoMatch }), 0, true));
   return _tagCompletions = result ? result.options : [];
 }
 
-// src/app/obsidian-editor/utils/editorExtensions.ts
+// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
 var import_language_data = require("@codemirror/language-data");
-var import_language6 = require("@codemirror/language");
-var import_highlight4 = require("@lezer/highlight");
+var import_state5 = require("@codemirror/state");
+var syntaxRules = [
+  new HeadingDecorator(),
+  new BoldDecorator(),
+  new ItalicDecorator(),
+  new StrikethroughDecorator(),
+  new CodeDecorator(),
+  new HighlightDecorator(),
+  new OldBoldDecorator(),
+  new OldItalicDecorator(),
+  new ListDecorator(),
+  new BlockquoteDecorator(),
+  new FencedCodeBlockDecorator()
+  // HorizontalRuleDecorator is now a ViewPlugin and managed separately
+];
+var setMarkdownSyntaxMode = import_state4.StateEffect.define();
+function buildLegacyDecorations(state, currentMode, view) {
+  const builder = new import_state4.RangeSetBuilder();
+  const allDecorations = [];
+  const cursorPositions = [];
+  for (const range of state.selection.ranges) {
+    cursorPositions.push(range.head);
+  }
+  const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
+  const htmlEditRegions = [];
+  for (const { from, to } of rangesToProcess) {
+    const docTextSlice = state.doc.sliceString(from, to);
+    const context = {
+      builder,
+      docText: docTextSlice,
+      textSliceFrom: from,
+      cursorPositions,
+      state,
+      view,
+      decorations: allDecorations,
+      currentMode,
+      htmlEditRegions
+      // Empty array, but preserved for API compatibility
+    };
+    for (const rule of syntaxRules) {
+      try {
+        if (typeof rule.process === "function") {
+          rule.process(context);
+        } else {
+          console.warn(`Rule ${rule.constructor.name} does not have a process method.`);
+        }
+      } catch (error) {
+        console.error("Error processing legacy rule:", rule.constructor.name, error);
+      }
+    }
+  }
+  const groupedDecorations = /* @__PURE__ */ new Map();
+  for (const item of allDecorations) {
+    if (!groupedDecorations.has(item.from)) {
+      groupedDecorations.set(item.from, []);
+    }
+    if (item.decoration) {
+      groupedDecorations.get(item.from).push(item);
+    } else {
+      console.warn("Encountered an item with undefined decoration during legacy build:", item);
+    }
+  }
+  const sortedFromPositions = [...groupedDecorations.keys()].sort((a, b) => a - b);
+  for (const fromPos of sortedFromPositions) {
+    const group = groupedDecorations.get(fromPos);
+    group.sort((a, b) => a.to - b.to);
+    for (const item of group) {
+      builder.add(item.from, item.to, item.decoration);
+    }
+  }
+  return builder.finish();
+}
+var markdownSyntaxStateField = import_state4.StateField.define({
+  /**
+   * Creates the initial state for the field
+   * @param state - The editor state
+   * @returns The initial field value
+   */
+  create(state) {
+    const initialMode = "live";
+    return {
+      decorations: buildLegacyDecorations(state, initialMode, void 0),
+      currentMode: initialMode
+    };
+  },
+  /**
+   * Updates the field value based on transactions
+   * @param value - The current field value
+   * @param tr - The transaction to apply
+   * @returns The updated field value
+   */
+  update(value, tr) {
+    let newMode = value.currentMode;
+    let needsRebuild = false;
+    for (const effect of tr.effects) {
+      if (effect.is(setMarkdownSyntaxMode)) {
+        newMode = effect.value;
+        needsRebuild = true;
+      }
+    }
+    let modeChangedByEffect = false;
+    for (const effect of tr.effects) {
+      if (effect.is(setMarkdownSyntaxMode)) {
+        if (newMode !== effect.value) {
+          newMode = effect.value;
+          modeChangedByEffect = true;
+        }
+      }
+    }
+    if (tr.docChanged || tr.selection && !tr.startState.selection.eq(tr.selection) || modeChangedByEffect) {
+      return {
+        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
+        currentMode: newMode
+      };
+    }
+    if (value.currentMode !== newMode) {
+      return {
+        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
+        currentMode: newMode
+      };
+    }
+    return value;
+  },
+  /**
+   * Provides the decorations to the editor view
+   */
+  provide: (f) => import_view19.EditorView.decorations.from(f, (value) => value.decorations)
+});
+var markdownCompartment = new import_state5.Compartment();
+function createMarkdownSyntaxPlugin(options = {}) {
+  const { highlightHTML = true } = options;
+  const markdownConfig = {
+    // Add markdown extensions
+    extensions: [
+      // GitHub Flavored Markdown: tables, strikethrough, etc.
+      {
+        name: "table",
+        enable: true
+      },
+      {
+        name: "strikethrough",
+        enable: true
+      },
+      {
+        name: "taggedTemplate",
+        enable: true
+      },
+      {
+        name: "tasklist",
+        enable: true
+      }
+    ],
+    codeLanguages: import_language_data.languages
+  };
+  return [
+    markdownCompartment.of(markdown(markdownConfig))
+  ];
+}
+
+// src/app/obsidian-editor/utils/editorExtensions.ts
+var import_state10 = require("@codemirror/state");
+var import_view23 = require("@codemirror/view");
+var import_language_data2 = require("@codemirror/language-data");
+var import_language9 = require("@codemirror/language");
+var import_highlight6 = require("@lezer/highlight");
 var import_commands = require("@codemirror/commands");
 
 // src/app/obsidian-editor/extensions/AtomicIndents.ts
-var import_view19 = require("@codemirror/view");
-var import_state9 = require("@codemirror/state");
+var import_view20 = require("@codemirror/view");
+var import_state7 = require("@codemirror/state");
 
 // src/app/obsidian-editor/utils/formatting/linkAndListFormatting.ts
-var insertLink = (editorView) => {
-  if (!editorView) return;
-  const selection = editorView.state.selection.main;
-  if (selection.empty) {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: "[link text](url)"
-      },
-      selection: { anchor: selection.from + 1, head: selection.from + 10 }
-    });
-  } else {
-    const selectedText = editorView.state.sliceDoc(selection.from, selection.to);
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: `[${selectedText}](url)`
-      },
-      selection: { anchor: selection.to + 2, head: selection.to + 5 }
-    });
-  }
-  editorView.focus();
-};
 var isListItem = (lineText) => {
   return /^\s*([-*+]|\d+\.)\s/.test(lineText);
 };
 
 // src/app/obsidian-editor/utils/formatting/indentationUtils.ts
-var import_state8 = require("@codemirror/state");
+var import_state6 = require("@codemirror/state");
 var NBSP = "\xA0";
 var INDENT_UNIT = NBSP.repeat(4);
 var isBlockquote = (lineText) => {
   return /^\s*>/.test(lineText);
-};
-var indentListOrBlockquote = (editorView, line) => {
-  if (isListItem(line.text)) {
-    editorView.dispatch({
-      changes: {
-        from: line.from,
-        to: line.from,
-        insert: "    "
-        // Four regular spaces for lists
-      }
-    });
-    return true;
-  }
-  if (isBlockquote(line.text)) {
-    const existingMarker = line.text.match(/^(\s*(?:>\s*)+)/)?.[1] || "";
-    editorView.dispatch({
-      changes: {
-        from: line.from + existingMarker.length,
-        to: line.from + existingMarker.length,
-        insert: "> "
-      }
-    });
-    return true;
-  }
-  return false;
-};
-var unindentListOrBlockquote = (editorView, line) => {
-  if (isListItem(line.text) && /^\s{1,4}/.test(line.text)) {
-    const spacesToRemove = Math.min(4, line.text.match(/^(\s*)/)[1].length);
-    if (spacesToRemove > 0) {
-      editorView.dispatch({
-        changes: {
-          from: line.from,
-          to: line.from + spacesToRemove,
-          insert: ""
-        }
-      });
-      return true;
-    }
-  }
-  if (isBlockquote(line.text)) {
-    const match = line.text.match(/^(\s*)(?:>\s*){2,}/);
-    if (match) {
-      const leadingSpaces = match[1] || "";
-      const firstMarkerPos = line.from + leadingSpaces.length;
-      const secondMarkerStart = firstMarkerPos + 2;
-      editorView.dispatch({
-        changes: {
-          from: firstMarkerPos,
-          to: secondMarkerStart,
-          insert: ""
-        }
-      });
-      return true;
-    }
-  }
-  return false;
-};
-var indentText = (editorView) => {
-  if (!editorView) return false;
-  const { state } = editorView;
-  let actionPerformed = false;
-  try {
-    const selection = state.selection.main;
-    const firstLine = state.doc.lineAt(selection.from);
-    const lastLine = state.doc.lineAt(selection.to);
-    if (firstLine.number === lastLine.number && (isListItem(firstLine.text) || isBlockquote(firstLine.text))) {
-      if (indentListOrBlockquote(editorView, firstLine)) {
-        return true;
-      }
-    } else if (firstLine.number !== lastLine.number) {
-      let anyIndented = false;
-      for (let i = firstLine.number; i <= lastLine.number; i++) {
-        const line = state.doc.line(i);
-        if (isListItem(line.text) || isBlockquote(line.text)) {
-          if (indentListOrBlockquote(editorView, line)) {
-            anyIndented = true;
-          }
-        }
-      }
-      if (anyIndented) {
-        return true;
-      }
-    }
-    const changes = state.changeByRange((range) => {
-      const defaultReturn = {
-        range: import_state8.EditorSelection.range(range.anchor, range.head),
-        changes: []
-      };
-      const firstLine2 = state.doc.lineAt(range.from);
-      const lastLine2 = state.doc.lineAt(range.to);
-      const newChanges = [];
-      let originalAnchor = range.anchor;
-      let originalHead = range.head;
-      let newAnchor = originalAnchor;
-      let newHead = originalHead;
-      let cumulativeCharsAddedBeforeAnchor = 0;
-      let cumulativeCharsAddedBeforeHead = 0;
-      for (let i = firstLine2.number; i <= lastLine2.number; i++) {
-        const line = state.doc.line(i);
-        if (isListItem(line.text) || isBlockquote(line.text)) {
-          continue;
-        }
-        if (line.length === 0) {
-          if (i === firstLine2.number && firstLine2.number === lastLine2.number) {
-          } else {
-            continue;
-          }
-        }
-        newChanges.push({ from: line.from, insert: INDENT_UNIT });
-        actionPerformed = true;
-        if (line.from <= originalAnchor) {
-          cumulativeCharsAddedBeforeAnchor += INDENT_UNIT.length;
-        }
-        if (line.from <= originalHead) {
-          cumulativeCharsAddedBeforeHead += INDENT_UNIT.length;
-        }
-      }
-      if (!actionPerformed || newChanges.length === 0) {
-        return defaultReturn;
-      }
-      newAnchor = originalAnchor + cumulativeCharsAddedBeforeAnchor;
-      newHead = originalHead + cumulativeCharsAddedBeforeHead;
-      return {
-        changes: newChanges,
-        range: import_state8.EditorSelection.range(newAnchor, newHead)
-      };
-    });
-    if (actionPerformed && changes && !changes.changes.empty) {
-      editorView.dispatch({
-        changes: changes.changes,
-        selection: changes.selection,
-        userEvent: "indent"
-      });
-      editorView.focus();
-      return true;
-    }
-  } catch (error) {
-    console.error("Error in indentText:", error);
-  }
-  editorView.focus();
-  return false;
-};
-var unindentText = (editorView) => {
-  if (!editorView) return false;
-  const { state } = editorView;
-  let actionPerformed = false;
-  try {
-    const selection = state.selection.main;
-    const firstLine = state.doc.lineAt(selection.from);
-    const lastLine = state.doc.lineAt(selection.to);
-    if (firstLine.number === lastLine.number && (isListItem(firstLine.text) || isBlockquote(firstLine.text))) {
-      if (unindentListOrBlockquote(editorView, firstLine)) {
-        return true;
-      }
-    } else if (firstLine.number !== lastLine.number) {
-      let anyUnindented = false;
-      for (let i = firstLine.number; i <= lastLine.number; i++) {
-        const line = state.doc.line(i);
-        if (isListItem(line.text) || isBlockquote(line.text)) {
-          if (unindentListOrBlockquote(editorView, line)) {
-            anyUnindented = true;
-          }
-        }
-      }
-      if (anyUnindented) {
-        return true;
-      }
-    }
-    const changes = state.changeByRange((range) => {
-      const defaultReturn = {
-        range: import_state8.EditorSelection.range(range.anchor, range.head),
-        changes: []
-      };
-      const firstLine2 = state.doc.lineAt(range.from);
-      const lastLine2 = state.doc.lineAt(range.to);
-      const newChanges = [];
-      let originalAnchor = range.anchor;
-      let originalHead = range.head;
-      let newAnchor = originalAnchor;
-      let newHead = originalHead;
-      let cumulativeCharsRemovedBeforeAnchor = 0;
-      let cumulativeCharsRemovedBeforeHead = 0;
-      for (let i = firstLine2.number; i <= lastLine2.number; i++) {
-        const line = state.doc.line(i);
-        if (isListItem(line.text) || isBlockquote(line.text)) {
-          continue;
-        }
-        if (line.length === 0) {
-          continue;
-        }
-        let removedOnThisLine = 0;
-        if (line.text.startsWith(INDENT_UNIT)) {
-          removedOnThisLine = INDENT_UNIT.length;
-          newChanges.push({ from: line.from, to: line.from + removedOnThisLine, insert: "" });
-          actionPerformed = true;
-        } else if (line.text.startsWith("    ")) {
-          removedOnThisLine = 4;
-          newChanges.push({ from: line.from, to: line.from + removedOnThisLine, insert: "" });
-          actionPerformed = true;
-        } else {
-          let j = 0;
-          while (j < line.text.length && (line.text[j] === " " || line.text[j] === NBSP)) {
-            j++;
-          }
-          if (j > 0) {
-            removedOnThisLine = j;
-            newChanges.push({ from: line.from, to: line.from + removedOnThisLine, insert: "" });
-            actionPerformed = true;
-          }
-        }
-        if (removedOnThisLine > 0) {
-          if (line.from < originalAnchor) {
-            cumulativeCharsRemovedBeforeAnchor += Math.min(removedOnThisLine, originalAnchor - line.from);
-          }
-          if (line.from < originalHead) {
-            cumulativeCharsRemovedBeforeHead += Math.min(removedOnThisLine, originalHead - line.from);
-          }
-        }
-      }
-      if (!actionPerformed || newChanges.length === 0) {
-        return defaultReturn;
-      }
-      newAnchor = Math.max(0, originalAnchor - cumulativeCharsRemovedBeforeAnchor);
-      newHead = Math.max(0, originalHead - cumulativeCharsRemovedBeforeHead);
-      if (originalAnchor <= originalHead && newAnchor > newHead) newHead = newAnchor;
-      if (originalAnchor >= originalHead && newAnchor < newHead) newAnchor = newHead;
-      return {
-        changes: newChanges,
-        range: import_state8.EditorSelection.range(newAnchor, newHead)
-      };
-    });
-    if (actionPerformed && changes && !changes.changes.empty) {
-      editorView.dispatch({
-        changes: changes.changes,
-        selection: changes.selection,
-        userEvent: "unindent"
-      });
-      editorView.focus();
-      return true;
-    }
-  } catch (error) {
-    console.error("Error in unindentText:", error);
-  }
-  editorView.focus();
-  return false;
 };
 
 // src/app/obsidian-editor/extensions/AtomicIndents.ts
@@ -8591,7 +8682,7 @@ var AtomicIndentPluginValue = class {
    * @returns A RangeSet containing all atomic indent ranges
    */
   buildAtomicRanges(view) {
-    const builder = new import_state9.RangeSetBuilder();
+    const builder = new import_state7.RangeSetBuilder();
     for (const { from, to } of view.visibleRanges) {
       let pos = from;
       while (pos <= to) {
@@ -8602,7 +8693,7 @@ var AtomicIndentPluginValue = class {
           const matchStart = line.from + searchPosInLine;
           const matchEnd = matchStart + INDENT_UNIT2.length;
           if (matchStart < to && matchEnd > from) {
-            builder.add(matchStart, matchEnd, import_view19.Decoration.mark({
+            builder.add(matchStart, matchEnd, import_view20.Decoration.mark({
               class: "cm-atomic-indent"
             }));
           }
@@ -8619,7 +8710,7 @@ var AtomicIndentPluginValue = class {
                 builder.add(
                   line.from + i,
                   line.from + i + 4,
-                  import_view19.Decoration.mark({
+                  import_view20.Decoration.mark({
                     class: "cm-atomic-indent cm-list-indent"
                   })
                 );
@@ -8637,7 +8728,7 @@ var AtomicIndentPluginValue = class {
               builder.add(
                 matchPos,
                 matchPos + matchLen,
-                import_view19.Decoration.mark({
+                import_view20.Decoration.mark({
                   class: "cm-atomic-indent cm-blockquote-indent"
                 })
               );
@@ -8652,15 +8743,15 @@ var AtomicIndentPluginValue = class {
     return result;
   }
 };
-var atomicIndentPlugin = import_view19.ViewPlugin.fromClass(AtomicIndentPluginValue);
-var atomicRangesFacetProvider = import_view19.EditorView.atomicRanges.of((view) => {
+var atomicIndentPlugin = import_view20.ViewPlugin.fromClass(AtomicIndentPluginValue);
+var atomicRangesFacetProvider = import_view20.EditorView.atomicRanges.of((view) => {
   const pluginValue = view.plugin(atomicIndentPlugin);
   if (pluginValue) {
-    return pluginValue.atomicRanges || import_state9.RangeSet.empty;
+    return pluginValue.atomicRanges || import_state7.RangeSet.empty;
   }
-  return import_state9.RangeSet.empty;
+  return import_state7.RangeSet.empty;
 });
-var atomicIndentsStyle = import_view19.EditorView.baseTheme({
+var atomicIndentsStyle = import_view20.EditorView.baseTheme({
   ".cm-atomic-indent": {
     caretColor: "transparent"
   },
@@ -8677,61 +8768,64 @@ var atomicIndents = [
   atomicIndentsStyle
 ];
 
-// src/app/obsidian-editor/extensions/MarkdownPasteHandler.js
-var import_view20 = require("@codemirror/view");
-var import_state10 = require("@codemirror/state");
+// src/app/obsidian-editor/extensions/MarkdownPasteHandler.ts
+var import_view21 = require("@codemirror/view");
+var import_state8 = require("@codemirror/state");
 var import_marked = require("marked");
-var markdownPasteHandler = import_state10.Prec.highest(import_view20.EditorView.domEventHandlers({
-  paste(event, view) {
-    console.log("[MarkdownPasteHandler] Paste event triggered.");
-    const clipboardData = event.clipboardData || window.clipboardData;
-    if (!clipboardData) {
-      console.log("[MarkdownPasteHandler] No clipboard data found.");
+function createMarkdownPasteHandler() {
+  return import_state8.Prec.highest(import_view21.EditorView.domEventHandlers({
+    paste(event, view) {
+      console.log("[MarkdownPasteHandler] Paste event triggered.");
+      const clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) {
+        console.log("[MarkdownPasteHandler] No clipboard data found.");
+        return false;
+      }
+      let pastedText = clipboardData.getData("text/plain");
+      console.log("[MarkdownPasteHandler] Original pastedText:", JSON.stringify(pastedText));
+      if (!pastedText) {
+        console.log("[MarkdownPasteHandler] No plain text in clipboard.");
+        return false;
+      }
+      let textToConvert = pastedText.replace(/__([\s\S]+?)__/g, "**$1**");
+      console.log("[MarkdownPasteHandler] After __ -> ** conversion:", JSON.stringify(textToConvert));
+      const htmlOutput = import_marked.marked.parseInline(textToConvert, { gfm: true });
+      console.log("[MarkdownPasteHandler] Inline HTML output from marked:", JSON.stringify(htmlOutput));
+      let convertedText = htmlOutput;
+      convertedText = convertedText.replace(/\\<em>/g, "<em>");
+      convertedText = convertedText.replace(/\\<\/em>/g, "</em>");
+      convertedText = convertedText.replace(/\\<strong>/g, "<strong>");
+      convertedText = convertedText.replace(/\\<\/strong>/g, "</strong>");
+      convertedText = convertedText.replace(/<em><strong>([\s\S]+?)<\/strong><\/em>/g, "_**$1**_");
+      convertedText = convertedText.replace(/<strong><em>([\s\S]+?)<\/em><\/strong>/g, "**_$1_**");
+      convertedText = convertedText.replace(/<strong>([\s\S]+?)<\/strong>/g, "**$1**");
+      convertedText = convertedText.replace(/<em>([\s\S]+?)<\/em>/g, "_$1_");
+      const tempElement = document.createElement("textarea");
+      tempElement.innerHTML = convertedText;
+      convertedText = tempElement.value.trim();
+      console.log("[MarkdownPasteHandler] Final convertedText after HTML to Markdown style:", JSON.stringify(convertedText));
+      if (convertedText !== pastedText) {
+        console.log("[MarkdownPasteHandler] Text was modified. Dispatching transaction.");
+        view.dispatch(view.state.replaceSelection(convertedText));
+        return true;
+      }
+      console.log("[MarkdownPasteHandler] Text was not modified by conversion. Allowing default paste.");
       return false;
     }
-    let pastedText = clipboardData.getData("text/plain");
-    console.log("[MarkdownPasteHandler] Original pastedText:", JSON.stringify(pastedText));
-    if (!pastedText) {
-      console.log("[MarkdownPasteHandler] No plain text in clipboard.");
-      return false;
-    }
-    let textToConvert = pastedText.replace(/__([\s\S]+?)__/g, "**$1**");
-    console.log("[MarkdownPasteHandler] After __ -> ** conversion:", JSON.stringify(textToConvert));
-    const htmlOutput = import_marked.marked.parseInline(textToConvert, { gfm: true });
-    console.log("[MarkdownPasteHandler] Inline HTML output from marked:", JSON.stringify(htmlOutput));
-    let convertedText = htmlOutput;
-    convertedText = convertedText.replace(/\\<em>/g, "<em>");
-    convertedText = convertedText.replace(/\\<\/em>/g, "</em>");
-    convertedText = convertedText.replace(/\\<strong>/g, "<strong>");
-    convertedText = convertedText.replace(/\\<\/strong>/g, "</strong>");
-    convertedText = convertedText.replace(/<em><strong>([\s\S]+?)<\/strong><\/em>/g, "_**$1**_");
-    convertedText = convertedText.replace(/<strong><em>([\s\S]+?)<\/em><\/strong>/g, "**_$1_**");
-    convertedText = convertedText.replace(/<strong>([\s\S]+?)<\/strong>/g, "**$1**");
-    convertedText = convertedText.replace(/<em>([\s\S]+?)<\/em>/g, "_$1_");
-    const tempElement = document.createElement("textarea");
-    tempElement.innerHTML = convertedText;
-    convertedText = tempElement.value.trim();
-    console.log("[MarkdownPasteHandler] Final convertedText after HTML to Markdown style:", JSON.stringify(convertedText));
-    if (convertedText !== pastedText) {
-      console.log("[MarkdownPasteHandler] Text was modified. Dispatching transaction.");
-      view.dispatch(view.state.replaceSelection(convertedText));
-      return true;
-    }
-    console.log("[MarkdownPasteHandler] Text was not modified by conversion. Allowing default paste.");
-    return false;
-  }
-}));
+  }));
+}
+var markdownPasteHandler = createMarkdownPasteHandler();
 
 // src/app/obsidian-editor/extensions/lezer-safety-plugin.ts
-var import_view21 = require("@codemirror/view");
+var import_view22 = require("@codemirror/view");
 function createLezerSafetyPlugin() {
-  return import_view21.EditorView.updateListener.of((update) => {
-    if (!update.view.state.field(import_view21.EditorView.decorations)) {
+  return import_view22.EditorView.updateListener.of((update) => {
+    if (!update.view.state.field(import_view22.EditorView.decorations)) {
       console.log("Applying Lezer safety patches");
       try {
         const view = update.view;
         if (view && view.plugin && view.dispatch) {
-          const plugins = view.state.facet(import_view21.EditorView.plugins);
+          const plugins = view.state.facet(import_view22.EditorView.plugins);
           if (plugins && Array.isArray(plugins)) {
             plugins.forEach((plugin) => {
               if (plugin && plugin.extension && plugin.extension.parser) {
@@ -8763,268 +8857,311 @@ function createLezerSafetyPlugin() {
   });
 }
 
-// src/app/obsidian-editor/utils/formatting/basicFormatting.ts
-var insertBold = (editorView) => {
-  if (!editorView) return;
-  const selection = editorView.state.selection.main;
-  if (selection.empty) {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: "**bold text**"
-      },
-      selection: { anchor: selection.from + 2, head: selection.from + 11 }
-    });
-  } else {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: `**${editorView.state.sliceDoc(selection.from, selection.to)}**`
-      },
-      selection: { anchor: selection.from + 2, head: selection.to + 2 }
-    });
+// src/app/obsidian-editor/utils/formatting/index.ts
+var import_state9 = require("@codemirror/state");
+function insertBold(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.from,
+        insert: "****"
+      });
+      selections.push(import_state9.EditorSelection.cursor(range.from + 2));
+    } else {
+      const selectedText = state.doc.sliceString(range.from, range.to);
+      const newText = `**${selectedText}**`;
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: newText
+      });
+      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+    }
   }
-  editorView.focus();
-};
-var insertItalic = (editorView) => {
-  if (!editorView) return;
-  const selection = editorView.state.selection.main;
-  if (selection.empty) {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: "*italic text*"
-      },
-      selection: { anchor: selection.from + 1, head: selection.from + 12 }
-    });
-  } else {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: `*${editorView.state.sliceDoc(selection.from, selection.to)}*`
-      },
-      selection: { anchor: selection.from + 1, head: selection.to + 1 }
-    });
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function insertItalic(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.from,
+        insert: "**"
+      });
+      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+    } else {
+      const selectedText = state.doc.sliceString(range.from, range.to);
+      const newText = `*${selectedText}*`;
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: newText
+      });
+      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+    }
   }
-  editorView.focus();
-};
-
-// src/app/obsidian-editor/utils/formatting/headingAndCodeFormatting.ts
-var insertHeading = (editorView, level) => {
-  if (!editorView) return;
-  const selection = editorView.state.selection.main;
-  const line = editorView.state.doc.lineAt(selection.from);
-  const prefix = "#".repeat(level) + " ";
-  const lineText = editorView.state.sliceDoc(line.from, line.to);
-  const headingMatch = lineText.match(/^(#{1,6})\s/);
-  if (headingMatch) {
-    editorView.dispatch({
-      changes: {
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function insertCode(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.from,
+        insert: "``"
+      });
+      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+    } else {
+      const selectedText = state.doc.sliceString(range.from, range.to);
+      const newText = `\`${selectedText}\``;
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: newText
+      });
+      selections.push(import_state9.EditorSelection.range(range.from, range.from + newText.length));
+    }
+  }
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function insertHeading(view, level = 1) {
+  const { state, dispatch } = view;
+  const validLevel = Math.max(1, Math.min(6, level));
+  const prefix = "#".repeat(validLevel) + " ";
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    const line = state.doc.lineAt(range.from);
+    const lineContent = line.text;
+    const existingHeadingMatch = lineContent.match(/^(#{1,6})\s/);
+    if (existingHeadingMatch) {
+      changes.push({
         from: line.from,
-        to: line.from + headingMatch[0].length,
+        to: line.from + existingHeadingMatch[0].length,
         insert: prefix
-      }
-    });
-  } else {
-    editorView.dispatch({
-      changes: {
+      });
+    } else {
+      changes.push({
         from: line.from,
         to: line.from,
         insert: prefix
+      });
+    }
+    const contentOffset = range.from - line.from;
+    const newPos = line.from + prefix.length + contentOffset;
+    selections.push(import_state9.EditorSelection.cursor(newPos));
+  }
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function insertLink(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.from,
+        insert: "[](url)"
+      });
+      selections.push(import_state9.EditorSelection.cursor(range.from + 1));
+    } else {
+      const selectedText = state.doc.sliceString(range.from, range.to);
+      const newText = `[${selectedText}](url)`;
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: newText
+      });
+      const urlPos = range.from + selectedText.length + 3;
+      selections.push(import_state9.EditorSelection.cursor(urlPos));
+    }
+  }
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function indentText(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  const indentSize = 2;
+  const indent = " ".repeat(indentSize);
+  const processedLines = /* @__PURE__ */ new Set();
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from);
+    const endLine = state.doc.lineAt(range.to);
+    for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+      if (processedLines.has(lineNum)) continue;
+      const line = state.doc.line(lineNum);
+      processedLines.add(lineNum);
+      changes.push({
+        from: line.from,
+        to: line.from,
+        insert: indent
+      });
+    }
+    const newFrom = range.from + indentSize;
+    const newTo = range.to + (endLine.number - startLine.number + 1) * indentSize;
+    selections.push(import_state9.EditorSelection.range(newFrom, newTo));
+  }
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function unindentText(view) {
+  const { state, dispatch } = view;
+  const changes = [];
+  const selections = [];
+  const indentSize = 2;
+  const processedLines = /* @__PURE__ */ new Set();
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from);
+    const endLine = state.doc.lineAt(range.to);
+    let totalIndentRemoved = 0;
+    for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+      if (processedLines.has(lineNum)) continue;
+      const line = state.doc.line(lineNum);
+      processedLines.add(lineNum);
+      const lineContent = line.text;
+      const leadingSpaces = lineContent.match(/^( +)/);
+      if (leadingSpaces) {
+        const spacesToRemove = Math.min(leadingSpaces[1].length, indentSize);
+        changes.push({
+          from: line.from,
+          to: line.from + spacesToRemove,
+          insert: ""
+        });
+        if (lineNum === startLine.number) {
+          totalIndentRemoved += spacesToRemove;
+        }
       }
-    });
+    }
+    const newFrom = Math.max(startLine.from, range.from - totalIndentRemoved);
+    let newTo = range.to;
+    for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+      const line = state.doc.line(lineNum);
+      const lineContent = line.text;
+      const leadingSpaces = lineContent.match(/^( +)/);
+      if (leadingSpaces) {
+        const spacesToRemove = Math.min(leadingSpaces[1].length, indentSize);
+        newTo -= spacesToRemove;
+      }
+    }
+    selections.push(import_state9.EditorSelection.range(newFrom, Math.max(newFrom, newTo)));
   }
-  editorView.focus();
-};
-var insertCode = (editorView) => {
-  if (!editorView) return;
-  const selection = editorView.state.selection.main;
-  if (selection.empty) {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: "`code`"
-      },
-      selection: { anchor: selection.from + 1, head: selection.from + 5 }
-    });
-  } else {
-    editorView.dispatch({
-      changes: {
-        from: selection.from,
-        to: selection.to,
-        insert: `\`${editorView.state.sliceDoc(selection.from, selection.to)}\``
-      },
-      selection: { anchor: selection.from + 1, head: selection.to + 1 }
-    });
-  }
-  editorView.focus();
-};
-
-// src/app/obsidian-editor/utils/formatting/keyHandlers.ts
-var import_state11 = require("@codemirror/state");
-var handleBackspaceIndent = (editorView) => {
-  if (!editorView) return false;
-  const { state } = editorView;
-  const { selection } = state;
-  if (!selection.main.empty) {
+  dispatch({
+    changes,
+    selection: import_state9.EditorSelection.create(selections)
+  });
+}
+function handleBackspaceIndent(view) {
+  const { state, dispatch } = view;
+  const indentSize = 2;
+  if (!state.selection.ranges.every((range) => range.empty)) {
     return false;
   }
-  const cursorPos = selection.main.anchor;
-  if (cursorPos < INDENT_UNIT.length) {
-    return false;
+  let handled = false;
+  const changes = [];
+  const selections = [];
+  for (const range of state.selection.ranges) {
+    const pos = range.from;
+    const line = state.doc.lineAt(pos);
+    if (pos > line.from) {
+      const textBeforeCursor = line.text.substring(0, pos - line.from);
+      if (/^\s+$/.test(textBeforeCursor)) {
+        const spacesToRemove = Math.min(textBeforeCursor.length, indentSize);
+        changes.push({
+          from: pos - spacesToRemove,
+          to: pos,
+          insert: ""
+        });
+        selections.push(import_state9.EditorSelection.cursor(pos - spacesToRemove));
+        handled = true;
+      }
+    }
   }
-  const textBeforeCursor = state.doc.sliceString(cursorPos - INDENT_UNIT.length, cursorPos);
-  if (textBeforeCursor === INDENT_UNIT) {
-    editorView.dispatch({
-      changes: {
-        from: cursorPos - INDENT_UNIT.length,
-        to: cursorPos,
-        insert: ""
-      },
-      selection: import_state11.EditorSelection.cursor(cursorPos - INDENT_UNIT.length),
-      userEvent: "delete.indent"
+  if (handled) {
+    dispatch({
+      changes,
+      selection: import_state9.EditorSelection.create(selections)
     });
     return true;
   }
   return false;
-};
-var handleEnterListBlockquote = (editorView) => {
-  if (!editorView) return false;
-  const { state } = editorView;
-  const selection = state.selection.main;
-  if (!selection.empty) return false;
-  const line = state.doc.lineAt(selection.from);
-  const lineText = state.doc.sliceString(line.from, line.to);
-  const cursorCol = selection.head - line.from;
-  const bqFullMatch = lineText.match(/^(\s*)((?:>\s*)+)(.*?)$/);
-  if (bqFullMatch) {
-    const [, leading, markers, content] = bqFullMatch;
-    if (!content.trim()) {
-      let rest = lineText;
-      rest = rest.replace(/^(\s*)>(\s*)/, (m, p1, p2) => p1);
-      if (/^\s+$/.test(rest)) {
-        rest = "";
-      }
-      editorView.dispatch({
-        changes: { from: line.from, to: line.to, insert: rest },
-        selection: { anchor: line.from + rest.length },
-        userEvent: "delete.enter-blockquote"
-      });
-      return true;
-    } else {
-      if (cursorCol < lineText.length) {
-        const beforeCursor = lineText.substring(0, cursorCol);
-        const afterCursor = lineText.substring(cursorCol);
-        editorView.dispatch({
-          changes: {
-            from: line.from,
-            to: line.to,
-            insert: beforeCursor + "\n" + leading + markers + afterCursor
-          },
-          selection: {
-            anchor: line.from + beforeCursor.length + 1 + leading.length + markers.length
-          },
-          userEvent: "input.enter"
-        });
-      } else {
-        editorView.dispatch({
-          changes: {
-            from: line.to,
-            to: line.to,
-            insert: "\n" + leading + markers
-          },
-          selection: {
-            anchor: line.to + 1 + leading.length + markers.length
-          },
-          userEvent: "input.enter"
-        });
-      }
-      return true;
-    }
+}
+function handleEnterListBlockquote(view) {
+  const { state, dispatch } = view;
+  if (state.selection.ranges.length !== 1 || !state.selection.ranges[0].empty) {
+    return false;
   }
-  const listFullMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s+(.*?)$/);
-  if (listFullMatch) {
-    const [, leading, marker, content] = listFullMatch;
-    const markerWithSpace = marker + " ";
-    const transformedLeading = leading.replace(/ {4}/g, INDENT_UNIT);
-    if (!content.trim()) {
-      let rest = lineText;
-      if (rest.includes(INDENT_UNIT)) {
-        rest = rest.replace(INDENT_UNIT, "");
-      } else if (/^ {4}/.test(rest)) {
-        rest = rest.replace(/^ {4}/, "");
-      } else {
-        rest = rest.replace(/^(\s*)([-*+]|\d+\.)\s*/, "");
-      }
-      if (/^\s+$/.test(rest)) {
-        rest = "";
-      }
-      editorView.dispatch({
-        changes: { from: line.from, to: line.to, insert: rest },
-        selection: { anchor: line.from + rest.length },
-        userEvent: "delete.enter-list"
+  const pos = state.selection.main.from;
+  const line = state.doc.lineAt(pos);
+  const lineContent = line.text;
+  const listMatch = lineContent.match(/^(\s*)([-*+]|\d+\.)\s/);
+  const blockquoteMatch = lineContent.match(/^(\s*>\s+)/);
+  if (listMatch || blockquoteMatch) {
+    const prefix = listMatch ? listMatch[0] : blockquoteMatch[0];
+    if (lineContent.trim() === prefix.trim()) {
+      dispatch({
+        changes: { from: line.from, to: line.to, insert: "" }
       });
       return true;
-    } else {
-      const nextMarker = /^\d+\./.test(marker) ? parseInt(marker) + 1 + "." : marker;
-      if (cursorCol < lineText.length) {
-        const beforeCursor = lineText.substring(0, cursorCol);
-        const afterCursor = lineText.substring(cursorCol);
-        editorView.dispatch({
-          changes: {
-            from: line.from,
-            to: line.to,
-            insert: beforeCursor + "\n" + transformedLeading + nextMarker + " " + afterCursor
-          },
-          selection: {
-            anchor: line.from + beforeCursor.length + 1 + transformedLeading.length + nextMarker.length + 1
-          },
-          userEvent: "input.enter"
-        });
-      } else {
-        editorView.dispatch({
-          changes: {
-            from: line.to,
-            to: line.to,
-            insert: "\n" + transformedLeading + nextMarker + " "
-          },
-          selection: {
-            anchor: line.to + 1 + transformedLeading.length + nextMarker.length + 1
-          },
-          userEvent: "input.enter"
-        });
-      }
+    } else if (pos === line.to) {
+      dispatch({
+        changes: { from: pos, to: pos, insert: "\n" + prefix },
+        selection: { anchor: pos + 1 + prefix.length }
+      });
       return true;
     }
   }
   return false;
-};
+}
 
 // src/app/obsidian-editor/utils/editorExtensions.ts
 var createCustomHighlightStyle = () => {
   try {
-    if (typeof import_highlight4.tags !== "object" || import_highlight4.tags === null) {
+    if (typeof import_highlight6.tags !== "object" || import_highlight6.tags === null) {
       console.warn("Lezer highlight tags not available, using empty highlight style");
       return [];
     }
     const validStyles = [];
-    if (import_highlight4.tags.heading1) validStyles.push({ tag: [import_highlight4.tags.heading1], fontSize: "1.6em", fontWeight: "bold" });
-    if (import_highlight4.tags.heading2) validStyles.push({ tag: [import_highlight4.tags.heading2], fontSize: "1.4em", fontWeight: "bold" });
-    if (import_highlight4.tags.heading3) validStyles.push({ tag: [import_highlight4.tags.heading3], fontSize: "1.2em", fontWeight: "bold" });
-    if (import_highlight4.tags.heading4) validStyles.push({ tag: [import_highlight4.tags.heading4], fontSize: "1.1em", fontWeight: "bold" });
-    if (import_highlight4.tags.heading5) validStyles.push({ tag: [import_highlight4.tags.heading5], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (import_highlight4.tags.heading6) validStyles.push({ tag: [import_highlight4.tags.heading6], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (import_highlight4.tags.strong) validStyles.push({ tag: [import_highlight4.tags.strong], fontWeight: "bold" });
-    if (import_highlight4.tags.emphasis) validStyles.push({ tag: [import_highlight4.tags.emphasis], fontStyle: "italic" });
-    if (import_highlight4.tags.link) validStyles.push({ tag: [import_highlight4.tags.link], color: "#2563eb", textDecoration: "underline" });
-    if (import_highlight4.tags.monospace) validStyles.push({ tag: [import_highlight4.tags.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
+    if (import_highlight6.tags.heading1) validStyles.push({ tag: [import_highlight6.tags.heading1], fontSize: "1.6em", fontWeight: "bold" });
+    if (import_highlight6.tags.heading2) validStyles.push({ tag: [import_highlight6.tags.heading2], fontSize: "1.4em", fontWeight: "bold" });
+    if (import_highlight6.tags.heading3) validStyles.push({ tag: [import_highlight6.tags.heading3], fontSize: "1.2em", fontWeight: "bold" });
+    if (import_highlight6.tags.heading4) validStyles.push({ tag: [import_highlight6.tags.heading4], fontSize: "1.1em", fontWeight: "bold" });
+    if (import_highlight6.tags.heading5) validStyles.push({ tag: [import_highlight6.tags.heading5], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (import_highlight6.tags.heading6) validStyles.push({ tag: [import_highlight6.tags.heading6], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (import_highlight6.tags.strong) validStyles.push({ tag: [import_highlight6.tags.strong], fontWeight: "bold" });
+    if (import_highlight6.tags.emphasis) validStyles.push({ tag: [import_highlight6.tags.emphasis], fontStyle: "italic" });
+    if (import_highlight6.tags.link) validStyles.push({ tag: [import_highlight6.tags.link], color: "#2563eb", textDecoration: "underline" });
+    if (import_highlight6.tags.monospace) validStyles.push({ tag: [import_highlight6.tags.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
     if (validStyles.length > 0) {
-      return import_language6.HighlightStyle.define(validStyles);
+      return import_language9.HighlightStyle.define(validStyles);
     } else {
       console.warn("No valid lezer highlight tags found, using empty highlight style");
       return [];
@@ -9035,7 +9172,7 @@ var createCustomHighlightStyle = () => {
   }
 };
 var createCustomEnterKeymap = () => {
-  return import_state12.Prec.highest(import_view22.keymap.of([
+  return import_state10.Prec.highest(import_view23.keymap.of([
     {
       key: "Enter",
       run: (view) => handleEnterListBlockquote(view)
@@ -9043,7 +9180,7 @@ var createCustomEnterKeymap = () => {
   ]));
 };
 var createMarkdownKeymaps = (onSaveRef) => {
-  return import_view22.keymap.of([
+  return import_view23.keymap.of([
     {
       key: "Backspace",
       run: (view) => {
@@ -9122,7 +9259,7 @@ var createMarkdownKeymaps = (onSaveRef) => {
   ]);
 };
 var createEditorStyling = () => {
-  return import_view22.EditorView.theme({
+  return import_view23.EditorView.theme({
     "&": {
       height: "100%"
     },
@@ -9146,19 +9283,19 @@ var createEditorExtensions = (options) => {
     atomicIndents,
     createCustomEnterKeymap(),
     // Add our Lezer safety plugin with highest precedence to run first
-    import_state12.Prec.highest(createLezerSafetyPlugin()),
+    import_state10.Prec.highest(createLezerSafetyPlugin()),
     markdown({
       base: markdownLanguage,
-      codeLanguages: import_language_data.languages,
+      codeLanguages: import_language_data2.languages,
       addKeymap: false
     }),
     createMarkdownSyntaxPlugin(),
     markdownPasteHandler,
-    (0, import_view22.highlightActiveLine)(),
-    (0, import_view22.highlightActiveLineGutter)(),
-    import_view22.EditorView.lineWrapping,
+    (0, import_view23.highlightActiveLine)(),
+    (0, import_view23.highlightActiveLineGutter)(),
+    import_view23.EditorView.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
-    editableCompartment.of(import_view22.EditorView.editable.of(true)),
+    editableCompartment.of(import_view23.EditorView.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
@@ -9169,131 +9306,13 @@ var createEditorExtensions = (options) => {
         safeExtensions.push(...highlightStyle);
       }
     } else {
-      safeExtensions.push((0, import_language6.syntaxHighlighting)(highlightStyle));
+      safeExtensions.push((0, import_language9.syntaxHighlighting)(highlightStyle));
     }
   } catch (error) {
     console.error("Error applying syntax highlighting:", error);
   }
   return safeExtensions;
 };
-
-// src/app/obsidian-editor/utils/theme.ts
-var import_view23 = require("@codemirror/view");
-var getCurrentDocumentTheme = () => {
-  if (typeof window !== "undefined") {
-    const storedTheme = localStorage.getItem("obsidian-theme");
-    if (storedTheme === "light" || storedTheme === "dark") {
-      return storedTheme;
-    }
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-  }
-  return "light";
-};
-var obsidianCssVariables = {
-  light: {
-    "--background-primary": "#ffffff",
-    "--background-secondary": "#f8f8f8",
-    "--text-normal": "#2e3338",
-    "--text-muted": "#888888",
-    "--text-faint": "#999999",
-    "--text-error": "#e75545",
-    "--text-accent": "#705dcf",
-    "--interactive-normal": "#f2f3f5",
-    "--interactive-hover": "#e9e9e9",
-    "--interactive-accent": "#7b6cd9",
-    "--interactive-accent-hover": "#8875ff",
-    "--link-color": "#5E81AC",
-    "--hr-color": "#dcddde",
-    "--tag-color": "#2991e3",
-    "--selection-background": "rgba(104, 134, 197, 0.3)",
-    "--code-background": "rgba(0, 0, 0, 0.03)"
-  },
-  dark: {
-    "--background-primary": "#2b2b2b",
-    "--background-secondary": "#363636",
-    "--text-normal": "#dcddde",
-    "--text-muted": "#999999",
-    "--text-faint": "#666666",
-    "--text-error": "#ff3333",
-    "--text-accent": "#a277ff",
-    "--interactive-normal": "#3f3f3f",
-    "--interactive-hover": "#4a4a4a",
-    "--interactive-accent": "#7b6cd9",
-    "--interactive-accent-hover": "#8875ff",
-    "--link-color": "#a8c0e0",
-    "--hr-color": "#444444",
-    "--tag-color": "#4097e3",
-    "--selection-background": "rgba(104, 134, 197, 0.2)",
-    "--code-background": "rgba(255, 255, 255, 0.05)"
-  }
-};
-var applyThemeVariables = (theme) => {
-  if (typeof document !== "undefined") {
-    const variables = obsidianCssVariables[theme];
-    const root = document.documentElement;
-    Object.entries(variables).forEach(([key, value]) => {
-      root.style.setProperty(key, value);
-    });
-  }
-};
-var lightTheme = import_view23.EditorView.theme({
-  "&": {
-    backgroundColor: "var(--background-primary, #ffffff)",
-    color: "var(--text-normal, #2e3338)"
-  },
-  ".cm-content": {
-    caretColor: "var(--text-normal, #2e3338)"
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--text-normal, #2e3338)"
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.3))"
-  },
-  ".cm-activeLine": {
-    backgroundColor: "var(--background-secondary, #f5f6f8)"
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "var(--background-secondary, #f5f6f8)"
-  }
-}, { dark: false });
-var darkTheme = import_view23.EditorView.theme({
-  "&": {
-    backgroundColor: "var(--background-primary, #202020)",
-    color: "var(--text-normal, #dcddde)"
-  },
-  ".cm-content": {
-    caretColor: "var(--text-normal, #dcddde)"
-  },
-  ".cm-cursor, .cm-dropCursor": {
-    borderLeftColor: "var(--text-normal, #dcddde)"
-  },
-  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
-    backgroundColor: "var(--selection-background, rgba(104, 134, 197, 0.2))"
-  },
-  ".cm-activeLine": {
-    backgroundColor: "var(--background-secondary, #161616)"
-  },
-  ".cm-activeLineGutter": {
-    backgroundColor: "var(--background-secondary, #161616)"
-  }
-}, { dark: true });
-if (typeof window !== "undefined") {
-  setTimeout(() => {
-    const initialTheme = getCurrentDocumentTheme();
-    applyThemeVariables(initialTheme);
-    if (window.matchMedia) {
-      window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
-        if (!localStorage.getItem("obsidian-theme")) {
-          const newTheme = e.matches ? "dark" : "light";
-          applyThemeVariables(newTheme);
-        }
-      });
-    }
-  }, 0);
-}
 
 // src/app/obsidian-editor/components/EditorCore.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
@@ -9311,8 +9330,9 @@ var EditorCore = ({
   const [initializationError, setInitializationError] = (0, import_react2.useState)(null);
   const onChangeRef = (0, import_react2.useRef)(onChange);
   const onSaveRef = (0, import_react2.useRef)(onSave);
-  const editableCompartment = (0, import_react2.useRef)(new import_state13.Compartment()).current;
-  const themeCompartment = (0, import_react2.useRef)(new import_state13.Compartment()).current;
+  const editableCompartment = (0, import_react2.useRef)(new import_state11.Compartment()).current;
+  const themeCompartment = (0, import_react2.useRef)(new import_state11.Compartment()).current;
+  const editorThemeName = getCurrentEditorTheme();
   (0, import_react2.useEffect)(() => {
     onChangeRef.current = onChange;
     onSaveRef.current = onSave;
@@ -9351,7 +9371,7 @@ var EditorCore = ({
         }
       };
       window.addEventListener("error", errorHandler);
-      const themeExtension = theme === "dark" ? darkTheme : lightTheme;
+      const themeExtension = getTheme(editorThemeName, theme === "dark" ? "dark" : "light");
       const changeListener = import_view24.EditorView.updateListener.of((update) => {
         if (update.docChanged && onChangeRef.current) {
           if (update.transactions.some((tr) => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
@@ -9378,7 +9398,7 @@ var EditorCore = ({
         errorHandlingExtension
       ];
       const view = new import_view24.EditorView({
-        state: import_state13.EditorState.create({
+        state: import_state11.EditorState.create({
           doc: safeInitialValue,
           extensions
         }),
@@ -9400,15 +9420,20 @@ var EditorCore = ({
   (0, import_react2.useEffect)(() => {
     if (editorViewRef.current && themeCompartment && mounted) {
       try {
-        const themeExtension = theme === "dark" ? darkTheme : lightTheme;
+        const themeExtension = getTheme(editorThemeName, theme === "dark" ? "dark" : "light");
+        document.documentElement.setAttribute(
+          "data-theme",
+          `${editorThemeName}-${theme === "dark" ? "dark" : "light"}`
+        );
         editorViewRef.current.dispatch({
           effects: themeCompartment.reconfigure(themeExtension)
         });
+        console.log(`Applied editor theme: ${editorThemeName} in ${theme} mode`);
       } catch (error) {
         console.error("Error updating theme:", error);
       }
     }
-  }, [theme, themeCompartment, mounted]);
+  }, [theme, themeCompartment, mounted, editorThemeName]);
   (0, import_react2.useEffect)(() => {
     if (editorViewRef.current && mounted) {
       try {
@@ -9467,7 +9492,7 @@ var EditorCore = ({
 var EditorCore_default = EditorCore;
 
 // src/app/obsidian-editor/utils/formatting/markdownFormatting.ts
-var import_state14 = require("@codemirror/state");
+var import_state12 = require("@codemirror/state");
 function toggleBold(selection, doc) {
   const changes = [];
   let newSelection;
@@ -9479,7 +9504,7 @@ function toggleBold(selection, doc) {
         insert: "**bold text**"
       });
       const cursorPos = range.from + 2;
-      newSelection = import_state14.EditorSelection.cursor(cursorPos);
+      newSelection = import_state12.EditorSelection.cursor(cursorPos);
     } else {
       const selectedText = doc.slice(range.from, range.to);
       if (selectedText.startsWith("**") && selectedText.endsWith("**")) {
@@ -9510,7 +9535,7 @@ function toggleItalic(selection, doc) {
         insert: "*italic text*"
       });
       const cursorPos = range.from + 1;
-      newSelection = import_state14.EditorSelection.cursor(cursorPos);
+      newSelection = import_state12.EditorSelection.cursor(cursorPos);
     } else {
       const selectedText = doc.slice(range.from, range.to);
       if (selectedText.startsWith("*") && selectedText.endsWith("*") && !(selectedText.startsWith("**") && selectedText.endsWith("**"))) {
@@ -9570,12 +9595,106 @@ function toggleHeading(selection, doc, level) {
   return { changes };
 }
 
-// src/app/obsidian-editor/components/EditorToolbar.tsx
+// src/app/obsidian-editor/components/ThemeSwitcher.tsx
+var import_react3 = require("react");
 var import_jsx_runtime3 = require("react/jsx-runtime");
+var ThemeSwitcher = ({ onThemeChange }) => {
+  const [themeName, setThemeName] = (0, import_react3.useState)("obsidian");
+  (0, import_react3.useEffect)(() => {
+    const currentTheme = getCurrentEditorTheme();
+    setThemeName(currentTheme);
+  }, []);
+  const handleThemeChange = (e) => {
+    const selectedTheme = e.target.value;
+    console.log(`Theme changed to: ${selectedTheme}`);
+    setThemeName(selectedTheme);
+    setEditorTheme(selectedTheme);
+    if (selectedTheme === "vanilla") {
+      const editorElements = document.querySelectorAll(".cm-editor");
+      const isDark = document.documentElement.classList.contains("dark");
+      editorElements.forEach((editor) => {
+        if (isDark) {
+          editor.style.backgroundColor = "#2a2536";
+          editor.style.border = "4px solid #c4b3e0";
+          const content = editor.querySelector(".cm-content");
+          if (content) {
+            content.style.backgroundColor = "#2a2536";
+          }
+          const gutters = editor.querySelector(".cm-gutters");
+          if (gutters) {
+            gutters.style.backgroundColor = "#332d3e";
+            gutters.style.borderRight = "1px solid #4a4252";
+          }
+        } else {
+          editor.style.backgroundColor = "#f5f0ff";
+          editor.style.border = "4px solid #625772";
+          const content = editor.querySelector(".cm-content");
+          if (content) {
+            content.style.backgroundColor = "#f5f0ff";
+          }
+          const gutters = editor.querySelector(".cm-gutters");
+          if (gutters) {
+            gutters.style.backgroundColor = "#ede6f8";
+            gutters.style.borderRight = "1px solid #d8c9f0";
+          }
+        }
+      });
+    }
+    if (onThemeChange) {
+      setTimeout(() => {
+        onThemeChange(selectedTheme);
+      }, 0);
+    }
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "obsidian-theme-switcher", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { htmlFor: "theme-select", children: "Theme:" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+      "select",
+      {
+        id: "theme-select",
+        value: themeName,
+        onChange: handleThemeChange,
+        className: "theme-select",
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "obsidian", children: "Obsidian" }),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "vanilla", children: "Vanilla" })
+        ]
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("style", { jsx: true, children: `
+        .obsidian-theme-switcher {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+        }
+        
+        .theme-select {
+          padding: 4px 8px;
+          border-radius: 4px;
+          border: 1px solid var(--hr-color, #dcddde);
+          background-color: var(--background-primary, #ffffff);
+          color: var(--text-normal, #2e3338);
+          cursor: pointer;
+        }
+        
+        .dark .theme-select {
+          background-color: var(--background-primary, #2b2b2b);
+          color: var(--text-normal, #dcddde);
+          border-color: var(--hr-color, #444444);
+        }
+      ` })
+  ] });
+};
+var ThemeSwitcher_default = ThemeSwitcher;
+
+// src/app/obsidian-editor/components/EditorToolbar.tsx
+var import_jsx_runtime4 = require("react/jsx-runtime");
 var EditorToolbar = ({
   editorView,
   mode,
-  onModeChange
+  onModeChange,
+  onThemeChange
 }) => {
   const applyFormatting = (formatter) => {
     if (!editorView) return;
@@ -9590,97 +9709,204 @@ var EditorToolbar = ({
       editorView.focus();
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "obsidian-editor-toolbar", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "mode-toggle", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          className: `mode-button ${mode === "live" ? "active" : ""}`,
-          onClick: () => onModeChange("live"),
-          "aria-pressed": mode === "live",
-          "aria-label": "Edit mode",
-          title: "Edit mode",
-          children: "Edit"
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          className: `mode-button ${mode === "preview" ? "active" : ""}`,
-          onClick: () => onModeChange("preview"),
-          "aria-pressed": mode === "preview",
-          "aria-label": "Preview mode",
-          title: "Preview mode",
-          children: "Preview"
-        }
-      )
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "obsidian-editor-toolbar", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "toolbar-left", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "mode-toggle", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            className: `mode-button ${mode === "live" ? "active" : ""}`,
+            onClick: () => onModeChange("live"),
+            "aria-pressed": mode === "live",
+            "aria-label": "Edit mode",
+            title: "Edit mode",
+            children: "Edit"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            className: `mode-button ${mode === "preview" ? "active" : ""}`,
+            onClick: () => onModeChange("preview"),
+            "aria-pressed": mode === "preview",
+            "aria-label": "Preview mode",
+            title: "Preview mode",
+            children: "Preview"
+          }
+        )
+      ] }),
+      mode === "live" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "format-buttons", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            onClick: () => applyFormatting(toggleBold),
+            className: "format-button",
+            "aria-label": "Bold",
+            title: "Bold (Ctrl+B)",
+            children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: "B" })
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            onClick: () => applyFormatting(toggleItalic),
+            className: "format-button",
+            "aria-label": "Italic",
+            title: "Italic (Ctrl+I)",
+            children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("em", { children: "I" })
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
+            className: "format-button",
+            "aria-label": "Heading 1",
+            title: "Heading 1 (Ctrl+1)",
+            children: "H1"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
+            className: "format-button",
+            "aria-label": "Heading 2",
+            title: "Heading 2 (Ctrl+2)",
+            children: "H2"
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          "button",
+          {
+            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
+            className: "format-button",
+            "aria-label": "Heading 3",
+            title: "Heading 3 (Ctrl+3)",
+            children: "H3"
+          }
+        )
+      ] })
     ] }),
-    mode === "live" && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "format-buttons", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          onClick: () => applyFormatting(toggleBold),
-          className: "format-button",
-          "aria-label": "Bold",
-          title: "Bold (Ctrl+B)",
-          children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "B" })
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "toolbar-right", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ThemeSwitcher_default, { onThemeChange }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("style", { jsx: true, children: `
+        .obsidian-editor-toolbar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          background-color: var(--background-secondary, #f8f8f8);
+          border-bottom: 1px solid var(--hr-color, #dcddde);
         }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          onClick: () => applyFormatting(toggleItalic),
-          className: "format-button",
-          "aria-label": "Italic",
-          title: "Italic (Ctrl+I)",
-          children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("em", { children: "I" })
+        
+        .toolbar-left, .toolbar-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
         }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
-          className: "format-button",
-          "aria-label": "Heading 1",
-          title: "Heading 1 (Ctrl+1)",
-          children: "H1"
+        
+        .mode-toggle {
+          display: flex;
+          border-radius: 4px;
+          overflow: hidden;
+          border: 1px solid var(--hr-color, #dcddde);
         }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
-          className: "format-button",
-          "aria-label": "Heading 2",
-          title: "Heading 2 (Ctrl+2)",
-          children: "H2"
+        
+        .mode-button {
+          padding: 4px 12px;
+          border: none;
+          background: var(--background-primary, #ffffff);
+          color: var(--text-normal, #2e3338);
+          cursor: pointer;
+          transition: background 0.2s;
         }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-        "button",
-        {
-          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
-          className: "format-button",
-          "aria-label": "Heading 3",
-          title: "Heading 3 (Ctrl+3)",
-          children: "H3"
+        
+        .mode-button.active {
+          background: var(--interactive-accent, #7b6cd9);
+          color: white;
         }
-      )
-    ] })
+        
+        .format-buttons {
+          display: flex;
+          gap: 4px;
+        }
+        
+        .format-button {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid var(--hr-color, #dcddde);
+          border-radius: 4px;
+          background: var(--background-primary, #ffffff);
+          color: var(--text-normal, #2e3338);
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        
+        .format-button:hover {
+          background: var(--interactive-hover, #e9e9e9);
+        }
+        
+        .dark .mode-button {
+          background: var(--background-primary, #2b2b2b);
+          color: var(--text-normal, #dcddde);
+        }
+        
+        .dark .format-button {
+          background: var(--background-primary, #2b2b2b);
+          color: var(--text-normal, #dcddde);
+          border-color: var(--hr-color, #444444);
+        }
+        
+        .dark .format-button:hover {
+          background: var(--interactive-hover, #4a4a4a);
+        }
+      ` })
   ] });
 };
 var EditorToolbar_default = EditorToolbar;
 
 // src/app/obsidian-editor/CodeMirrorEditor.tsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
+if (typeof document !== "undefined") {
+  const loadThemeCSS2 = () => {
+    if (!document.querySelector('link[data-theme-css="vanilla-light"]')) {
+      const lightCSS = document.createElement("link");
+      lightCSS.rel = "stylesheet";
+      lightCSS.href = "/css/vanilla-light.css";
+      lightCSS.setAttribute("data-theme-css", "vanilla-light");
+      document.head.appendChild(lightCSS);
+    }
+    if (!document.querySelector('link[data-theme-css="vanilla-dark"]')) {
+      const darkCSS = document.createElement("link");
+      darkCSS.rel = "stylesheet";
+      darkCSS.href = "/css/vanilla-dark.css";
+      darkCSS.setAttribute("data-theme-css", "vanilla-dark");
+      document.head.appendChild(darkCSS);
+    }
+    const theme = getCurrentEditorTheme();
+    const mode = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", `${theme}-${mode}`);
+    if (!document.querySelector('link[data-theme-css="obsidian"]')) {
+      const obsidianCSS = document.createElement("link");
+      obsidianCSS.rel = "stylesheet";
+      obsidianCSS.href = "/css/obsidian.css";
+      obsidianCSS.setAttribute("data-theme-css", "obsidian");
+      document.head.appendChild(obsidianCSS);
+    }
+  };
+  loadThemeCSS2();
+}
 var CodeMirrorEditor = ({
   initialValue = "",
   readOnly = false,
   onChange,
   onSave
 }) => {
-  const [editorView, setEditorView] = (0, import_react3.useState)(null);
-  const [currentMode, setCurrentMode] = (0, import_react3.useState)("live");
+  const [editorView, setEditorView] = (0, import_react4.useState)(null);
+  const [currentMode, setCurrentMode] = (0, import_react4.useState)("live");
   const { mounted } = useTheme();
   const handleEditorViewCreated = (view) => {
     setEditorView(view);
@@ -9688,16 +9914,20 @@ var CodeMirrorEditor = ({
   const handleModeChange = (mode) => {
     setCurrentMode(mode);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+  const handleThemeChange = (themeName) => {
+    setEditorTheme(themeName);
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
       EditorToolbar_default,
       {
         editorView,
         mode: currentMode,
-        onModeChange: handleModeChange
+        onModeChange: handleModeChange,
+        onThemeChange: handleThemeChange
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: "obsidian-editor-content", children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "obsidian-editor-content", children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
       EditorCore_default,
       {
         initialValue,
@@ -9714,27 +9944,27 @@ var CodeMirrorEditor_default = CodeMirrorEditor;
 
 // src/components/ThemeToggle.tsx
 var import_lucide_react = require("lucide-react");
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 function ThemeToggle() {
   const { theme, toggleTheme, mounted } = useTheme();
   if (!mounted) {
-    return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
       "button",
       {
         className: "p-2 rounded-full transition-colors",
         "aria-label": "Theme toggle",
         "aria-hidden": "true",
-        children: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "w-5 h-5" })
+        children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "w-5 h-5" })
       }
     );
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
     "button",
     {
       onClick: toggleTheme,
       className: "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors",
       "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
-      children: theme === "light" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react.Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(import_lucide_react.Sun, { className: "w-5 h-5 text-yellow-300" })
+      children: theme === "light" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_lucide_react.Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_lucide_react.Sun, { className: "w-5 h-5 text-yellow-300" })
     }
   );
 }

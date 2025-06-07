@@ -12,6 +12,7 @@ import { defaultKeymap, historyKeymap, history } from '@codemirror/commands';
 // Import custom extensions
 import { atomicIndents } from '../extensions/AtomicIndents';
 import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax/index';
+import { htmlDecorator } from '../extensions/markdown-syntax/html-decorator';
 import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler.ts';
 // Import our Lezer safety plugin
 import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
@@ -222,6 +223,7 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
       addKeymap: false,
     }),
     createMarkdownSyntaxPlugin(),
+    htmlDecorator(), // Add HTML decorator extension for HTML rendering
     markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),

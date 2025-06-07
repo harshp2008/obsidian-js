@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Markdown syntax extension for CodeMirror
+ * @module obsidian-editor/extensions/markdown-syntax
+ */
+
 import { EditorView, Decoration, DecorationSet } from '@codemirror/view';
 import { RangeSetBuilder, StateField, StateEffect, EditorState, Extension } from '@codemirror/state';
 import { SyntaxRule, SyntaxRuleContext } from './types';
@@ -15,6 +20,9 @@ import { HorizontalRuleDecorator } from './rules/horizontalRuleDecorator';
 import { LineBreakDecorator } from './rules/lineBreakDecorator';
 import { htmlDecorator } from './html-decorator';
 import { BlockquoteDecorator } from './rules/blockquoteDecorator';
+import { markdown } from '@codemirror/lang-markdown';
+import { languages } from '@codemirror/language-data';
+import { Compartment } from '@codemirror/state';
 
 /**
  * Represents a decoration item with its position and decoration object
@@ -215,15 +223,72 @@ export const markdownSyntaxStateField = StateField.define<{
 });
 
 /**
- * Creates the markdown syntax plugin with all necessary extensions
- * @returns An array of extensions for markdown syntax highlighting
+ * Compartment for markdown syntax mode
  */
-export function createMarkdownSyntaxPlugin(): Extension[] {
+export const markdownCompartment = new Compartment();
+
+/**
+ * Current markdown syntax mode
+ */
+let currentMode: 'visible' | 'hidden' = 'visible';
+
+/**
+ * Create the markdown syntax extension
+ * 
+ * @param {Object} options - Configuration options
+ * @param {boolean} options.highlightHTML - Whether to highlight HTML in markdown
+ * @returns {Extension} The markdown syntax extension
+ */
+export function createMarkdownSyntaxPlugin(options: {
+  highlightHTML?: boolean;
+} = {}): Extension {
+  const { highlightHTML = true } = options;
+  
+  // Configure the markdown extension
+  const markdownConfig = {
+    // Add markdown extensions
+    extensions: [
+      // GitHub Flavored Markdown: tables, strikethrough, etc.
+      {
+        name: 'table',
+        enable: true
+      },
+      {
+        name: 'strikethrough',
+        enable: true
+      },
+      {
+        name: 'taggedTemplate',
+        enable: true
+      },
+      {
+        name: 'tasklist',
+        enable: true
+      }
+    ],
+    codeLanguages: languages
+  };
+  
   return [
+    markdownCompartment.of(markdown(markdownConfig)),
     markdownSyntaxStateField,
-    LineBreakDecorator,
-    htmlDecorator(),
-    HorizontalRuleDecorator
   ];
+}
+
+/**
+ * Function to toggle markdown syntax visibility
+ * 
+ * @param {EditorView} view - The editor view
+ * @param {'visible' | 'hidden'} mode - The syntax mode
+ */
+export function toggleMarkdownSyntaxVisibility(view: EditorView, mode: 'visible' | 'hidden'): void {
+  if (mode === currentMode) return;
+  
+  // Apply mode change via StateEffect
+  view.dispatch({
+    effects: [setMarkdownSyntaxMode.of(mode === 'visible' ? 'live' : 'preview')]
+  });
+  
+  currentMode = mode;
 }
 

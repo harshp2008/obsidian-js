@@ -19,6 +19,8 @@ export interface ThemeConfig {
 export function applyTheme(view: EditorView, config: ThemeConfig): void {
   const { name, mode } = config;
   
+  console.log(`Applying theme: ${name} in ${mode} mode`);
+  
   // Get theme from registry
   const theme = themeRegistry[name] || themeRegistry.default;
   
@@ -27,9 +29,11 @@ export function applyTheme(view: EditorView, config: ThemeConfig): void {
     if (mode === 'dark') {
       document.documentElement.classList.add('dark');
       document.documentElement.classList.remove('light');
+      document.documentElement.setAttribute('data-theme', `${name}-dark`);
     } else {
       document.documentElement.classList.add('light');
       document.documentElement.classList.remove('dark');
+      document.documentElement.setAttribute('data-theme', `${name}-light`);
     }
   }
   
@@ -57,12 +61,27 @@ export function applyTheme(view: EditorView, config: ThemeConfig): void {
  * @param name The theme name
  */
 export function loadThemeCSS(name: ThemeName): void {
-  // Import theme CSS files
+  // Load theme CSS files
   if (typeof document !== 'undefined') {
+    // Remove any existing theme CSS
+    const existingLinks = document.querySelectorAll('link[data-theme-css]');
+    existingLinks.forEach(link => link.remove());
+    
     if (name === 'vanilla') {
-      // Dynamically import vanilla theme CSS
-      import('../themes/vanilla/light.css');
-      import('../themes/vanilla/dark.css');
+      // Create link elements for vanilla theme CSS
+      const lightCSS = document.createElement('link');
+      lightCSS.rel = 'stylesheet';
+      lightCSS.href = '/css/vanilla-light.css'; // These files should be in the public/css directory
+      lightCSS.setAttribute('data-theme-css', 'vanilla-light');
+      document.head.appendChild(lightCSS);
+      
+      const darkCSS = document.createElement('link');
+      darkCSS.rel = 'stylesheet';
+      darkCSS.href = '/css/vanilla-dark.css'; // These files should be in the public/css directory
+      darkCSS.setAttribute('data-theme-css', 'vanilla-dark');
+      document.head.appendChild(darkCSS);
+      
+      console.log('Loaded vanilla theme CSS');
     } else {
       // Default theme CSS is loaded in the main app
     }

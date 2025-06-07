@@ -1,0 +1,89 @@
+/* 
+ * VANILLA LIGHT THEME
+ * A clean, minimal light theme with neutral colors
+ */
+
+:root {
+  /* Default variables if not overridden */
+  --vanilla-light-background-primary: #fcfcfc; /* Main editor background */
+  --vanilla-light-background-secondary: #f5f5f5; /* Secondary backgrounds like gutters */
+  --vanilla-light-text-normal: #2c2c2c; /* Main text color */
+  --vanilla-light-text-muted: #707070; /* Subdued text color */
+  --vanilla-light-text-accent: #625772; /* Accent color for highlights */
+  --vanilla-light-cursor: #625772; /* Cursor color */
+
+  /* === SELECTION & HIGHLIGHTS === */
+  --vanilla-light-selection-bg: rgba(
+    98,
+    87,
+    114,
+    0.15
+  ); /* Selected text background */
+  --vanilla-light-active-line: rgba(0, 0, 0, 0.03); /* Active line background */
+  --vanilla-light-active-line-gutter: rgba(
+    0,
+    0,
+    0,
+    0.05
+  ); /* Active line gutter */
+
+  /* === SYNTAX HIGHLIGHTING === */
+  --vanilla-light-heading-color: #42404d; /* Heading text color */
+  --vanilla-light-emphasis-color: #2c2c2c; /* Italic text color */
+  --vanilla-light-strong-color: #222222; /* Bold text color */
+  --vanilla-light-link-color: #625772; /* Link text color */
+  --vanilla-light-code-color: #625772; /* Inline code color */
+  --vanilla-light-quote-color: #707070; /* Blockquote text color */
+
+  /* === BORDERS & SHADOWS === */
+  --vanilla-light-border-color: #e2e2e2; /* Border color */
+  --vanilla-light-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Default shadow */
+}
+
+/* Apply stronger colors when vanilla theme is selected */
+html[data-theme="vanilla-light"] {
+  --vanilla-light-background-primary: #f5f0ff; /* Light purple background */
+  --vanilla-light-background-secondary: #ede6f8; /* Light purple secondary */
+  --vanilla-light-text-normal: #2c2c2c;
+  --vanilla-light-text-muted: #707070;
+  --vanilla-light-text-accent: #5a4c6d; /* Darker purple accent */
+  --vanilla-light-cursor: #5a4c6d; /* Darker purple cursor */
+  --vanilla-light-selection-bg: rgba(98, 87, 114, 0.2); /* Stronger selection */
+  --vanilla-light-active-line: rgba(
+    98,
+    87,
+    114,
+    0.05
+  ); /* Purple tinted active line */
+  --vanilla-light-active-line-gutter: rgba(
+    98,
+    87,
+    114,
+    0.08
+  ); /* Purple tinted gutter */
+  --vanilla-light-heading-color: #42404d;
+  --vanilla-light-emphasis-color: #2c2c2c;
+  --vanilla-light-strong-color: #222222;
+  --vanilla-light-link-color: #5a4c6d; /* Darker purple links */
+  --vanilla-light-code-color: #5a4c6d; /* Darker purple code */
+  --vanilla-light-quote-color: #707070;
+  --vanilla-light-border-color: #e2e2e2;
+  --vanilla-light-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Add a special highlight color to show the theme is working */
+html[data-theme="vanilla-light"] .cm-editor {
+  border: 4px solid #625772;
+  background-color: #f5f0ff !important; /* Force background color */
+}
+
+/* Force background color on content area */
+html[data-theme="vanilla-light"] .cm-content {
+  background-color: #f5f0ff !important;
+}
+
+/* More visible gutter */
+html[data-theme="vanilla-light"] .cm-gutters {
+  background-color: #ede6f8 !important;
+  border-right: 1px solid #d8c9f0 !important;
+}

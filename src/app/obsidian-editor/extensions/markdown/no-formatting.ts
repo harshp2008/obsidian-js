@@ -1,108 +1,73 @@
-import { EditorView, ViewPlugin, DecorationSet, Decoration } from '@codemirror/view';
-import { RangeSetBuilder, EditorState } from '@codemirror/state';
+/**
+ * @fileoverview Extension to prevent markdown formatting inside HTML elements
+ * @module obsidian-editor/extensions/markdown/no-formatting
+ */
+
+import { Extension } from '@codemirror/state';
+import { EditorView, Decoration, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { syntaxTree } from '@codemirror/language';
+import { RangeSetBuilder } from '@codemirror/state';
 
 /**
- * Extension that adds extra protection against markdown formatting in HTML regions.
- * This adds non-parsing spans that instruct the markdown parser to completely skip these areas.
+ * Creates an extension that prevents markdown formatting within HTML elements
+ * 
+ * @returns {Extension} CodeMirror extension
  */
-export const noMarkdownInHtmlPlugin = ViewPlugin.fromClass(class {
-  decorations: DecorationSet;
+export function createNoMarkdownInHtmlExtension(): Extension {
+  // Create a ViewPlugin to handle HTML elements
+  return ViewPlugin.fromClass(
+    class {
+      decorations: any;
 
-  constructor(view: EditorView) {
-    this.decorations = this.buildDecorations(view);
-  }
-
-  update(update: { view: EditorView; docChanged: boolean }) {
-    if (update.docChanged) {
-      this.decorations = this.buildDecorations(update.view);
-    }
-  }
-
-  /**
-   * Find HTML regions in the document and create anti-formatting decorations
-   */
-  buildDecorations(view: EditorView): DecorationSet {
-    const { state } = view;
-    const builder = new RangeSetBuilder<Decoration>();
-
-    // Find HTML regions by scanning for angle brackets
-    this.findHtmlRegions(state).forEach(({ from, to }) => {
-      if (from < to) {
-        // Add a decoration that breaks markdown parsing
-        builder.add(
-          from, 
-          to, 
-          Decoration.mark({
-            class: 'cm-anti-markdown no-parse',
-            attributes: { 'data-no-markdown': 'true', 'data-raw': 'true' }
-          })
-        );
+      constructor(view: EditorView) {
+        this.decorations = this.buildDecorations(view);
       }
-    });
 
-    return builder.finish();
-  }
+      update(update: ViewUpdate) {
+        if (update.docChanged || update.viewportChanged) {
+          this.decorations = this.buildDecorations(update.view);
+        }
+      }
 
-  /**
-   * Simple HTML region detection - looks for paired angle brackets
-   */
-  findHtmlRegions(state: EditorState): { from: number; to: number }[] {
-    const doc = state.doc.toString();
-    const regions: { from: number; to: number }[] = [];
-    
-    // Very simple regex-based HTML detection
-    const htmlTagRegex = /<\/?[a-zA-Z][^>]*>/g;
-    
-    // Track potential HTML tag openings
-    let match;
-    let openTags: { tag: string; pos: number }[] = [];
-    
-    while ((match = htmlTagRegex.exec(doc)) !== null) {
-      const tagContent = match[0];
-      const isClosing = tagContent.startsWith('</');
-      const isVoid = tagContent.endsWith('/>');
-      
-      if (isVoid) {
-        // Self-closing tag, create a region just for this tag
-        regions.push({ from: match.index, to: match.index + tagContent.length });
-      } else if (isClosing) {
-        // Closing tag, find matching opening tag if any
-        const tagName = tagContent.match(/<\/([a-zA-Z][^>\s]*)/)?.[1]?.toLowerCase();
-        
-        if (tagName) {
-          // Look for matching open tag from the end
-          for (let i = openTags.length - 1; i >= 0; i--) {
-            if (openTags[i].tag === tagName) {
-              // Found matching pair, create a region
-              regions.push({
-                from: openTags[i].pos,
-                to: match.index + tagContent.length
+      buildDecorations(view: EditorView) {
+        const builder = new RangeSetBuilder<Decoration>();
+        const { state } = view;
+        const tree = syntaxTree(state);
+
+        // Find HTML tags in the document
+        tree.iterate({
+          enter: (node) => {
+            if (node.name.includes('HtmlTag') || node.name.includes('HtmlBlock')) {
+              // Add a decoration to mark this as HTML content
+              const htmlMark = Decoration.mark({
+                class: 'cm-html-content',
+                attributes: { 'data-html': 'true' }
               });
               
-              // Remove this and all nested tags
-              openTags.splice(i);
-              break;
+              builder.add(node.from, node.to, htmlMark);
             }
           }
-        }
-      } else {
-        // Opening tag, add to stack
-        const tagName = tagContent.match(/<([a-zA-Z][^>\s]*)/)?.[1]?.toLowerCase();
-        if (tagName) {
-          openTags.push({ tag: tagName, pos: match.index });
-        }
-      }
-    }
-    
-    return regions;
-  }
-}, {
-  decorations: instance => instance.decorations
-});
+        });
 
-/**
- * Export the plugin as an extension
- */
-export function createNoMarkdownInHtmlExtension() {
-  return [noMarkdownInHtmlPlugin];
+        return builder.finish();
+      }
+    },
+    {
+      decorations: (instance) => instance.decorations,
+      provide: (plugin) =>
+        EditorView.baseTheme({
+          '.cm-html-content': {
+            // Styles for HTML content
+            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+            borderRadius: '2px',
+          },
+          '.cm-html-content .cm-formatting': {
+            // Prevent markdown formatting inside HTML
+            color: 'inherit !important',
+            fontWeight: 'inherit !important',
+            fontStyle: 'inherit !important',
+          }
+        })
+    }
+  );
 } 

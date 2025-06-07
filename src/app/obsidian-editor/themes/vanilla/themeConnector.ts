@@ -10,6 +10,18 @@ export function createVanillaLightTheme() {
         color: "var(--vanilla-light-text-normal, #2c2c2c)",
         backgroundColor: "var(--vanilla-light-background-primary, #fcfcfc)",
       },
+      "&.cm-editor": {
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          pointerEvents: "none",
+        }
+      },
       ".cm-content": { 
         caretColor: "var(--vanilla-light-cursor, #625772)",
         fontFamily: "'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace",
@@ -56,6 +68,18 @@ export function createVanillaDarkTheme() {
       "&": {
         color: "var(--vanilla-dark-text-normal, #e0e0e0)",
         backgroundColor: "var(--vanilla-dark-background-primary, #262626)",
+      },
+      "&.cm-editor": {
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: -1,
+          pointerEvents: "none",
+        }
       },
       ".cm-content": { 
         caretColor: "var(--vanilla-dark-cursor, #bfb1d5)",

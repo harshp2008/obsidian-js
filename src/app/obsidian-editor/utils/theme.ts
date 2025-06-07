@@ -1,12 +1,24 @@
 /**
+ * @fileoverview Theme utilities for the editor
+ * @module obsidian-editor/utils/theme
+ */
+
+/**
  * This file contains theme configurations for the CodeMirror editor.
  */
 import { EditorView } from '@codemirror/view';
 import { vanillaLightTheme, vanillaDarkTheme } from '../themes/vanilla';
 import { loadThemeCSS } from './applyTheme';
 
-// Define available themes
-export type EditorThemeName = 'obsidian' | 'vanilla';
+/**
+ * Editor theme names
+ */
+export type EditorThemeName = 'vanilla';
+
+/**
+ * Theme storage key
+ */
+const THEME_STORAGE_KEY = 'obsidian-editor-theme';
 
 /**
  * Get the current document theme (light/dark) based on system preferences
@@ -28,45 +40,60 @@ export const getCurrentDocumentTheme = (): 'light' | 'dark' => {
 };
 
 /**
- * Get the current editor theme name
+ * Get the current editor theme
+ * 
+ * @returns {EditorThemeName} The current theme name
  */
-export const getCurrentEditorTheme = (): EditorThemeName => {
-  if (typeof window !== 'undefined') {
-    const storedTheme = localStorage.getItem('obsidian-editor-theme');
-    if (storedTheme === 'obsidian' || storedTheme === 'vanilla') {
-      return storedTheme;
-    }
-  }
-  return 'obsidian'; // Default theme
-};
+export function getCurrentEditorTheme(): EditorThemeName {
+  if (typeof window === 'undefined') return 'vanilla'; // Default for SSR
+  
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  return (savedTheme as EditorThemeName) || 'vanilla';
+}
 
 /**
  * Set the editor theme
+ * 
+ * @param {EditorThemeName} theme - The theme to set
  */
-export const setEditorTheme = (themeName: EditorThemeName): void => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('obsidian-editor-theme', themeName);
-    loadThemeCSS(themeName === 'vanilla' ? 'vanilla' : 'default');
-  }
-};
+export function setEditorTheme(theme: EditorThemeName): void {
+  if (typeof window === 'undefined') return; // Skip for SSR
+  
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  
+  // Apply theme to document
+  const isDarkMode = document.documentElement.classList.contains('dark');
+  const themeClass = isDarkMode ? `${theme}-dark` : `${theme}-light`;
+  document.documentElement.setAttribute('data-theme', themeClass);
+}
 
 /**
- * Toggle between light and dark themes
+ * Check if the current theme is dark mode
+ * 
+ * @returns {boolean} True if in dark mode
  */
-export const toggleTheme = (): 'light' | 'dark' => {
-  const currentTheme = getCurrentDocumentTheme();
-  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+export function isEditorDarkMode(): boolean {
+  if (typeof window === 'undefined') return false; // Default for SSR
   
-  // Save the new theme preference
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('obsidian-theme', newTheme);
-  }
+  return document.documentElement.classList.contains('dark');
+}
+
+/**
+ * Toggle the editor theme between light and dark
+ */
+export function toggleEditorTheme(): void {
+  if (typeof window === 'undefined') return; // Skip for SSR
   
-  // Apply the new theme
-  applyThemeVariables(newTheme);
+  const currentTheme = getCurrentEditorTheme();
+  const isDark = document.documentElement.classList.contains('dark');
   
-  return newTheme;
-};
+  // Toggle dark mode class
+  document.documentElement.classList.toggle('dark');
+  
+  // Update theme attribute
+  const newMode = !isDark ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', `${currentTheme}-${newMode}`);
+}
 
 /**
  * Define CSS variables for Obsidian-like styling

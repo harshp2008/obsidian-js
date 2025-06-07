@@ -1,4 +1,79 @@
-# obsidian-js
+# Obsidian JS
+
+A modern, extensible JavaScript-based markdown editor inspired by Obsidian.
+
+## Features
+
+- 📝 **Rich Markdown Editing** - Full-featured markdown editor
+- 🎨 **Themes** - Light and dark themes with customization options
+- 🧩 **Extensions** - Modular architecture for adding new features
+- 📱 **Responsive** - Works on desktop and mobile devices
+- ⚡ **Performance** - Fast, efficient editing experience
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 16.x or higher
+- npm or yarn
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/obsidian-js.git
+cd obsidian-js
+
+# Install dependencies
+npm install
+
+# Start the development server
+npm run dev
+```
+
+## Project Structure
+
+The project is organized as follows:
+
+```
+obsidian-js/
+├── docs/                  # Documentation
+├── public/                # Static assets
+│   └── themes/            # Theme files
+├── src/                   # Source code
+│   ├── app/               # Main application code
+│   │   └── obsidian-editor/  # Editor core
+│   ├── components/        # Shared components
+│   ├── contexts/          # React contexts
+│   └── types/             # TypeScript type definitions
+└── ...                    # Configuration files
+```
+
+## Theme System
+
+Obsidian JS includes a flexible theme system with light and dark modes. Themes are located in the `public/themes` directory and can be customized or extended.
+
+See [Theme Documentation](./docs/themes.md) for more details.
+
+## Extension System
+
+The editor can be extended with plugins that add new functionality. Extensions are located in the `src/app/obsidian-editor/extensions` directory.
+
+See [Extension Documentation](./docs/extensions.md) for more details.
+
+## Contributing
+
+Contributions are welcome! Please see our [Contributing Guidelines](./CONTRIBUTING.md) for more information.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## Acknowledgments
+
+- Inspired by [Obsidian](https://obsidian.md)
+- Built with [Next.js](https://nextjs.org)
+- Uses [CodeMirror](https://codemirror.net) for the editor
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 

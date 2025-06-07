@@ -187,9 +187,18 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
         // Get the appropriate theme based on the current theme name and mode
         const themeExtension = getTheme(editorThemeName, theme === 'dark' ? 'dark' : 'light');
         
+        // Apply the data-theme attribute for CSS targeting
+        document.documentElement.setAttribute(
+          'data-theme', 
+          `${editorThemeName}-${theme === 'dark' ? 'dark' : 'light'}`
+        );
+        
+        // Update CodeMirror's theme
         editorViewRef.current.dispatch({
           effects: themeCompartment.reconfigure(themeExtension)
         });
+        
+        console.log(`Applied editor theme: ${editorThemeName} in ${theme} mode`);
       } catch (error) {
         console.error("Error updating theme:", error);
       }
