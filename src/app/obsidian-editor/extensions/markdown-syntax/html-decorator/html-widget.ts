@@ -1,4 +1,4 @@
-import { WidgetType } from '@codemirror/view';
+import { WidgetType, EditorView } from '@codemirror/view';
 import { DANGEROUS_TAGS } from './types';
 
 // Debug helper

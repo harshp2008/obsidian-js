@@ -1534,281 +1534,136 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 2px;
 }
 
-/* Ultra aggressive reset for HTML code mode - maintain markdown neutralization */
-.cm-editor .cm-scroller .cm-content .cm-line .cm-html-code-mode,
-.cm-editor .cm-scroller .cm-content .cm-line .cm-html-code-mode *,
-.cm-html-code-mode,
-.cm-html-code-mode * {
-  font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  text-decoration: none !important;
-  font-weight: normal !important;
-  font-style: normal !important;
-  background-color: transparent !important;
-  color: inherit !important;
-  text-align: left !important;
-  white-space: pre-wrap !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  border-radius: 0 !important;
-  list-style: none !important;
-  display: inline !important;
-  text-transform: none !important;
-  letter-spacing: normal !important;
-  box-shadow: none !important;
-  text-indent: 0 !important;
-  height: auto !important;
-  width: auto !important;
-  opacity: 1 !important;
-  position: static !important;
-}
-
-/* CRITICAL OVERRIDE - Highest priority HTML syntax highlighting */
+/* OBSIDIAN-STYLE HTML SYNTAX HIGHLIGHTING */
 html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
-  color: #9c64de !important;
-  font-weight: 500 !important;
+  color: #5a9bcf !important; /* Obsidian-like blue for tag names */
+  font-weight: 600 !important; /* Make it bolder */
 }
 
 html body .cm-editor .cm-content .cm-line .cm-html-attribute {
-  color: #49abb5 !important;
-  font-weight: normal !important;
+  color: #d99e5f !important; /* Obsidian-like orange for attributes */
+  font-weight: 500 !important;
 }
 
 html body .cm-editor .cm-content .cm-line .cm-html-attribute-value {
-  color: #dd672c !important;
+  color: #8cad5d !important; /* Obsidian-like green for attribute values */
   font-weight: normal !important;
 }
 
 html body .cm-editor .cm-content .cm-line .cm-html-bracket {
-  color: #7999bb !important;
+  color: #6c6c6c !important; /* Gray for brackets to be less distracting */
   font-weight: normal !important;
 }
 
-/* Nesting levels with highest specificity */
+/* Nesting levels with highest specificity - More Obsidian-like colors */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-0 {
-  color: #9c64de !important;
-}
+  color: #5a9bcf !important;
+} /* Blue */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-1 {
-  color: #4e88d5 !important;
-}
+  color: #8cad5d !important;
+} /* Green */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-2 {
-  color: #3ba85d !important;
-}
+  color: #d99e5f !important;
+} /* Orange */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-3 {
-  color: #d2922c !important;
-}
+  color: #d35c5c !important;
+} /* Red */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-4 {
-  color: #cf456c !important;
-}
+  color: #b97ad4 !important;
+} /* Purple */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-tag-name.cm-html-tag-level-5 {
-  color: #6d7893 !important;
-}
+  color: #5fb9b9 !important;
+} /* Teal */
 
+/* Bracket colors to match tag colors */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-0 {
-  color: #9c64de !important;
-}
+  color: rgba(90, 155, 207, 0.7) !important;
+} /* Blue */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-1 {
-  color: #4e88d5 !important;
-}
+  color: rgba(140, 173, 93, 0.7) !important;
+} /* Green */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-2 {
-  color: #3ba85d !important;
-}
+  color: rgba(217, 158, 95, 0.7) !important;
+} /* Orange */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-3 {
-  color: #d2922c !important;
-}
+  color: rgba(211, 92, 92, 0.7) !important;
+} /* Red */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-4 {
-  color: #cf456c !important;
-}
+  color: rgba(185, 122, 212, 0.7) !important;
+} /* Purple */
 html
   body
   .cm-editor
   .cm-content
   .cm-line
   .cm-html-bracket.cm-html-bracket-level-5 {
-  color: #6d7893 !important;
+  color: rgba(95, 185, 185, 0.7) !important;
+} /* Teal */
+
+/* Additional visual cues for HTML code */
+html body .cm-editor .cm-content .cm-line .cm-html-code-mode {
+  background-color: rgba(245, 245, 250, 0.2) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Direct targeting of formatted elements */
-.cm-html-code-mode h1,
-.cm-html-code-mode h2,
-.cm-html-code-mode h3,
-.cm-html-code-mode h4,
-.cm-html-code-mode h5,
-.cm-html-code-mode h6,
-.cm-html-code-mode strong,
-.cm-html-code-mode b,
-.cm-html-code-mode em,
-.cm-html-code-mode i,
-.cm-html-code-mode u,
-.cm-html-code-mode s,
-.cm-html-code-mode strike,
-.cm-html-code-mode del,
-.cm-html-code-mode a,
-.cm-html-code-mode blockquote,
-.cm-html-code-mode ul,
-.cm-html-code-mode ol,
-.cm-html-code-mode li {
-  all: revert !important;
-  font-family: inherit !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  text-decoration: none !important;
-  font-weight: normal !important;
-  font-style: normal !important;
-  background-color: transparent !important;
-  color: inherit !important;
-}
-
-/* Target all CodeMirror markdown classes within HTML code mode */
-.cm-html-code-mode .cm-strong,
-.cm-html-code-mode .cm-em,
-.cm-html-code-mode .cm-header,
-.cm-html-code-mode .cm-header-1,
-.cm-html-code-mode .cm-header-2,
-.cm-html-code-mode .cm-header-3,
-.cm-html-code-mode .cm-header-4,
-.cm-html-code-mode .cm-header-5,
-.cm-html-code-mode .cm-header-6,
-.cm-html-code-mode .cm-link,
-.cm-html-code-mode .cm-url,
-.cm-html-code-mode .cm-formatting,
-.cm-html-code-mode .cm-formatting-header,
-.cm-html-code-mode .cm-formatting-strong,
-.cm-html-code-mode .cm-formatting-em,
-.cm-html-code-mode .cm-formatting-link,
-.cm-html-code-mode .cm-formatting-list,
-.cm-html-code-mode .cm-formatting-list-ul,
-.cm-html-code-mode .cm-formatting-list-ol,
-.cm-html-code-mode .cm-hmd-list-1,
-.cm-html-code-mode .cm-hmd-list-2,
-.cm-html-code-mode .cm-hmd-list-3,
-.cm-html-code-mode .cm-quote,
-.cm-html-code-mode .cm-hr,
-.cm-html-code-mode .cm-comment,
-.cm-html-code-mode .cm-strikethrough,
-.cm-html-code-mode .cm-highlight {
-  all: unset !important;
-  font-weight: normal !important;
-  font-style: normal !important;
-  background-color: transparent !important;
-  text-decoration: none !important;
-  display: inline !important;
-  color: inherit !important;
-}
-
-/* Remove any background colors inside HTML code mode */
-.cm-html-code-mode .cm-header[style*="background"],
-.cm-html-code-mode .cm-strong[style*="background"],
-.cm-html-code-mode .cm-em[style*="background"],
-.cm-html-code-mode [style*="background"] {
-  background-color: transparent !important;
-  background: none !important;
-}
-
-/* Show markdown syntax as literal text with soft colors */
-.cm-html-code-mode .cm-formatting-header-1,
-.cm-html-code-mode .cm-formatting-header-2,
-.cm-html-code-mode .cm-formatting-header-3,
-.cm-html-code-mode .cm-formatting-header-4,
-.cm-html-code-mode .cm-formatting-header-5,
-.cm-html-code-mode .cm-formatting-header-6 {
-  color: #888 !important;
-  font-weight: normal !important;
-}
-
-.cm-html-code-mode .cm-formatting-strong,
-.cm-html-code-mode .cm-strong {
-  color: #888 !important;
-  font-weight: normal !important;
-}
-
-.cm-html-code-mode .cm-formatting-em,
-.cm-html-code-mode .cm-em {
-  color: #888 !important;
-  font-style: normal !important;
-}
-
-.cm-html-code-mode .cm-formatting-list-ul,
-.cm-html-code-mode .cm-formatting-list-ol {
-  color: #888 !important;
-  font-weight: normal !important;
-}
-
-/* Override background highlight effects */
-.cm-html-code-mode [class*="cm-header"],
-.cm-html-code-mode [class*="cm-header"] *,
-.cm-html-code-mode h1,
-.cm-html-code-mode h2,
-.cm-html-code-mode h3,
-.cm-html-code-mode h4,
-.cm-html-code-mode h5,
-.cm-html-code-mode h6 {
-  background-color: transparent !important;
-  color: inherit !important;
-  font-size: inherit !important;
-  font-weight: normal !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  display: inline !important;
-}
-
-.dark .cm-html-code-mode {
-  background-color: rgba(30, 35, 42, 0.15);
+/* Make HTML tags stand out more */
+html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !important;
+  letter-spacing: 0.03em !important;
 }

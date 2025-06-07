@@ -234,50 +234,65 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
     }
   }
   
-  // Sort all decorations by from position
-  allDecorations.sort((a, b) => {
-    // First sort by from position
-    if (a.from !== b.from) {
-      return a.from - b.from;
-    }
+  // COMPLETELY REWRITTEN DECORATION SORTING AND BUILDING LOGIC
+  const builder = new RangeSetBuilder<Decoration>();
+  
+  try {
+    // Create a map to store decorations by position
+    // The key is the from position, and the value is an array of decorations at that position
+    const positionMap = new Map<number, {from: number, to: number, decoration: Decoration}[]>();
     
-    // For same position, prioritize replace decorations over mark decorations
-    const aIsReplace = a.decoration.spec?.widget !== undefined;
-    const bIsReplace = b.decoration.spec?.widget !== undefined;
-    
-    if (aIsReplace !== bIsReplace) {
-      return aIsReplace ? -1 : 1;
-    }
-    
-    // For mark decorations, check inclusivity 
-    if (!aIsReplace && !bIsReplace) {
-      const aInclusive = a.decoration.spec?.inclusiveStart ?? false;
-      const bInclusive = b.decoration.spec?.inclusiveStart ?? false;
-      
-      if (aInclusive !== bInclusive) {
-        return aInclusive ? -1 : 1;
+    // Group decorations by from position
+    for (const deco of allDecorations) {
+      if (deco.from < deco.to) { // Skip invalid ranges
+        if (!positionMap.has(deco.from)) {
+          positionMap.set(deco.from, []);
+        }
+        positionMap.get(deco.from)!.push(deco);
       }
     }
     
-    // Finally sort by to position
-    return a.to - b.to;
-  });
-  
-  // Add sorted decorations to the builder
-  const builder = new RangeSetBuilder<Decoration>();
-  try {
-    // Add decorations in sorted order
-    for (const { from, to, decoration } of allDecorations) {
-      if (from < to) {
-        // Skip invalid ranges
+    // Get all positions sorted
+    const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
+    
+    // For each position, sort its decorations by startSide and priority
+    for (const pos of positions) {
+      const decos = positionMap.get(pos)!;
+      
+      // Sort decorations at this position
+      decos.sort((a, b) => {
+        // First prioritize by whether it's a replace widget
+        const aIsWidget = a.decoration.spec.widget !== undefined;
+        const bIsWidget = b.decoration.spec.widget !== undefined;
+        
+        if (aIsWidget !== bIsWidget) {
+          return aIsWidget ? -1 : 1; // Widgets come first
+        }
+        
+        // For marks, sort by startSide (inclusiveStart)
+        if (!aIsWidget && !bIsWidget) {
+          const aInclusive = a.decoration.spec.inclusiveStart === true;
+          const bInclusive = b.decoration.spec.inclusiveStart === true;
+          
+          if (aInclusive !== bInclusive) {
+            return aInclusive ? -1 : 1; // Inclusive comes first
+          }
+        }
+        
+        // If still tied, sort by end position
+        return a.to - b.to;
+      });
+      
+      // Add sorted decorations to the builder
+      for (const deco of decos) {
         try {
-          builder.add(from, to, decoration);
-        } catch (error) {
-          console.warn("Error adding decoration", { from, to, error });
-          // Continue with other decorations
+          builder.add(deco.from, deco.to, deco.decoration);
+        } catch (e) {
+          if (DEBUG) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
         }
       }
     }
+    
     return builder.finish();
   } catch (error) {
     console.error("Critical error in decoration building:", error);

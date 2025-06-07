@@ -61,7 +61,7 @@ class HtmlDecoratorPlugin implements PluginValue {
     let htmlContentChanged = false;
     if (contentChanged) {
       // Check if any changes overlap with known HTML regions
-      htmlContentChanged = update.changes.iterChanges((fromA, toA, fromB, toB) => {
+      update.changes.iterChanges((fromA, toA, fromB, toB) => {
         // If we've already determined HTML content changed, skip further checks
         if (htmlContentChanged) return;
         

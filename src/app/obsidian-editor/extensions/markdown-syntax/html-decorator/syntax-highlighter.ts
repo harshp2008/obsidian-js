@@ -56,14 +56,18 @@ export class HtmlSyntaxHighlighter {
     const tagStack: {name: string, level: number}[] = [];
     let currentLevel = 0;
     
-    // Process tag by tag using regex
-    const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(?:=(?:(['"]).*?\3|\S+))?|(['"])(.*?)\4|(\/?>)/g;
+    // Improved regex for better token detection
+    // Process tag by tag using regex that handles all HTML elements more precisely
+    const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(=(?:(['"]).*?\4|\S+))?|(['"])(.*?)\5|(\/?>)/g;
     let match;
+    
+    // Create an array of tokens before adding to builder
+    const tokens: {from: number, to: number, class: string}[] = [];
     
     // Process tokens in order of appearance (which maintains from order)
     while ((match = tokenRegex.exec(html)) !== null) {
       try {
-        const [full, tagName, attrName, q1, q2, attrValue, bracket] = match;
+        const [full, tagName, attrName, fullAttr, q1, attrValue, q2, bracket] = match;
         const start = baseOffset + match.index;
         
         // Handle opening and closing tags
@@ -73,22 +77,18 @@ export class HtmlSyntaxHighlighter {
           const tagEnd = start + (isClosing ? 2 : 1) + tagName.length;
           
           // Add bracket highlighting
-          builder.add(
-            tagStart,
-            tagStart + (isClosing ? 2 : 1),
-            Decoration.mark({ 
-              class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}` 
-            })
-          );
+          tokens.push({
+            from: tagStart,
+            to: tagStart + (isClosing ? 2 : 1),
+            class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}`
+          });
           
           // Add tag name highlighting
-          builder.add(
-            tagStart + (isClosing ? 2 : 1),
-            tagEnd,
-            Decoration.mark({ 
-              class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}` 
-            })
-          );
+          tokens.push({
+            from: tagStart + (isClosing ? 2 : 1),
+            to: tagEnd,
+            class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}`
+          });
           
           // Track nesting
           if (isClosing) {
@@ -115,24 +115,44 @@ export class HtmlSyntaxHighlighter {
           const attrStart = start + 1; // Skip whitespace
           const attrEnd = attrStart + attrName.length;
           
-          builder.add(
-            attrStart,
-            attrEnd,
-            Decoration.mark({ class: 'cm-html-attribute' })
-          );
+          tokens.push({
+            from: attrStart,
+            to: attrEnd,
+            class: 'cm-html-attribute'
+          });
+          
+          // If attribute has a value, highlight it
+          if (fullAttr && fullAttr.includes('=')) {
+            const equalsPos = fullAttr.indexOf('=');
+            const valueStart = attrStart + attrName.length + 1; // +1 for equals sign
+            
+            if (q1) { // Quoted value
+              const quoteLen = q1.length;
+              tokens.push({
+                from: valueStart,
+                to: valueStart + fullAttr.length - equalsPos - 1,
+                class: 'cm-html-attribute-value'
+              });
+            } else if (fullAttr.length > equalsPos + 1) { // Unquoted value
+              tokens.push({
+                from: valueStart,
+                to: valueStart + fullAttr.length - equalsPos - 1,
+                class: 'cm-html-attribute-value'
+              });
+            }
+          }
         }
         
-        // Handle attribute values
-        else if (attrValue !== undefined && (q1 || q2)) {
-          const quote = q1 || q2;
+        // Handle attribute values with explicit quotes
+        else if (attrValue !== undefined && q2) {
           const valueStart = start;
-          const valueEnd = start + quote.length + attrValue.length + quote.length;
+          const valueEnd = start + q2.length + attrValue.length + q2.length;
           
-          builder.add(
-            valueStart,
-            valueEnd,
-            Decoration.mark({ class: 'cm-html-attribute-value' })
-          );
+          tokens.push({
+            from: valueStart,
+            to: valueEnd,
+            class: 'cm-html-attribute-value'
+          });
         }
         
         // Handle closing brackets
@@ -144,13 +164,11 @@ export class HtmlSyntaxHighlighter {
               (bracket === '>' && tagStack.length > 0 && 
                VOID_TAGS.has(tagStack[tagStack.length - 1].name));
             
-          builder.add(
-            bracketStart,
-            bracketEnd,
-            Decoration.mark({ 
-              class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}` 
-            })
-          );
+          tokens.push({
+            from: bracketStart,
+            to: bracketEnd,
+            class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}`
+          });
           
           if (isSelfClosing && tagStack.length > 0) {
             currentLevel = tagStack[tagStack.length - 1].level;
@@ -161,6 +179,21 @@ export class HtmlSyntaxHighlighter {
         // Skip this token if there was an error processing it
         console.warn("Error processing token:", tokenError);
       }
+    }
+    
+    // Sort tokens by position to ensure they're added in the correct order
+    tokens.sort((a, b) => {
+      if (a.from !== b.from) return a.from - b.from;
+      return a.to - b.to;
+    });
+    
+    // Add all tokens to the builder
+    for (const token of tokens) {
+      builder.add(
+        token.from,
+        token.to,
+        Decoration.mark({ class: token.class })
+      );
     }
   }
 } 
