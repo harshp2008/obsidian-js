@@ -77,6 +77,8 @@ export function addHtmlStyles(): void {
     .cm-html-code-mode {
       color: #a626a4 !important;
       font-family: monospace !important;
+      background-color: rgba(166, 38, 164, 0.08) !important;
+      border-radius: 3px !important;
     }
     
     .cm-html-tag-name {
@@ -143,6 +145,24 @@ export function addHtmlStyles(): void {
       background: rgba(255,255,255,0.7);
       padding: 1px 3px;
       border-radius: 2px;
+    }
+    
+    /* Editorial indicator when in edit mode */
+    .cm-editing-html {
+      position: relative;
+    }
+    
+    .cm-editing-html::before {
+      content: "Editing HTML";
+      position: absolute;
+      top: -18px;
+      right: 10px;
+      background-color: #ff7043;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      opacity: 0.8;
     }
   `;
   

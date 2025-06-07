@@ -35,8 +35,8 @@ export function buildHtmlDecorations(view: EditorView): DecorationSet {
     // Check if editor is in read-only/preview mode
     const inPreviewMode = isEditorInPreviewMode(view);
     
-    // Build decorations
-    return buildReplaceDecorations(regions, view);
+    // Build decorations based on cursor position
+    return buildSmartDecorations(regions, view, inPreviewMode);
   } catch (error) {
     console.error('Error building HTML decorations:', error);
     return Decoration.none;
@@ -94,55 +94,86 @@ function createHtmlPreview(html: string): HTMLElement {
 }
 
 /**
- * Build decorations using the replace approach instead of widgets
+ * Build smart decorations that handle both edit mode and preview mode
  */
-function buildReplaceDecorations(regions: HtmlRegion[], view: EditorView): DecorationSet {
+function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPreviewMode: boolean): DecorationSet {
   const builder = new RangeSetBuilder<Decoration>();
+  const cursorRanges = view.state.selection.ranges;
   
   // Process each HTML region
   for (const region of regions) {
     try {
-      console.log(`Creating replace decoration for region: ${region.tagName} (${region.from}-${region.to})`);
-      
-      // Extract just the HTML content for preview
-      let htmlContent = region.content;
-      
-      // For div and span, try to extract inner content for cleaner display
-      const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
-      if (tagMatch) {
-        const tagName = tagMatch[1].toLowerCase();
-        const attributes = tagMatch[2] || '';
-        const innerContent = tagMatch[3] || '';
-        
-        // Create an HTML string that preserves styling but focuses on content
-        if (tagName === 'div' || tagName === 'span') {
-          const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
-          const styleValue = styleMatch ? styleMatch[2] : '';
+      // Check if cursor is near this region
+      let nearCursor = false;
+      for (const range of cursorRanges) {
+        // Consider cursor near if it's within the region or very close to its boundaries
+        const closeToBoundary = 
+          Math.abs(range.head - region.from) < 5 || 
+          Math.abs(range.head - region.to) < 5;
           
-          if (styleValue) {
-            htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
-          } else {
-            htmlContent = innerContent;
-          }
+        if ((range.head >= region.from && range.head <= region.to) || closeToBoundary) {
+          nearCursor = true;
+          break;
         }
       }
       
-      // Create a DOM element with the HTML preview
-      const previewElement = createHtmlPreview(htmlContent);
-      
-      // Convert the element to HTML string for the replace decoration
-      const tempContainer = document.createElement('div');
-      tempContainer.appendChild(previewElement);
-      const htmlString = tempContainer.innerHTML;
-      
-      // Create a replace decoration for this region
-      builder.add(region.from, region.to, Decoration.replace({
-        widget: new HtmlReplaceWidget(htmlString),
-        inclusive: true
-      }));
-      
+      // If we're in preview mode or cursor is not near, show HTML preview
+      if (inPreviewMode || !nearCursor) {
+        console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
+        
+        // Extract just the HTML content for preview
+        let htmlContent = region.content;
+        
+        // For div and span, try to extract inner content for cleaner display
+        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
+        if (tagMatch) {
+          const tagName = tagMatch[1].toLowerCase();
+          const attributes = tagMatch[2] || '';
+          const innerContent = tagMatch[3] || '';
+          
+          // Create an HTML string that preserves styling but focuses on content
+          if (tagName === 'div' || tagName === 'span') {
+            const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
+            const styleValue = styleMatch ? styleMatch[2] : '';
+            
+            if (styleValue) {
+              htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
+            } else {
+              htmlContent = innerContent;
+            }
+          }
+        }
+        
+        // Create a DOM element with the HTML preview
+        const previewElement = createHtmlPreview(htmlContent);
+        
+        // Convert the element to HTML string for the replace decoration
+        const tempContainer = document.createElement('div');
+        tempContainer.appendChild(previewElement);
+        const htmlString = tempContainer.innerHTML;
+        
+        // Create a replace decoration for this region
+        builder.add(region.from, region.to, Decoration.replace({
+          widget: new HtmlReplaceWidget(htmlString),
+          inclusive: true
+        }));
+      } 
+      // If cursor is near, show editable code with syntax highlighting
+      else {
+        console.log(`Creating editable syntax highlighting for ${region.tagName}`);
+        
+        // Apply syntax highlighting
+        const syntaxDecorations = HtmlSyntaxHighlighter.highlight(region);
+        
+        // Add each syntax highlighting decoration
+        syntaxDecorations.between(region.from, region.to, (from, to, deco) => {
+          if (from < to) {
+            builder.add(from, to, deco);
+          }
+        });
+      }
     } catch (error) {
-      console.error('Error creating replace decoration for region:', error, region);
+      console.error('Error processing region:', error, region);
     }
   }
   

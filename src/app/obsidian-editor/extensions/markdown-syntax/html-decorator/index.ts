@@ -13,12 +13,18 @@ class HtmlDecoratorPlugin implements PluginValue {
   private debug = true;
   private updateScheduled = false;
   private isDestroyed = false;
+  private lastSelectionHead = -1;
   
   constructor(view: EditorView) {
     this.view = view;
     
     // Add styles on plugin initialization
     addHtmlStyles();
+    
+    // Initialize last selection position
+    if (view.state.selection.ranges.length > 0) {
+      this.lastSelectionHead = view.state.selection.main.head;
+    }
     
     // Schedule initial decorations update
     setTimeout(() => {
@@ -34,17 +40,31 @@ class HtmlDecoratorPlugin implements PluginValue {
   update(update: ViewUpdate): void {
     if (!this.enabled || this.isDestroyed) return;
     
-    // Only update decorations if content changed or selection changed
+    // Check if content or selection changed
     const contentChanged = update.docChanged;
     const selectionChanged = update.selectionSet;
+    
+    // Check if cursor moved significantly
+    let cursorMoved = false;
+    if (selectionChanged && update.state.selection.ranges.length > 0) {
+      const newHead = update.state.selection.main.head;
+      // Only count significant cursor movements (more than just character by character)
+      cursorMoved = Math.abs(newHead - this.lastSelectionHead) > 1;
+      this.lastSelectionHead = newHead;
+      
+      if (cursorMoved) {
+        console.log("Cursor moved - checking HTML regions");
+      }
+    }
     
     if (contentChanged) {
       console.log("Document changed - scheduling HTML decoration update");
     }
     
-    if ((contentChanged || selectionChanged) && !this.updateScheduled) {
+    // Update on content change or significant cursor movement
+    if ((contentChanged || cursorMoved) && !this.updateScheduled) {
       console.log('HtmlDecorator: Scheduling update due to', 
-        contentChanged ? 'content change' : 'selection change');
+        contentChanged ? 'content change' : 'cursor movement');
       
       // Schedule decoration update at the end of the current event loop
       this.updateScheduled = true;

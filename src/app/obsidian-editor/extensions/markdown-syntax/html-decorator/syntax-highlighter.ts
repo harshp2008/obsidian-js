@@ -36,7 +36,9 @@ export class HtmlSyntaxHighlighter {
     decorations.push({
       from: region.from,
       to: region.to,
-      decoration: Decoration.mark({ class: 'cm-html-code-mode' })
+      decoration: Decoration.mark({ 
+        class: 'cm-html-code-mode cm-editing-html' 
+      })
     });
     
     // Find and highlight all tag names
