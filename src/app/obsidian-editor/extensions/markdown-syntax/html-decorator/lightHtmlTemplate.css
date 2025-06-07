@@ -1,0 +1,95 @@
+/* 
+ * LIGHT HTML HIGHLIGHTING TEMPLATE
+ * Use this file as a starting point for customizing HTML highlighting in light mode
+ * 
+ * INSTRUCTIONS:
+ * 1. Copy this file and rename it (e.g., myLightHtmlHighlighting.css)
+ * 2. Modify the CSS variables below to customize colors and styles
+ * 3. Use these variables in your HTML decorator implementation
+ */
+
+:root {
+  /* === HTML PREVIEW CONTAINER === */
+  --light-html-preview-bg: #f8f8f8; /* Preview background color */
+  --light-html-preview-border: #e0e0e0; /* Preview border color */
+  --light-html-preview-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Preview shadow */
+
+  /* === HTML PREVIEW LABEL === */
+  --light-html-label-bg: #e3e3e3; /* Label background color */
+  --light-html-label-color: #333333; /* Label text color */
+
+  /* === HTML CONTENT === */
+  --light-html-content-bg: #ffffff; /* HTML content background */
+  --light-html-content-color: #333333; /* HTML content text color */
+
+  /* === HTML SYNTAX HIGHLIGHTING === */
+  --light-html-tag-color: #d73a49; /* HTML tag name color */
+  --light-html-attribute-color: #e36209; /* HTML attribute name color */
+  --light-html-attribute-value-color: #22863a; /* HTML attribute value color */
+  --light-html-bracket-color: #909090; /* HTML brackets color (<>) */
+
+  /* === HEADINGS IN HTML === */
+  --light-html-heading-color: #333333; /* HTML heading text color */
+
+  /* === DEBUG & EDITING === */
+  --light-html-debug-color: #999999; /* Debug info text color */
+  --light-html-edit-label-bg: #f0f0f0; /* Editing label background */
+  --light-html-edit-label-color: #555555; /* Editing label text color */
+}
+
+/* 
+ * The following styles serve as a reference for how to use the variables above
+ * in your HTML decorator implementation.
+ *
+ * Example implementation:
+ *
+ * export function addHtmlStyles(): void {
+ *   const style = document.createElement('style');
+ *   style.id = 'cm-html-decorator-styles';
+ *   style.textContent = `
+ *     .cm-html-preview {
+ *       background-color: var(--light-html-preview-bg);
+ *       border: 1px solid var(--light-html-preview-border);
+ *       box-shadow: var(--light-html-preview-shadow);
+ *       color: var(--light-html-content-color);
+ *     }
+ *     
+ *     .cm-html-preview-label {
+ *       background: var(--light-html-label-bg);
+ *       color: var(--light-html-label-color);
+ *     }
+ *     
+ *     .cm-html-content {
+ *       background: var(--light-html-content-bg);
+ *       color: var(--light-html-content-color);
+ *     }
+ *     
+ *     .cm-editor .cm-html-tag-name {
+ *       color: var(--light-html-tag-color) !important;
+ *     }
+ *     
+ *     .cm-editor .cm-html-attribute {
+ *       color: var(--light-html-attribute-color) !important;
+ *     }
+ *     
+ *     .cm-editor .cm-html-attribute-value {
+ *       color: var(--light-html-attribute-value-color) !important;
+ *     }
+ *     
+ *     .cm-editor .cm-html-bracket {
+ *       color: var(--light-html-bracket-color) !important;
+ *     }
+ *     
+ *     .cm-html-preview h1,
+ *     .cm-html-preview h2,
+ *     .cm-html-preview h3,
+ *     .cm-html-preview h4,
+ *     .cm-html-preview h5,
+ *     .cm-html-preview h6 {
+ *       color: var(--light-html-heading-color) !important;
+ *     }
+ *   `;
+ *   
+ *   document.head.appendChild(style);
+ * }
+ */

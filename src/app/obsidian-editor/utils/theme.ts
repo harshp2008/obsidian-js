@@ -2,6 +2,11 @@
  * This file contains theme configurations for the CodeMirror editor.
  */
 import { EditorView } from '@codemirror/view';
+import { vanillaLightTheme, vanillaDarkTheme } from '../themes/vanilla';
+import { loadThemeCSS } from './applyTheme';
+
+// Define available themes
+export type EditorThemeName = 'obsidian' | 'vanilla';
 
 /**
  * Get the current document theme (light/dark) based on system preferences
@@ -20,6 +25,29 @@ export const getCurrentDocumentTheme = (): 'light' | 'dark' => {
     }
   }
   return 'light';
+};
+
+/**
+ * Get the current editor theme name
+ */
+export const getCurrentEditorTheme = (): EditorThemeName => {
+  if (typeof window !== 'undefined') {
+    const storedTheme = localStorage.getItem('obsidian-editor-theme');
+    if (storedTheme === 'obsidian' || storedTheme === 'vanilla') {
+      return storedTheme;
+    }
+  }
+  return 'obsidian'; // Default theme
+};
+
+/**
+ * Set the editor theme
+ */
+export const setEditorTheme = (themeName: EditorThemeName): void => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('obsidian-editor-theme', themeName);
+    loadThemeCSS(themeName === 'vanilla' ? 'vanilla' : 'default');
+  }
 };
 
 /**
@@ -94,11 +122,20 @@ const applyThemeVariables = (theme: 'light' | 'dark') => {
     Object.entries(variables).forEach(([key, value]) => {
       root.style.setProperty(key, value);
     });
+    
+    // Apply theme class to document
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+      document.documentElement.classList.remove('light');
+    } else {
+      document.documentElement.classList.add('light');
+      document.documentElement.classList.remove('dark');
+    }
   }
 };
 
 /**
- * Light theme for the editor
+ * Light theme for the editor (Obsidian default)
  */
 export const lightTheme = EditorView.theme({
   '&': {
@@ -123,7 +160,7 @@ export const lightTheme = EditorView.theme({
 }, { dark: false });
 
 /**
- * Dark theme for the editor
+ * Dark theme for the editor (Obsidian default)
  */
 export const darkTheme = EditorView.theme({
   '&': {
@@ -147,12 +184,28 @@ export const darkTheme = EditorView.theme({
   },
 }, { dark: true });
 
+// Re-export vanilla themes for easier access
+export { vanillaLightTheme, vanillaDarkTheme };
+
+// Get the appropriate theme based on theme name and mode
+export const getTheme = (themeName: EditorThemeName, mode: 'light' | 'dark'): EditorView.Theme => {
+  if (themeName === 'vanilla') {
+    return mode === 'dark' ? vanillaDarkTheme : vanillaLightTheme;
+  } else {
+    return mode === 'dark' ? darkTheme : lightTheme;
+  }
+};
+
 // Apply theme variables when this module is loaded in browser
 if (typeof window !== 'undefined') {
   // Wait until after hydration is complete
   setTimeout(() => {
     const initialTheme = getCurrentDocumentTheme();
     applyThemeVariables(initialTheme);
+    
+    // Load theme CSS based on current editor theme
+    const editorTheme = getCurrentEditorTheme();
+    loadThemeCSS(editorTheme === 'vanilla' ? 'vanilla' : 'default');
     
     // Listen for theme changes
     if (window.matchMedia) {

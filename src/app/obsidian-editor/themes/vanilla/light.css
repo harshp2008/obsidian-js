@@ -1,0 +1,41 @@
+/* 
+ * VANILLA LIGHT THEME
+ * A clean, minimal light theme with neutral colors
+ */
+
+:root {
+  /* === BASE COLORS === */
+  --vanilla-light-background-primary: #fcfcfc; /* Main editor background */
+  --vanilla-light-background-secondary: #f5f5f5; /* Secondary backgrounds like gutters */
+  --vanilla-light-text-normal: #2c2c2c; /* Main text color */
+  --vanilla-light-text-muted: #707070; /* Subdued text color */
+  --vanilla-light-text-accent: #625772; /* Accent color for highlights */
+  --vanilla-light-cursor: #625772; /* Cursor color */
+
+  /* === SELECTION & HIGHLIGHTS === */
+  --vanilla-light-selection-bg: rgba(
+    98,
+    87,
+    114,
+    0.15
+  ); /* Selected text background */
+  --vanilla-light-active-line: rgba(0, 0, 0, 0.03); /* Active line background */
+  --vanilla-light-active-line-gutter: rgba(
+    0,
+    0,
+    0,
+    0.05
+  ); /* Active line gutter */
+
+  /* === SYNTAX HIGHLIGHTING === */
+  --vanilla-light-heading-color: #42404d; /* Heading text color */
+  --vanilla-light-emphasis-color: #2c2c2c; /* Italic text color */
+  --vanilla-light-strong-color: #222222; /* Bold text color */
+  --vanilla-light-link-color: #625772; /* Link text color */
+  --vanilla-light-code-color: #625772; /* Inline code color */
+  --vanilla-light-quote-color: #707070; /* Blockquote text color */
+
+  /* === BORDERS & SHADOWS === */
+  --vanilla-light-border-color: #e2e2e2; /* Border color */
+  --vanilla-light-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Default shadow */
+}

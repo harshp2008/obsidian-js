@@ -6,7 +6,7 @@ import { EditorView } from '@codemirror/view';
 import { setMarkdownSyntaxMode } from '../extensions/markdown-syntax/index';
 import { createEditorExtensions } from '../utils/editorExtensions';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { lightTheme, darkTheme } from '../utils/theme';
+import { lightTheme, darkTheme, getCurrentEditorTheme, getTheme } from '../utils/theme';
 import { ThemeMode } from '../../../types/theme';
 
 /**
@@ -55,6 +55,9 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
   // Create compartments for reconfigurable extensions
   const editableCompartment = useRef(new Compartment()).current;
   const themeCompartment = useRef(new Compartment()).current;
+  
+  // Get the current editor theme
+  const editorThemeName = getCurrentEditorTheme();
   
   // Update refs when props change
   useEffect(() => {
@@ -115,8 +118,8 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
       
       window.addEventListener('error', errorHandler);
       
-      // Determine which theme to use based on the current application theme
-      const themeExtension = theme === 'dark' ? darkTheme : lightTheme;
+      // Determine which theme to use based on the current application theme and editor theme
+      const themeExtension = getTheme(editorThemeName, theme === 'dark' ? 'dark' : 'light');
       
       // Listen for document changes
       const changeListener = EditorView.updateListener.of((update) => {
@@ -181,7 +184,9 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
   useEffect(() => {
     if (editorViewRef.current && themeCompartment && mounted) {
       try {
-        const themeExtension = theme === 'dark' ? darkTheme : lightTheme;
+        // Get the appropriate theme based on the current theme name and mode
+        const themeExtension = getTheme(editorThemeName, theme === 'dark' ? 'dark' : 'light');
+        
         editorViewRef.current.dispatch({
           effects: themeCompartment.reconfigure(themeExtension)
         });
@@ -189,7 +194,7 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
         console.error("Error updating theme:", error);
       }
     }
-  }, [theme, themeCompartment, mounted]);
+  }, [theme, themeCompartment, mounted, editorThemeName]);
 
   // Effect for updating the editor mode and editable state
   useEffect(() => {

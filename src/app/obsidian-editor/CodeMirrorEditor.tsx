@@ -9,6 +9,7 @@ import { createMarkdownSyntaxPlugin, setMarkdownSyntaxMode } from './extensions/
 import { createCodeMirrorKeymaps } from './extensions/keymaps';
 import { createMarkdownFileSystem } from './extensions/filesystem';
 import { createNoMarkdownInHtmlExtension } from './extensions/markdown/no-formatting';
+import { EditorThemeName, setEditorTheme } from './utils/theme';
 
 // Import our modular components
 import EditorCore from './components/EditorCore';
@@ -63,6 +64,11 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   const handleModeChange = (mode: 'live' | 'preview') => {
     setCurrentMode(mode);
   };
+  
+  // Handle theme changes
+  const handleThemeChange = (themeName: EditorThemeName) => {
+    setEditorTheme(themeName);
+  };
 
   return (
     <div className="obsidian-editor-container">
@@ -74,6 +80,7 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
             editorView={editorView} 
             mode={currentMode}
             onModeChange={handleModeChange}
+            onThemeChange={handleThemeChange}
           />
           
           {/* Core editor component */}

@@ -1,0 +1,56 @@
+/* 
+ * LIGHT THEME TEMPLATE
+ * Use this file as a starting point for customizing the light theme
+ * 
+ * INSTRUCTIONS:
+ * 1. Copy this file and rename it (e.g., myLightTheme.css)
+ * 2. Modify the CSS variables below to customize colors and styles
+ * 3. Import your theme into your application
+ */
+
+:root {
+  /* === BASE COLORS === */
+  --light-background-primary: #ffffff; /* Main editor background */
+  --light-background-secondary: #f8f9fa; /* Secondary backgrounds like gutters */
+  --light-text-normal: #1a1a1a; /* Main text color */
+  --light-text-muted: #6c757d; /* Subdued text color */
+  --light-text-accent: #3b82f6; /* Accent color for highlights */
+  --light-cursor: #3b82f6; /* Cursor color */
+
+  /* === SELECTION & HIGHLIGHTS === */
+  --light-selection-bg: #b3d7ff; /* Selected text background */
+  --light-active-line: rgba(0, 0, 0, 0.03); /* Active line background */
+  --light-active-line-gutter: rgba(0, 0, 0, 0.05); /* Active line gutter */
+
+  /* === SYNTAX HIGHLIGHTING === */
+  --light-heading-color: #1a1a1a; /* Heading text color */
+  --light-emphasis-color: #1a1a1a; /* Italic text color */
+  --light-strong-color: #1a1a1a; /* Bold text color */
+  --light-link-color: #2563eb; /* Link text color */
+  --light-code-color: #10b981; /* Inline code color */
+  --light-quote-color: #6c757d; /* Blockquote text color */
+
+  /* === BORDERS & SHADOWS === */
+  --light-border-color: #e0e0e0; /* Border color */
+  --light-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Default shadow */
+}
+
+/* 
+ * The following styles serve as a reference for how to use the variables above
+ * when creating your CodeMirror theme using JavaScript.
+ * 
+ * Example implementation:
+ * 
+ * import { EditorView } from '@codemirror/view';
+ *
+ * export const myLightTheme = EditorView.theme({
+ *   '&': { color: 'var(--light-text-normal)', backgroundColor: 'var(--light-background-primary)' },
+ *   '.cm-content': { caretColor: 'var(--light-cursor)' },
+ *   '.cm-gutters': { backgroundColor: 'var(--light-background-secondary)', color: 'var(--light-text-muted)', border: 'none' },
+ *   '.cm-activeLine': { backgroundColor: 'var(--light-active-line)' },
+ *   '.cm-activeLineGutter': { backgroundColor: 'var(--light-active-line-gutter)' },
+ *   '.cm-selectionBackground': { backgroundColor: 'var(--light-selection-bg)' },
+ *   '.cm-line': { padding: '0 4px' },
+ *   '.cm-cursor': { borderLeftWidth: '2px', borderLeftColor: 'var(--light-cursor)' },
+ * }, { dark: false });
+ */

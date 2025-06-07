@@ -1,0 +1,95 @@
+/* 
+ * DARK HTML HIGHLIGHTING TEMPLATE
+ * Use this file as a starting point for customizing HTML highlighting in dark mode
+ * 
+ * INSTRUCTIONS:
+ * 1. Copy this file and rename it (e.g., myDarkHtmlHighlighting.css)
+ * 2. Modify the CSS variables below to customize colors and styles
+ * 3. Use these variables in your HTML decorator implementation
+ */
+
+:root {
+  /* === HTML PREVIEW CONTAINER === */
+  --dark-html-preview-bg: #282828; /* Preview background color */
+  --dark-html-preview-border: #444444; /* Preview border color */
+  --dark-html-preview-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* Preview shadow */
+
+  /* === HTML PREVIEW LABEL === */
+  --dark-html-label-bg: #4a4a4a; /* Label background color */
+  --dark-html-label-color: #e0e0e0; /* Label text color */
+
+  /* === HTML CONTENT === */
+  --dark-html-content-bg: #333333; /* HTML content background */
+  --dark-html-content-color: #e0e0e0; /* HTML content text color */
+
+  /* === HTML SYNTAX HIGHLIGHTING === */
+  --dark-html-tag-color: #f97583; /* HTML tag name color */
+  --dark-html-attribute-color: #ffab70; /* HTML attribute name color */
+  --dark-html-attribute-value-color: #85e89d; /* HTML attribute value color */
+  --dark-html-bracket-color: #a0a0a0; /* HTML brackets color (<>) */
+
+  /* === HEADINGS IN HTML === */
+  --dark-html-heading-color: #e0e0e0; /* HTML heading text color */
+
+  /* === DEBUG & EDITING === */
+  --dark-html-debug-color: #777777; /* Debug info text color */
+  --dark-html-edit-label-bg: #3a3a3a; /* Editing label background */
+  --dark-html-edit-label-color: #bbbbbb; /* Editing label text color */
+}
+
+/* 
+ * The following styles serve as a reference for how to use the variables above
+ * in your HTML decorator implementation.
+ *
+ * Example implementation:
+ *
+ * export function addDarkHtmlStyles(): void {
+ *   const style = document.createElement('style');
+ *   style.id = 'cm-dark-html-decorator-styles';
+ *   style.textContent = `
+ *     .dark .cm-html-preview {
+ *       background-color: var(--dark-html-preview-bg);
+ *       border: 1px solid var(--dark-html-preview-border);
+ *       box-shadow: var(--dark-html-preview-shadow);
+ *       color: var(--dark-html-content-color);
+ *     }
+ *     
+ *     .dark .cm-html-preview-label {
+ *       background: var(--dark-html-label-bg);
+ *       color: var(--dark-html-label-color);
+ *     }
+ *     
+ *     .dark .cm-html-content {
+ *       background: var(--dark-html-content-bg);
+ *       color: var(--dark-html-content-color);
+ *     }
+ *     
+ *     .dark .cm-editor .cm-html-tag-name {
+ *       color: var(--dark-html-tag-color) !important;
+ *     }
+ *     
+ *     .dark .cm-editor .cm-html-attribute {
+ *       color: var(--dark-html-attribute-color) !important;
+ *     }
+ *     
+ *     .dark .cm-editor .cm-html-attribute-value {
+ *       color: var(--dark-html-attribute-value-color) !important;
+ *     }
+ *     
+ *     .dark .cm-editor .cm-html-bracket {
+ *       color: var(--dark-html-bracket-color) !important;
+ *     }
+ *     
+ *     .dark .cm-html-preview h1,
+ *     .dark .cm-html-preview h2,
+ *     .dark .cm-html-preview h3,
+ *     .dark .cm-html-preview h4,
+ *     .dark .cm-html-preview h5,
+ *     .dark .cm-html-preview h6 {
+ *       color: var(--dark-html-heading-color) !important;
+ *     }
+ *   `;
+ *   
+ *   document.head.appendChild(style);
+ * }
+ */

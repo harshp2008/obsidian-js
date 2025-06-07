@@ -1,0 +1,56 @@
+/* 
+ * DARK THEME TEMPLATE
+ * Use this file as a starting point for customizing the dark theme
+ * 
+ * INSTRUCTIONS:
+ * 1. Copy this file and rename it (e.g., myDarkTheme.css)
+ * 2. Modify the CSS variables below to customize colors and styles
+ * 3. Import your theme into your application
+ */
+
+:root {
+  /* === BASE COLORS === */
+  --dark-background-primary: #1e1e1e; /* Main editor background */
+  --dark-background-secondary: #252525; /* Secondary backgrounds like gutters */
+  --dark-text-normal: #e0e0e0; /* Main text color */
+  --dark-text-muted: #858585; /* Subdued text color */
+  --dark-text-accent: #3b82f6; /* Accent color for highlights */
+  --dark-cursor: #3b82f6; /* Cursor color */
+
+  /* === SELECTION & HIGHLIGHTS === */
+  --dark-selection-bg: #3a4b6d; /* Selected text background */
+  --dark-active-line: rgba(255, 255, 255, 0.05); /* Active line background */
+  --dark-active-line-gutter: rgba(255, 255, 255, 0.1); /* Active line gutter */
+
+  /* === SYNTAX HIGHLIGHTING === */
+  --dark-heading-color: #000; /* Heading text color */
+  --dark-emphasis-color: #e0e0e0; /* Italic text color */
+  --dark-strong-color: #e0e0e0; /* Bold text color */
+  --dark-link-color: #60a5fa; /* Link text color */
+  --dark-code-color: #4ade80; /* Inline code color */
+  --dark-quote-color: #9ca3af; /* Blockquote text color */
+
+  /* === BORDERS & SHADOWS === */
+  --dark-border-color: #404040; /* Border color */
+  --dark-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); /* Default shadow */
+}
+
+/* 
+ * The following styles serve as a reference for how to use the variables above
+ * when creating your CodeMirror theme using JavaScript.
+ * 
+ * Example implementation:
+ * 
+ * import { EditorView } from '@codemirror/view';
+ *
+ * export const myDarkTheme = EditorView.theme({
+ *   '&': { color: 'var(--dark-text-normal)', backgroundColor: 'var(--dark-background-primary)' },
+ *   '.cm-content': { caretColor: 'var(--dark-cursor)' },
+ *   '.cm-gutters': { backgroundColor: 'var(--dark-background-secondary)', color: 'var(--dark-text-muted)', border: 'none' },
+ *   '.cm-activeLine': { backgroundColor: 'var(--dark-active-line)' },
+ *   '.cm-activeLineGutter': { backgroundColor: 'var(--dark-active-line-gutter)' },
+ *   '.cm-selectionBackground': { backgroundColor: 'var(--dark-selection-bg)' },
+ *   '.cm-line': { padding: '0 4px' },
+ *   '.cm-cursor': { borderLeftWidth: '2px', borderLeftColor: 'var(--dark-cursor)' },
+ * }, { dark: true });
+ */
