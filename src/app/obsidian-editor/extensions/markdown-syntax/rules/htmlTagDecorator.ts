@@ -34,7 +34,8 @@ if (typeof window !== 'undefined') {
  * Regex patterns to match HTML tag pairs and self-closing tags
  */
 const HTML_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*)>([\s\S]*?)<\/\1>/g;
-const HTML_VOID_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)(?:\s*\/)?>(?!\s*<\/\1>)/g;
+const HTML_VOID_TAG_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)(?:\s*\/?)>(?!\s*<\/\1>)/g;
+const HTML_SELF_CLOSING_REGEX = /<([a-zA-Z][a-zA-Z0-9]*)([^>]*?)\s*\/>/g;
 
 /**
  * List of common self-closing HTML tags
@@ -92,9 +93,18 @@ class HTMLContentWidget extends WidgetType {
           const sanitizedHtml = formatHTML(this.html);
           wrapper.innerHTML = sanitizedHtml;
           
-          // If wrapper is empty after sanitization, show the raw HTML
-          if (wrapper.innerHTML === '') {
-            wrapper.textContent = this.html;
+          // If wrapper is empty after sanitization or contains self-closing tags, show the raw HTML
+          if (wrapper.innerHTML === '' || 
+              (this.html.includes('/>') && this.html.match(/<[^>]+\/>/))) {
+            // For self-closing tags, add a special class and show raw HTML
+            if (this.html.includes('/>')) {
+              wrapper.classList.add('cm-html-self-closing');
+              const code = document.createElement('code');
+              code.textContent = this.html;
+              wrapper.appendChild(code);
+            } else {
+              wrapper.textContent = this.html;
+            }
           }
         } catch (sanitizeError) {
           console.error("Error sanitizing HTML:", sanitizeError);
@@ -267,11 +277,14 @@ class HTMLContentWidget extends WidgetType {
     
     container.appendChild(audio);
     
-    // Fallback text
-    const fallback = document.createElement('div');
-    fallback.className = 'cm-html-fallback';
-    fallback.textContent = 'Your browser does not support the audio element.';
-    container.appendChild(fallback);
+    // Don't show fallback text by default since most modern browsers support audio
+    // Only add fallback if specifically set in the original HTML
+    if (audioEl.innerHTML.includes("browser does not support")) {
+      const fallback = document.createElement('div');
+      fallback.className = 'cm-html-fallback';
+      fallback.textContent = 'Your browser does not support the audio element.';
+      container.appendChild(fallback);
+    }
   }
   
   /**
@@ -303,11 +316,13 @@ class HTMLContentWidget extends WidgetType {
     
     container.appendChild(video);
     
-    // Fallback text
-    const fallback = document.createElement('div');
-    fallback.className = 'cm-html-fallback';
-    fallback.textContent = 'Your browser does not support the video element.';
-    container.appendChild(fallback);
+    // Only add fallback if specifically set in the original HTML
+    if (videoEl.innerHTML.includes("browser does not support")) {
+      const fallback = document.createElement('div');
+      fallback.className = 'cm-html-fallback';
+      fallback.textContent = 'Your browser does not support the video element.';
+      container.appendChild(fallback);
+    }
   }
   
   /**
@@ -452,6 +467,8 @@ class MultiLineHtmlEndWidget extends WidgetType {
  */
 function identifyHtmlRegions(view: EditorView): HtmlRegion[] {
   const regions: HtmlRegion[] = [];
+  const nestedRegions = new Set<number>(); // Track indices of nested tags to skip them
+  
   try {
     const { state } = view;
     if (!state || !state.doc) {
@@ -515,6 +532,18 @@ function identifyHtmlRegions(view: EditorView): HtmlRegion[] {
           
           console.debug(`Found ${isMultiLine ? 'multiline' : 'single-line'} HTML tag:`, tagName, `at line ${startLine.number}-${endLine.number}`);
           
+          // Look for self-closing tags within this parent tag's content
+          const innerContent = tagContent;
+          let selfClosingMatch;
+          HTML_SELF_CLOSING_REGEX.lastIndex = 0;
+          while ((selfClosingMatch = HTML_SELF_CLOSING_REGEX.exec(innerContent))) {
+            if (selfClosingMatch && selfClosingMatch.index !== undefined) {
+              // Calculate the absolute position in the document
+              const nestedTagPos = tagStart + openTagEnd - tagStart + selfClosingMatch.index;
+              nestedRegions.add(nestedTagPos);
+            }
+          }
+          
           regions.push({
             from: tagStart,
             to: tagEnd,
@@ -533,7 +562,68 @@ function identifyHtmlRegions(view: EditorView): HtmlRegion[] {
       console.error("Error processing HTML tags:", e);
     }
     
-    // Match self-closing/void HTML tags
+    // Match explicit self-closing tags like <tag />
+    try {
+      HTML_SELF_CLOSING_REGEX.lastIndex = 0;
+      let match;
+      while ((match = HTML_SELF_CLOSING_REGEX.exec(fullText))) {
+        if (!match || !Array.isArray(match) || match.length < 3) {
+          console.warn("Invalid match in HTML_SELF_CLOSING_REGEX:", match);
+          continue;
+        }
+        
+        const fullMatch = match[0];
+        const tagName = match[1];
+        const tagAttrs = match[2];
+        
+        if (!tagName) {
+          console.debug("Skipping self-closing tag match with invalid tag name:", match);
+          continue;
+        }
+        
+        const tagStart = match.index;
+        const tagEnd = tagStart + fullMatch.length;
+        
+        if (tagEnd <= tagStart) {
+          console.debug("Skipping self-closing tag match with invalid positions:", tagStart, tagEnd);
+          continue;
+        }
+        
+        // Skip if this is a nested tag that should be handled by its parent
+        if (nestedRegions.has(tagStart)) {
+          console.debug("Skipping nested self-closing tag:", tagName);
+          continue;
+        }
+        
+        try {
+          const startLine = doc.lineAt(tagStart);
+          const endLine = doc.lineAt(tagEnd - 1);
+          const isMultiLine = startLine.number !== endLine.number;
+          
+          console.debug(`Found ${isMultiLine ? 'multiline' : 'single-line'} self-closing HTML tag:`, tagName, `at line ${startLine.number}`);
+          
+          // For source tags and other important self-closing tags, ensure they're always visible
+          const isSourceTag = tagName.toLowerCase() === 'source';
+          
+          regions.push({
+            from: tagStart,
+            to: tagEnd,
+            isMultiLine,
+            content: fullMatch,
+            tagName,
+            openTagEnd: tagEnd,
+            closeTagStart: tagEnd,
+            isSelfClosing: true
+          });
+        } catch (docErr) {
+          console.error("Error getting line info for self-closing tag:", docErr);
+        }
+      }
+    } catch (e) {
+      console.error("Error processing self-closing HTML tags:", e);
+    }
+    
+    // Match void HTML tags (that don't need closing tag)
     try {
       HTML_VOID_TAG_REGEX.lastIndex = 0;
       let match;
@@ -547,13 +637,8 @@ function identifyHtmlRegions(view: EditorView): HtmlRegion[] {
         const tagName = match[1];
         const tagAttrs = match[2];
         
-        if (!tagName) {
-          console.debug("Skipping void tag match with invalid tag name:", match);
-          continue;
-        }
-        
-        // Skip if not a known void tag
-        if (!VOID_TAGS.has(tagName.toLowerCase())) {
+        // Skip if not a known void tag and not a self-closing tag (already handled above)
+        if (!VOID_TAGS.has(tagName.toLowerCase()) || fullMatch.trim().endsWith('/>')) {
           continue;
         }
         
@@ -609,14 +694,34 @@ function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolean {
     return true;
   }
   
-  // Check if cursor is immediately before the opening tag
-  if (cursor === region.from - 1) {
+  // Check if cursor is immediately at the tag start position only
+  // Further reduced proximity - only recognize cursor exactly at the start
+  if (cursor === region.from) {
     return true;
   }
   
-  // Check if cursor is immediately after the closing tag
-  if (cursor === region.to) {
-    return true;
+  // For self-closing tags, check if cursor is right at the closing bracket
+  // Reduced proximity - only checking exact positions not nearby
+  if (region.isSelfClosing) {
+    // Locate position of the / character
+    const slashPos = region.to - 2;
+    if (cursor === slashPos || cursor === region.to) {
+      return true;
+    }
+  } else {
+    // For normal tags, check if cursor is at closing tag
+    // Reduced proximity - only checking exact positions
+    if (cursor === region.closeTagStart || 
+        cursor === region.to) {
+      return true;
+    }
+  }
+  
+  // Check all selections, not just the main one
+  for (const sel of state.selection.ranges) {
+    if (sel.from <= region.to && sel.to >= region.from) {
+      return true;
+    }
   }
   
   return false;
@@ -627,7 +732,7 @@ function isCursorNearRegion(view: EditorView, region: HtmlRegion): boolean {
  */
 function isInPreviewMode(view: EditorView): boolean {
   // Check for preview mode class on any parent element
-  let element = view.dom;
+  let element: HTMLElement | null = view.dom;
   while (element) {
     if (element.classList && element.classList.contains('preview-mode')) {
       return true;
@@ -636,7 +741,8 @@ function isInPreviewMode(view: EditorView): boolean {
   }
   
   // Default to true if in a read-only editor
-  return !view.editable;
+  // Use the state.facet to check if the editor is editable
+  return !view.state.facet(EditorView.editable);
 }
 
 /**
@@ -647,6 +753,9 @@ function buildHTMLTagDecorations(view: EditorView): DecorationSet {
     console.warn("Invalid view in buildHTMLTagDecorations");
     return Decoration.none;
   }
+
+  // Check if we're in edit mode (not preview) - we'll use this to decide whether to show raw HTML
+  const isEditMode = !isInPreviewMode(view);
 
   // Collect all decorations in an array first so we can sort them
   const decorations: Array<{from: number, to: number, decoration: Decoration}> = [];
@@ -677,36 +786,63 @@ function buildHTMLTagDecorations(view: EditorView): DecorationSet {
           const startLine = doc.lineAt(region.from);
           const endLine = doc.lineAt(region.to - 1);
           
-          // Show raw HTML when cursor is nearby
-          if (isCursorNear) {
-            // Apply decoration to the entire HTML region using mark instead of replace
-            decorations.push({
-              from: region.from,
-              to: region.to,
-              decoration: htmlTagMark
-            });
-          }
-          // In preview/read mode, show rendered HTML
-          else {
-            // First we need to hide all the lines with empty widgets
+          // Always show raw HTML when in edit mode or cursor is nearby
+          // This ensures all content is visible during editing
+          if (isCursorNear || !inPreviewMode) {
+            // Use mark to ensure proper cursor navigation within HTML
             for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
               const line = doc.line(lineNum);
-              
-              // Skip lines that would yield empty decorations
               if (line.from >= line.to) continue;
               
-              // If it's the first line, create a placeholder for the HTML content
-              if (lineNum === startLine.number) {
+              // Add each line individually with mark decoration to preserve text editing
+              const lineFrom = Math.max(line.from, region.from);
+              const lineTo = Math.min(line.to, region.to);
+              
+              if (lineFrom < lineTo) {
                 decorations.push({
-                  from: line.from,
-                  to: line.to,
-                  decoration: Decoration.replace({
-                    widget: new HTMLContentWidget(region.content, false)
-                  })
+                  from: lineFrom,
+                  to: lineTo,
+                  decoration: htmlTagMark
                 });
               }
-              // Hide all other lines that are part of this HTML block
-              else {
+            }
+          }
+          // Only render HTML in preview mode
+          else {
+            // For self-closing tags in multiline HTML, still treat all lines as raw text
+            if (region.isSelfClosing) {
+              // Process each line individually to preserve self-closing tags
+              for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
+                const line = doc.line(lineNum);
+                if (line.from >= line.to) continue;
+                
+                const lineFrom = Math.max(line.from, region.from);
+                const lineTo = Math.min(line.to, region.to);
+                
+                // Just mark the lines for syntax highlighting, don't render
+                decorations.push({
+                  from: lineFrom,
+                  to: lineTo,
+                  decoration: htmlTagMark
+                });
+              }
+            } else {
+              // For regular tags, show all HTML content in the first line
+              decorations.push({
+                from: startLine.from,
+                to: startLine.to,
+                decoration: Decoration.replace({
+                  widget: new HTMLContentWidget(region.content, false)
+                })
+              });
+              
+              // Hide subsequent lines if they exist
+              for (let lineNum = startLine.number + 1; lineNum <= endLine.number; lineNum++) {
+                const line = doc.line(lineNum);
+                
+                // Skip lines that would yield empty decorations
+                if (line.from >= line.to) continue;
+                
                 decorations.push({
                   from: line.from,
                   to: line.to,
@@ -725,7 +861,7 @@ function buildHTMLTagDecorations(view: EditorView): DecorationSet {
             }
           }
         }
-        // For single-line HTML, simpler handling
+        // For single-line HTML (including self-closing tags), simpler handling
         else {
           if (isCursorNear) {
             // Show syntax highlighting for the entire HTML tag

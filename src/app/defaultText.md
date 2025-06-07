@@ -2,6 +2,10 @@
 
 This is inline <span style="color: red;">html</span>
 
+<a href="google.com" />
+
+<button />
+
 <audio controls>
     <source src="/uploads/medium-drill-burst.mp3" type="audio`/mpeg" />
     Your browser does not support the audio element.
