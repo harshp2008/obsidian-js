@@ -1,8 +1,14 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { useTheme } from '../../contexts/ThemeContext';
+import { createObsidianTheme } from './themes/obsidian';
+import { createMarkdownSyntaxPlugin, setMarkdownSyntaxMode } from './extensions/markdown-syntax';
+import { createCodeMirrorKeymaps } from './extensions/keymaps';
+import { createMarkdownFileSystem } from './extensions/filesystem';
+import { createNoMarkdownInHtmlExtension } from './extensions/markdown/no-formatting';
 
 // Import our modular components
 import EditorCore from './components/EditorCore';
