@@ -1,6 +1,6 @@
 import { Decoration, DecorationSet } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
-import { HtmlRegion } from './types';
+import { HtmlRegion, VOID_TAGS } from './types';
 
 /**
  * Interface for tracking decoration items before sorting
@@ -26,12 +26,6 @@ export class HtmlSyntaxHighlighter {
     const html = region.content;
     const baseOffset = region.from;
     
-    // Regular expressions for HTML parts
-    const tagOpenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)/g;
-    const tagCloseRegex = /\/?>/g;
-    const attributeRegex = /\s([a-zA-Z][a-zA-Z0-9\-_:]*)(=(?:(['"]).*?\3|\S+))?/g;
-    const attributeValueRegex = /=(['"])(.*?)\1/g;
-    
     // Add base HTML code highlighting class
     decorations.push({
       from: region.from,
@@ -41,79 +35,10 @@ export class HtmlSyntaxHighlighter {
       })
     });
     
-    // Find and highlight all tag names
-    let tagMatch;
-    while ((tagMatch = tagOpenRegex.exec(html)) !== null) {
-      const [fullTag, tagName] = tagMatch;
-      const tagStart = baseOffset + tagMatch.index;
-      const tagNameStart = tagStart + (fullTag.startsWith('</') ? 2 : 1); // Account for </
-      const tagNameEnd = tagNameStart + tagName.length;
-      
-      // Add tag name decoration
-      decorations.push({
-        from: tagNameStart,
-        to: tagNameEnd,
-        decoration: Decoration.mark({ class: 'cm-html-tag-name' })
-      });
-      
-      // Add brackets decoration
-      decorations.push({
-        from: tagStart,
-        to: tagNameStart,
-        decoration: Decoration.mark({ class: 'cm-html-bracket' })
-      });
-    }
+    // Parse HTML using the tokenizer for more accurate highlighting
+    this.tokenizeHtml(html, baseOffset, decorations);
     
-    // Find and highlight all closing brackets '>' or '/>'
-    tagCloseRegex.lastIndex = 0;
-    let closeBracketMatch;
-    while ((closeBracketMatch = tagCloseRegex.exec(html)) !== null) {
-      const closeStart = baseOffset + closeBracketMatch.index;
-      const closeEnd = closeStart + closeBracketMatch[0].length;
-      
-      decorations.push({
-        from: closeStart,
-        to: closeEnd,
-        decoration: Decoration.mark({ class: 'cm-html-bracket' })
-      });
-    }
-    
-    // Find and highlight all attributes and their values
-    let attrMatch;
-    while ((attrMatch = attributeRegex.exec(html)) !== null) {
-      const [fullAttr, attrName, hasValue] = attrMatch;
-      const attrStart = baseOffset + attrMatch.index + 1; // +1 to skip whitespace
-      const attrEnd = attrStart + attrName.length;
-      
-      // Add attribute name decoration
-      decorations.push({
-        from: attrStart,
-        to: attrEnd,
-        decoration: Decoration.mark({ class: 'cm-html-attribute' })
-      });
-      
-      // If attribute has a value, highlight it
-      if (hasValue) {
-        // Reset lastIndex to start search from current attribute position
-        attributeValueRegex.lastIndex = attrMatch.index + fullAttr.indexOf('=');
-        
-        const valueMatch = attributeValueRegex.exec(html);
-        if (valueMatch) {
-          const [fullValue, quote, value] = valueMatch;
-          const valueStart = baseOffset + valueMatch.index + 1; // +1 for '='
-          const valueEnd = valueStart + fullValue.length - 1; // -1 to exclude '='
-          
-          // Add attribute value decoration
-          decorations.push({
-            from: valueStart,
-            to: valueEnd,
-            decoration: Decoration.mark({ class: 'cm-html-attribute-value' })
-          });
-        }
-      }
-    }
-    
-    // Sort decorations by from position first, then by to position if from is equal
+    // Sort decorations by position
     decorations.sort((a, b) => {
       if (a.from !== b.from) return a.from - b.from;
       return a.to - b.to;
@@ -129,5 +54,122 @@ export class HtmlSyntaxHighlighter {
     }
     
     return builder.finish();
+  }
+  
+  /**
+   * Tokenize HTML content for better highlighting
+   */
+  private static tokenizeHtml(html: string, baseOffset: number, decorations: DecorationItem[]): void {
+    // Track tag nesting level for each tag name
+    const tagStack: {name: string, level: number}[] = [];
+    let currentLevel = 0;
+    
+    // Regular expressions for different HTML parts
+    const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(?:=(?:(['"]).*?\3|\S+))?|(['"])(.*?)\4|(\/?>)/g;
+    let match;
+    
+    while ((match = tokenRegex.exec(html)) !== null) {
+      const [full, tagName, attrName, q1, q2, attrValue, bracket] = match;
+      const start = baseOffset + match.index;
+      
+      // Handle opening and closing tags with proper level tracking
+      if (tagName) {
+        const isClosing = full.startsWith('</');
+        const tagStart = start;
+        const tagEnd = start + (isClosing ? 2 : 1) + tagName.length;
+        
+        // Add bracket highlighting
+        decorations.push({
+          from: tagStart,
+          to: tagStart + (isClosing ? 2 : 1),
+          decoration: Decoration.mark({ 
+            class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}` 
+          })
+        });
+        
+        // Add tag name highlighting
+        decorations.push({
+          from: tagStart + (isClosing ? 2 : 1),
+          to: tagEnd,
+          decoration: Decoration.mark({ 
+            class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}` 
+          })
+        });
+        
+        // Track nesting
+        if (isClosing) {
+          // Match this closing tag with its opening tag
+          for (let i = tagStack.length - 1; i >= 0; i--) {
+            if (tagStack[i].name === tagName.toLowerCase()) {
+              currentLevel = tagStack[i].level;
+              // Remove this and all nested unmatched tags
+              tagStack.splice(i);
+              break;
+            }
+          }
+          // If we exit the loop without finding a match, just use current level
+        } else {
+          // Push this tag onto the stack
+          tagStack.push({
+            name: tagName.toLowerCase(),
+            level: currentLevel
+          });
+          // Increase nesting level for content
+          currentLevel = (currentLevel + 1) % 6;
+        }
+      }
+      
+      // Handle attributes
+      else if (attrName) {
+        const attrStart = start + 1; // Skip the whitespace
+        const attrEnd = attrStart + attrName.length;
+        
+        // Add attribute name highlighting
+        decorations.push({
+          from: attrStart,
+          to: attrEnd,
+          decoration: Decoration.mark({ class: 'cm-html-attribute' })
+        });
+      }
+      
+      // Handle attribute values
+      else if (attrValue !== undefined && (q1 || q2)) {
+        const quote = q1 || q2;
+        const valueStart = start;
+        const valueEnd = start + quote.length + attrValue.length + quote.length;
+        
+        // Add attribute value highlighting (including quotes)
+        decorations.push({
+          from: valueStart,
+          to: valueEnd,
+          decoration: Decoration.mark({ class: 'cm-html-attribute-value' })
+        });
+      }
+      
+      // Handle closing brackets
+      else if (bracket) {
+        const bracketStart = start;
+        const bracketEnd = start + bracket.length;
+        
+        // Determine if this is a self-closing tag
+        const isSelfClosing = bracket === '/>' || bracket === '>' && tagStack.length > 0 && 
+          VOID_TAGS.has(tagStack[tagStack.length - 1].name);
+          
+        // Add bracket highlighting
+        decorations.push({
+          from: bracketStart,
+          to: bracketEnd,
+          decoration: Decoration.mark({ 
+            class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}` 
+          })
+        });
+        
+        // If self-closing, adjust the level
+        if (isSelfClosing && tagStack.length > 0) {
+          currentLevel = tagStack[tagStack.length - 1].level;
+          tagStack.pop();
+        }
+      }
+    }
   }
 } 

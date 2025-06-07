@@ -71,36 +71,14 @@ export class HtmlPreviewWidget extends WidgetType {
         let htmlToRender = this.content;
         let isBlockElement = false;
         
-        const match = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(this.content);
-        if (match) {
-          // Only render the inner content for specific tags that have wrappers
-          const tagName = match[1].toLowerCase();
-          const attributes = match[2];
-          const innerContent = match[3];
-          
-          // Check if this is a block element like div that should render on a new line
-          isBlockElement = (tagName === 'div' || tagName === 'p' || 
-                          tagName === 'article' || tagName === 'section' || 
-                          tagName === 'header' || tagName === 'footer' || 
-                          tagName === 'blockquote');
-          
-          if (tagName === 'div' || tagName === 'span') {
-            // Keep attributes for styling
-            const attributesObj: Record<string, string> = {};
-            const styleMatch = /style\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]*))/i.exec(attributes);
-            if (styleMatch) {
-              const styleContent = styleMatch[1] || styleMatch[2] || styleMatch[3];
-              
-              if (styleContent.trim()) {
-                // Keep the original tag with its style
-                htmlToRender = `<${tagName} style="${styleContent}">${innerContent}</${tagName}>`;
-              } else {
-                htmlToRender = innerContent;
-              }
-            } else {
-              htmlToRender = innerContent;
-            }
-          }
+        // Instead of trying to extract the content with regex, we'll render the full HTML
+        // This handles deeply nested elements better
+        
+        // Just detect if it's a block element for proper display
+        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\s*\/?>)/i.exec(this.content);
+        if (tagMatch) {
+          const tagName = tagMatch[1].toLowerCase();
+          isBlockElement = this.isBlockElement(tagName);
         }
         
         // Create a container for the actual rendered HTML
@@ -125,6 +103,7 @@ export class HtmlPreviewWidget extends WidgetType {
         htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
         
         // Apply base editor styles to all HTML elements that don't have explicit styles
+        // But preserve native browser styles for lists and other elements
         htmlContainer.querySelectorAll('*').forEach(element => {
           if (element instanceof HTMLElement) {
             // Only apply default styles if not specified in the HTML
@@ -138,6 +117,21 @@ export class HtmlPreviewWidget extends WidgetType {
             // Make sure block elements display properly
             if (this.isBlockElement(element.tagName)) {
               element.style.display = 'block';
+            }
+            
+            // Special handling for list elements to show bullets
+            if (element.tagName === 'UL') {
+              element.style.listStyleType = 'disc';
+              element.style.paddingLeft = '2em';
+              element.style.marginTop = '0.5em';
+              element.style.marginBottom = '0.5em';
+            } else if (element.tagName === 'OL') {
+              element.style.listStyleType = 'decimal';
+              element.style.paddingLeft = '2em';
+              element.style.marginTop = '0.5em';
+              element.style.marginBottom = '0.5em';
+            } else if (element.tagName === 'LI') {
+              element.style.display = 'list-item';
             }
           }
         });

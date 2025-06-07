@@ -86,24 +86,68 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
   // Get cursor ranges
   const cursorRanges = view.state.selection.ranges;
   
-  // Process each HTML region
-  for (const region of regions) {
-    try {
-      // Check if cursor is near this region
-      let nearCursor = false;
-      for (const range of cursorRanges) {
-        // Check if cursor is directly adjacent to or in this region 
-        // using the stricter isCursorNearRegion logic
-        if (isCursorNearRegion(view, region)) {
-          nearCursor = true;
-          break;
+  // First, determine which regions should be in edit mode based on cursor proximity
+  // and build a set of their IDs
+  const editModeRegions = new Set<number>();
+  
+  // First pass: Find regions directly containing the cursor
+  for (let i = 0; i < regions.length; i++) {
+    const region = regions[i];
+    for (const range of cursorRanges) {
+      if (isCursorNearRegion(view, region)) {
+        editModeRegions.add(i);
+        break;
+      }
+    }
+  }
+  
+  // Second pass: Find all regions nested within edit mode regions
+  // and also all parent regions containing edit mode regions
+  let madeChange = true;
+  while (madeChange) {
+    madeChange = false;
+    
+    // Check for nesting relationships
+    for (let i = 0; i < regions.length; i++) {
+      const region = regions[i];
+      
+      // If this region is already in edit mode, check for nested regions
+      if (editModeRegions.has(i)) {
+        // Find any regions completely contained within this one
+        for (let j = 0; j < regions.length; j++) {
+          if (i !== j && !editModeRegions.has(j)) {
+            const nestedRegion = regions[j];
+            if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
+              editModeRegions.add(j);
+              madeChange = true;
+            }
+          }
+        }
+      } else {
+        // Check if this region contains any edit mode regions
+        for (let j = 0; j < regions.length; j++) {
+          if (editModeRegions.has(j)) {
+            const editModeRegion = regions[j];
+            if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
+              editModeRegions.add(i);
+              madeChange = true;
+              break;
+            }
+          }
         }
       }
-      
-      // If cursor is near, show editable code with syntax highlighting
-      // Otherwise show HTML preview
-      if (nearCursor) {
-        console.log(`Creating editable syntax highlighting for ${region.tagName}`);
+    }
+  }
+  
+  console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
+  
+  // Process each HTML region
+  for (let i = 0; i < regions.length; i++) {
+    const region = regions[i];
+    try {
+      // If this region should be in edit mode
+      if (editModeRegions.has(i)) {
+        console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
         
         // Get syntax highlighting decorations
         const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
@@ -149,14 +193,29 @@ function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPrevie
           }
         }
         
-        // Completely hide the original HTML code
-        allDecorations.push({
-          from: region.from,
-          to: region.to,
-          decoration: Decoration.replace({
-            widget: new HtmlPreviewWidget(htmlContent, region.isMultiline),
-          })
-        });
+        // Make sure this region doesn't overlap with any edit mode regions
+        // This can happen with malformed HTML where regions overlap
+        let overlapsEditMode = false;
+        for (const editIndex of editModeRegions) {
+          const editRegion = regions[editIndex];
+          if ((region.from >= editRegion.from && region.from < editRegion.to) ||
+              (region.to > editRegion.from && region.to <= editRegion.to) ||
+              (region.from <= editRegion.from && region.to >= editRegion.to)) {
+            overlapsEditMode = true;
+            break;
+          }
+        }
+        
+        if (!overlapsEditMode) {
+          // Completely hide the original HTML code with a preview widget
+          allDecorations.push({
+            from: region.from,
+            to: region.to,
+            decoration: Decoration.replace({
+              widget: new HtmlPreviewWidget(htmlContent, region.isMultiline),
+            })
+          });
+        }
       }
     } catch (error) {
       console.error('Error processing region:', error, region);
