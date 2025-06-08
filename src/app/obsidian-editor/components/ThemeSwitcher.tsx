@@ -1,123 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import { getCurrentEditorTheme, setEditorTheme, EditorThemeName } from '../utils/theme';
+'use client';
 
+import React, { useState, useEffect } from 'react';
+import { EditorThemeName, getCurrentEditorTheme } from '../utils/theme';
+
+/**
+ * Props for the ThemeSwitcher component
+ */
 interface ThemeSwitcherProps {
   onThemeChange?: (themeName: EditorThemeName) => void;
 }
 
 /**
- * A component that allows switching between different editor themes
+ * Component for switching between editor themes
  */
 const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ onThemeChange }) => {
-  const [themeName, setThemeName] = useState<EditorThemeName>('obsidian');
+  const [themeName, setThemeName] = useState<EditorThemeName>('default');
   
-  // Initialize theme on mount
+  // Initialize with the current theme
   useEffect(() => {
-    const currentTheme = getCurrentEditorTheme();
-    setThemeName(currentTheme);
+    setThemeName(getCurrentEditorTheme());
   }, []);
   
   // Handle theme change
   const handleThemeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedTheme = e.target.value as EditorThemeName;
-    console.log(`Theme changed to: ${selectedTheme}`);
+    const newTheme = e.target.value as EditorThemeName;
+    setThemeName(newTheme);
     
-    // Update local state
-    setThemeName(selectedTheme);
-    
-    // Apply theme without causing a re-render of the entire application
-    setEditorTheme(selectedTheme);
-    
-    // Direct styling approach as a fallback
-    if (selectedTheme === 'vanilla') {
-      // Find all editor instances and directly apply styling
-      const editorElements = document.querySelectorAll('.cm-editor');
-      const isDark = document.documentElement.classList.contains('dark');
-      
-      editorElements.forEach(editor => {
-        if (isDark) {
-          // Apply dark theme styles directly
-          (editor as HTMLElement).style.backgroundColor = '#2a2536';
-          (editor as HTMLElement).style.border = '4px solid #c4b3e0';
-          
-          // Find content area
-          const content = editor.querySelector('.cm-content');
-          if (content) {
-            (content as HTMLElement).style.backgroundColor = '#2a2536';
-          }
-          
-          // Find gutters
-          const gutters = editor.querySelector('.cm-gutters');
-          if (gutters) {
-            (gutters as HTMLElement).style.backgroundColor = '#332d3e';
-            (gutters as HTMLElement).style.borderRight = '1px solid #4a4252';
-          }
-        } else {
-          // Apply light theme styles directly
-          (editor as HTMLElement).style.backgroundColor = '#f5f0ff';
-          (editor as HTMLElement).style.border = '4px solid #625772';
-          
-          // Find content area
-          const content = editor.querySelector('.cm-content');
-          if (content) {
-            (content as HTMLElement).style.backgroundColor = '#f5f0ff';
-          }
-          
-          // Find gutters
-          const gutters = editor.querySelector('.cm-gutters');
-          if (gutters) {
-            (gutters as HTMLElement).style.backgroundColor = '#ede6f8';
-            (gutters as HTMLElement).style.borderRight = '1px solid #d8c9f0';
-          }
-        }
-      });
-    }
-    
-    // Only notify parent if callback exists
     if (onThemeChange) {
-      // Use setTimeout to prevent synchronous rendering issues
-      setTimeout(() => {
-        onThemeChange(selectedTheme);
-      }, 0);
+      onThemeChange(newTheme);
     }
   };
   
   return (
-    <div className="obsidian-theme-switcher">
-      <label htmlFor="theme-select">Theme:</label>
+    <div className="theme-switcher">
       <select 
-        id="theme-select" 
         value={themeName} 
         onChange={handleThemeChange}
         className="theme-select"
+        aria-label="Select editor theme"
       >
-        <option value="obsidian">Obsidian</option>
+        <option value="default">Default</option>
         <option value="vanilla">Vanilla</option>
       </select>
       
-      <style jsx>{`
-        .obsidian-theme-switcher {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 14px;
+      <style>
+        {`
+        .theme-switcher {
+          position: relative;
         }
         
         .theme-select {
           padding: 4px 8px;
           border-radius: 4px;
           border: 1px solid var(--hr-color, #dcddde);
-          background-color: var(--background-primary, #ffffff);
+          background: var(--background-primary, #ffffff);
           color: var(--text-normal, #2e3338);
           cursor: pointer;
+          font-size: 14px;
         }
         
         .dark .theme-select {
-          background-color: var(--background-primary, #2b2b2b);
+          background: var(--background-primary, #2b2b2b);
           color: var(--text-normal, #dcddde);
           border-color: var(--hr-color, #444444);
         }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 };

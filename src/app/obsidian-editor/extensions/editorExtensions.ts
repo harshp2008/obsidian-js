@@ -2,14 +2,14 @@ import { Extension, Compartment } from '@codemirror/state';
 import { EditorView, keymap, highlightActiveLine, drawSelection, dropCursor, rectangularSelection, crosshairCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { syntaxHighlighting, bracketMatching, foldGutter, foldKeymap, defaultHighlightStyle } from '@codemirror/language';
-import { search, searchNext, searchPrevious, searchKeymap } from '@codemirror/search';
+import { search, searchKeymap } from '@codemirror/search';
 import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 import { lintKeymap } from '@codemirror/lint';
 import { markdown } from '@codemirror/lang-markdown';
 import { obsidianKeymap } from './keymaps/obsidianKeymap';
 import { obsidianTheme } from './themes/obsidianTheme';
 import { createMarkdownSyntaxPlugin } from './markdown-syntax';
-import { markdownPasteHandler } from './MarkdownPasteHandler.ts';
+import { markdownPasteHandler } from './MarkdownPasteHandler';
 
 /**
  * Creates the base extensions for the CodeMirror editor with Obsidian-like functionality.

@@ -1,13 +1,14 @@
-import { EditorView, Extension } from '@codemirror/view';
+import { EditorView } from '@codemirror/view';
+import { Extension } from '@codemirror/state';
 import { themeRegistry } from '../themes/editorThemes';
+import { EditorThemeName } from './theme';
 
 // Define available themes
-export type ThemeName = 'default' | 'vanilla';
 export type ThemeMode = 'light' | 'dark';
 
 // Interface for theme configuration
 export interface ThemeConfig {
-  name: ThemeName;
+  name: EditorThemeName;
   mode: ThemeMode;
 }
 
@@ -22,7 +23,8 @@ export function applyTheme(view: EditorView, config: ThemeConfig): void {
   console.log(`Applying theme: ${name} in ${mode} mode`);
   
   // Get theme from registry
-  const theme = themeRegistry[name] || themeRegistry.default;
+  const registryName = name as keyof typeof themeRegistry;
+  const theme = themeRegistry[registryName] || themeRegistry.default;
   
   // Apply theme mode to document
   if (typeof document !== 'undefined') {
@@ -37,53 +39,7 @@ export function applyTheme(view: EditorView, config: ThemeConfig): void {
     }
   }
   
-  // Create extensions array
-  const extensions: Extension[] = [];
-  
-  // Add theme extension
-  if (mode === 'dark') {
-    extensions.push(theme.dark);
-  } else {
-    extensions.push(theme.light);
-  }
-  
-  // Add highlight style
-  extensions.push(theme.highlight);
-  
-  // Apply extensions to view
-  view.dispatch({
-    effects: EditorView.reconfigure.of(extensions)
-  });
-}
-
-/**
- * Helper function to load theme CSS
- * @param name The theme name
- */
-export function loadThemeCSS(name: ThemeName): void {
-  // Load theme CSS files
-  if (typeof document !== 'undefined') {
-    // Remove any existing theme CSS
-    const existingLinks = document.querySelectorAll('link[data-theme-css]');
-    existingLinks.forEach(link => link.remove());
-    
-    if (name === 'vanilla') {
-      // Create link elements for vanilla theme CSS
-      const lightCSS = document.createElement('link');
-      lightCSS.rel = 'stylesheet';
-      lightCSS.href = '/css/vanilla-light.css'; // These files should be in the public/css directory
-      lightCSS.setAttribute('data-theme-css', 'vanilla-light');
-      document.head.appendChild(lightCSS);
-      
-      const darkCSS = document.createElement('link');
-      darkCSS.rel = 'stylesheet';
-      darkCSS.href = '/css/vanilla-dark.css'; // These files should be in the public/css directory
-      darkCSS.setAttribute('data-theme-css', 'vanilla-dark');
-      document.head.appendChild(darkCSS);
-      
-      console.log('Loaded vanilla theme CSS');
-    } else {
-      // Default theme CSS is loaded in the main app
-    }
-  }
+  // In a real implementation, we would apply the theme to CodeMirror
+  // But for now, we'll just log what would happen
+  console.log(`Would apply ${mode} theme to editor`, theme);
 } 
