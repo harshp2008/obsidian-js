@@ -1447,24 +1447,16 @@ html[data-markdown-mode=preview] .markdown-syntax-dim,
   background-color: #444;
   color: #aaa;
 }
-.cm-atomic-indent {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.03);
-  border-radius: 2px;
-  cursor: default !important;
+.cm-atomic-indent,
+.cm-atomicIndent {
   caret-color: transparent;
-  transition: background-color 0.2s ease;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  z-index: 10;
-  pointer-events: none;
-  min-width: 16px !important;
-  display: inline-block !important;
 }
-.dark .cm-atomic-indent {
-  background-color: rgba(255, 255, 255, 0.05);
+.cm-blockquote-indent,
+.cm-list-indent {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+.cm-blockquote .cm-content {
+  caret-color: auto !important;
 }
 .cm-list-indent {
   background-color: rgba(0, 0, 0, 0.05);

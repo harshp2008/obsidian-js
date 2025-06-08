@@ -9830,6 +9830,78 @@ var INDENT_UNIT = "    ";
 var isBlockquote = (lineText) => {
   return /^\s*>/.test(lineText);
 };
+var unindentListOrBlockquote = (editorView, line) => {
+  if (isListItem(line.text)) {
+    const match = line.text.match(/^(\s*)/);
+    if (!match) return false;
+    const leadingSpaces = match[1];
+    if (leadingSpaces.length >= 4) {
+      editorView.dispatch({
+        changes: {
+          from: line.from,
+          to: line.from + 4,
+          // Always remove exactly 4 spaces
+          insert: ""
+        },
+        userEvent: "unindent"
+      });
+      console.log(`List unindent applied: 4 spaces removed`);
+      return true;
+    } else if (leadingSpaces.length > 0) {
+      editorView.dispatch({
+        changes: {
+          from: line.from,
+          to: line.from + leadingSpaces.length,
+          insert: ""
+        },
+        userEvent: "unindent"
+      });
+      console.log(`List unindent applied: ${leadingSpaces.length} spaces removed`);
+      return true;
+    }
+  }
+  if (isBlockquote(line.text)) {
+    const blockquoteMatch = line.text.match(/^(\s*)((?:>\s*)+)(.*)/);
+    if (blockquoteMatch) {
+      const leadingSpaces = blockquoteMatch[1] || "";
+      const blockquoteMarkers = blockquoteMatch[2];
+      const firstMarkerPos = line.from + leadingSpaces.length;
+      const markerMatches = blockquoteMarkers.match(/(>\s*)/g);
+      if (markerMatches && markerMatches.length > 0) {
+        const markerToRemove = markerMatches[0];
+        editorView.dispatch({
+          changes: {
+            from: firstMarkerPos,
+            to: firstMarkerPos + markerToRemove.length,
+            insert: ""
+          },
+          userEvent: "unindent"
+        });
+        console.log("Blockquote unindent applied: > marker removed");
+        return true;
+      }
+    } else {
+      const match = line.text.match(/^(\s*)>/);
+      if (match) {
+        const leadingSpaces = match[1] || "";
+        const removePos = line.from + leadingSpaces.length;
+        const hasSpaceAfter = line.text.charAt(leadingSpaces.length + 1) === " ";
+        const removeLength = hasSpaceAfter ? 2 : 1;
+        editorView.dispatch({
+          changes: {
+            from: removePos,
+            to: removePos + removeLength,
+            insert: ""
+          },
+          userEvent: "unindent"
+        });
+        console.log("Simple blockquote unindent applied");
+        return true;
+      }
+    }
+  }
+  return false;
+};
 
 // src/app/obsidian-editor/extensions/AtomicIndents.ts
 var AtomicIndentPluginValue = class {
@@ -9886,24 +9958,36 @@ var AtomicIndentPluginValue = class {
   }
   /**
    * Process standard space indentation in text
+   * IMPORTANT: Only process spaces at the beginning of the line
    */
   processSpacesIndentation(lineText, lineStart, decorations) {
-    let searchPos = 0;
-    while (searchPos + 4 <= lineText.length) {
-      if (lineText.substring(searchPos, searchPos + 4) === INDENT_UNIT) {
-        decorations.push({
-          from: lineStart + searchPos,
-          to: lineStart + searchPos + 4,
-          decoration: view.Decoration.mark({
-            class: "cm-atomic-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-        searchPos += 4;
-      } else {
-        searchPos++;
-      }
+    const leadingSpacesMatch = lineText.match(/^(\s+)/);
+    if (!leadingSpacesMatch) return;
+    const leadingSpaces = leadingSpacesMatch[1];
+    let pos = 0;
+    while (pos + 4 <= leadingSpaces.length) {
+      decorations.push({
+        from: lineStart + pos,
+        to: lineStart + pos + 4,
+        decoration: view.Decoration.mark({
+          class: "cm-atomic-indent",
+          inclusive: true,
+          atomic: true
+        })
+      });
+      pos += 4;
+    }
+    const remainingSpaces = leadingSpaces.length % 4;
+    if (remainingSpaces > 0) {
+      decorations.push({
+        from: lineStart + pos,
+        to: lineStart + pos + remainingSpaces,
+        decoration: view.Decoration.mark({
+          class: "cm-atomic-indent",
+          inclusive: true,
+          atomic: true
+        })
+      });
     }
   }
   /**
@@ -9950,11 +10034,11 @@ var AtomicIndentPluginValue = class {
    * Process blockquote indentation
    */
   processBlockquoteIndentation(lineText, lineStart, decorations) {
-    const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
+    const match = lineText.match(/^(\s*)((?:>)(?:\s*)(?:>?\s*)*)(.*)/);
     if (!match) return;
     const leadingSpaces = match[1] || "";
-    const blockquoteMarkers = match[2];
-    const content = match[3];
+    const blockquoteSection = match[2];
+    match[3];
     if (leadingSpaces.length > 0) {
       for (let i = 0; i < Math.floor(leadingSpaces.length / 4) * 4; i += 4) {
         decorations.push({
@@ -9980,51 +10064,21 @@ var AtomicIndentPluginValue = class {
         });
       }
     }
-    let markerStart = lineStart + leadingSpaces.length;
-    const markerMatches = blockquoteMarkers.match(/(>\s*)/g);
-    if (markerMatches) {
-      markerMatches.forEach((marker) => {
+    let pos = lineStart + leadingSpaces.length;
+    for (let i = 0; i < blockquoteSection.length; i++) {
+      const char = blockquoteSection[i];
+      if (char === ">") {
         decorations.push({
-          from: markerStart,
-          to: markerStart + marker.length,
+          from: pos,
+          to: pos + 1,
           decoration: view.Decoration.mark({
             class: "cm-atomic-indent cm-blockquote-indent",
             inclusive: true,
             atomic: true
           })
         });
-        markerStart += marker.length;
-      });
-    }
-    if (content) {
-      const contentSpaces = content.match(/^(\s+)/);
-      if (contentSpaces && contentSpaces[1]) {
-        const spaces2 = contentSpaces[1];
-        const contentStart = lineStart + leadingSpaces.length + blockquoteMarkers.length;
-        for (let i = 0; i < Math.floor(spaces2.length / 4) * 4; i += 4) {
-          decorations.push({
-            from: contentStart + i,
-            to: contentStart + i + 4,
-            decoration: view.Decoration.mark({
-              class: "cm-atomic-indent",
-              inclusive: true,
-              atomic: true
-            })
-          });
-        }
-        const remainingSpaces = spaces2.length % 4;
-        if (remainingSpaces > 0) {
-          decorations.push({
-            from: contentStart + spaces2.length - remainingSpaces,
-            to: contentStart + spaces2.length,
-            decoration: view.Decoration.mark({
-              class: "cm-atomic-indent",
-              inclusive: true,
-              atomic: true
-            })
-          });
-        }
       }
+      pos++;
     }
   }
 };
@@ -10968,6 +11022,99 @@ var createCustomHighlightStyle = () => {
     return [];
   }
 };
+var handleTabKey = (view) => {
+  const { state } = view;
+  const selection = state.selection.main;
+  const line = state.doc.lineAt(selection.from);
+  const lineText = line.text;
+  if (isBlockquote(lineText)) {
+    const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
+    if (match) {
+      const leadingSpaces = match[1] || "";
+      match[2];
+      match[3];
+      view.dispatch({
+        changes: {
+          from: line.from + leadingSpaces.length,
+          to: line.from + leadingSpaces.length,
+          insert: "> "
+        },
+        selection: { anchor: selection.from + 2 },
+        // Move cursor after inserted content
+        userEvent: "indent"
+      });
+      console.log("Blockquote indented: added > marker");
+      return true;
+    }
+  }
+  if (isListItem(lineText)) {
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from,
+        insert: INDENT_UNIT
+      },
+      selection: { anchor: selection.from + 4 },
+      // Move cursor after inserted content
+      userEvent: "indent"
+    });
+    console.log("List indented: added 4 spaces");
+    return true;
+  }
+  const cursorOffset = selection.from - line.from;
+  view.dispatch({
+    changes: {
+      from: line.from,
+      to: line.from,
+      insert: INDENT_UNIT
+    },
+    // Move cursor by 4 or keep at same relative position
+    selection: { anchor: line.from + 4 + cursorOffset },
+    userEvent: "input"
+  });
+  return true;
+};
+var handleShiftTabKey = (view) => {
+  const { state } = view;
+  const selection = state.selection.main;
+  const line = state.doc.lineAt(selection.from);
+  const originalCursorOffset = selection.from - line.from;
+  if (isListItem(line.text) || isBlockquote(line.text)) {
+    if (unindentListOrBlockquote(view, { from: line.from, to: line.to, text: line.text })) {
+      return true;
+    }
+  }
+  if (line.text.startsWith(INDENT_UNIT)) {
+    const spacesToRemove = INDENT_UNIT.length;
+    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from + spacesToRemove,
+        insert: ""
+      },
+      selection: { anchor: line.from + newCursorOffset },
+      userEvent: "delete.dedent"
+    });
+    return true;
+  }
+  const leadingSpaces = line.text.match(/^(\s+)/);
+  if (leadingSpaces && leadingSpaces[0]) {
+    const spacesToRemove = leadingSpaces[0].length;
+    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from + spacesToRemove,
+        insert: ""
+      },
+      selection: { anchor: line.from + newCursorOffset },
+      userEvent: "delete.dedent"
+    });
+    return true;
+  }
+  return false;
+};
 var createMarkdownKeymaps = (onSaveRef) => {
   return view.keymap.of([
     {
@@ -10981,61 +11128,10 @@ var createMarkdownKeymaps = (onSaveRef) => {
     {
       key: "Tab",
       run: (view) => {
-        const selection = view.state.selection.main;
-        const firstLine = view.state.doc.lineAt(selection.from);
-        const lastLine = view.state.doc.lineAt(selection.to);
-        console.log("Tab pressed - processing indentation");
-        if (firstLine.number !== lastLine.number) {
-          console.log("Multi-line selection detected");
-          indentText(view);
-          return true;
-        }
-        const line = firstLine;
-        const isListLine = isListItem(line.text);
-        const isBlockquoteLine = isBlockquote(line.text);
-        if (isListLine) {
-          console.log("List line detected - applying 4-space indent");
-          view.dispatch({
-            changes: {
-              from: line.from,
-              to: line.from,
-              insert: INDENT_UNIT
-            },
-            userEvent: "input.indent"
-          });
-          return true;
-        }
-        if (isBlockquoteLine) {
-          console.log("Blockquote line detected - applying > marker");
-          const match = line.text.match(/^(\s*)((?:>\s*)+)(.*)/);
-          if (match) {
-            const leadingSpaces = match[1] || "";
-            view.dispatch({
-              changes: {
-                from: line.from + leadingSpaces.length,
-                to: line.from + leadingSpaces.length,
-                insert: "> "
-              },
-              userEvent: "input.indent"
-            });
-            return true;
-          }
-        }
-        console.log("Regular indent - applying 4 spaces");
-        view.dispatch({
-          changes: {
-            from: selection.from,
-            to: selection.from,
-            insert: INDENT_UNIT
-          },
-          userEvent: "input.indent"
-        });
-        return true;
+        return handleTabKey(view);
       },
       shift: (view) => {
-        console.log("Shift+Tab pressed - unindenting");
-        unindentText(view);
-        return true;
+        return handleShiftTabKey(view);
       }
     },
     {
