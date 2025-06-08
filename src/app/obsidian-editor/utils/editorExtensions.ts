@@ -1,16 +1,8 @@
 /**
  * This file contains configurations for CodeMirror editor extensions.
  */
-import { Extension, Prec, EditorState, RangeSetBuilder } from '@codemirror/state';
-import { 
-  keymap, 
-  highlightActiveLine, 
-  highlightActiveLineGutter, 
-  EditorView,
-  ViewPlugin, 
-  ViewUpdate, 
-  Decoration 
-} from '@codemirror/view';
+import { Extension, Prec } from '@codemirror/state';
+import { keymap, highlightActiveLine, highlightActiveLineGutter, EditorView } from '@codemirror/view';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { syntaxHighlighting, HighlightStyle } from '@codemirror/language';
@@ -19,17 +11,13 @@ import { defaultKeymap, historyKeymap, history } from '@codemirror/commands';
 
 // Import custom extensions
 import { atomicIndents } from '../extensions/AtomicIndents';
-import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax';
+import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax/index';
 import { htmlDecorator } from '../extensions/markdown-syntax/html-decorator';
-import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler';
+import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler.ts';
 // Import our Lezer safety plugin
 import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
 // Import the no markdown in HTML extension
 import { createNoMarkdownInHtmlExtension } from '../extensions/markdown/no-formatting';
-// Import markdown syntax hider
-import { markdownSyntaxHider } from '../extensions/MarkdownSyntaxHider';
-// Import the combined extensions
-import { createAllExtensions } from '../extensions';
 
 // Import formatting functions from our new modular structure
 import { 
@@ -43,14 +31,6 @@ import {
   handleBackspaceIndent,
   handleEnterListBlockquote
 } from './formatting';
-
-// Import additional helper functions
-import { isListItem } from './formatting/linkAndListFormatting';
-import { 
-  isBlockquote, 
-  INDENT_UNIT, 
-  unindentListOrBlockquote 
-} from './formatting/indentationUtils';
 
 /**
  * Creates a custom highlight style for markdown content
@@ -105,130 +85,6 @@ export const createCustomEnterKeymap = (): Extension => {
   ]));
 };
 
-const handleTabKey = (view: EditorView): boolean => {
-  const { state } = view;
-  const selection = state.selection.main;
-  
-  // Get the current line
-  const line = state.doc.lineAt(selection.from);
-  const lineText = line.text;
-  
-  // Handle indentation based on the context
-  
-  // Blockquote indentation
-  if (isBlockquote(lineText)) {
-    const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
-    if (match) {
-      const leadingSpaces = match[1] || '';
-      const blockquoteMarkers = match[2];
-      const content = match[3];
-      
-      // Insert a new blockquote marker
-      view.dispatch({
-        changes: {
-          from: line.from + leadingSpaces.length,
-          to: line.from + leadingSpaces.length,
-          insert: '> '
-        },
-        selection: { anchor: selection.from + 2 }, // Move cursor after inserted content
-        userEvent: 'indent'
-      });
-      console.log('Blockquote indented: added > marker');
-      return true;
-    }
-  }
-  
-  // List indentation
-  if (isListItem(lineText)) {
-    view.dispatch({
-      changes: {
-        from: line.from,
-        to: line.from,
-        insert: INDENT_UNIT
-      },
-      selection: { anchor: selection.from + 4 }, // Move cursor after inserted content
-      userEvent: 'indent'
-    });
-    console.log('List indented: added 4 spaces');
-    return true;
-  }
-  
-  // Default indentation for regular text (always at line start)
-  const cursorOffset = selection.from - line.from; // Calculate cursor position in line
-  
-  view.dispatch({
-    changes: {
-      from: line.from,
-      to: line.from,
-      insert: INDENT_UNIT
-    },
-    // Move cursor by 4 or keep at same relative position
-    selection: { anchor: line.from + 4 + cursorOffset },
-    userEvent: 'input'
-  });
-  
-  return true;
-};
-
-/**
- * Handles the Shift+Tab key to unindent the current line
- * @param view - The CodeMirror editor view
- * @returns Whether the key was handled
- */
-const handleShiftTabKey = (view: EditorView): boolean => {
-  const { state } = view;
-  const selection = state.selection.main;
-  
-  // Get the current line
-  const line = state.doc.lineAt(selection.from);
-  const originalCursorOffset = selection.from - line.from;
-  
-  // Try to unindent a list or blockquote
-  if (isListItem(line.text) || isBlockquote(line.text)) {
-    if (unindentListOrBlockquote(view, { from: line.from, to: line.to, text: line.text })) {
-      return true;
-    }
-  }
-  
-  // Handle default unindentation for other text
-  // Look for INDENT_UNIT at the start of the line and remove it
-  if (line.text.startsWith(INDENT_UNIT)) {
-    const spacesToRemove = INDENT_UNIT.length;
-    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
-    
-    view.dispatch({
-      changes: {
-        from: line.from,
-        to: line.from + spacesToRemove,
-        insert: ''
-      },
-      selection: { anchor: line.from + newCursorOffset },
-      userEvent: 'delete.dedent'
-    });
-    return true;
-  }
-  
-  // Check for other spaces at the start of the line
-  const leadingSpaces = line.text.match(/^(\s+)/);
-  if (leadingSpaces && leadingSpaces[0]) {
-    const spacesToRemove = leadingSpaces[0].length;
-    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
-    
-    view.dispatch({
-      changes: {
-        from: line.from,
-        to: line.from + spacesToRemove,
-        insert: ''
-      },
-      selection: { anchor: line.from + newCursorOffset },
-      userEvent: 'delete.dedent'
-    });
-    return true;
-  }
-  
-  return false;
-};
-
 /**
  * Creates custom keymaps for markdown editing
  * @param onSaveRef - Reference to the onSave function
@@ -247,10 +103,12 @@ export const createMarkdownKeymaps = (onSaveRef: React.MutableRefObject<(() => v
     {
       key: 'Tab',
       run: (view) => {
-        return handleTabKey(view);
+        indentText(view);
+        return true;
       },
       shift: (view) => {
-        return handleShiftTabKey(view);
+        unindentText(view);
+        return true;
       }
     },
     {
@@ -357,10 +215,20 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
   const safeExtensions: Extension[] = [
     themeExtension,
     history(),
-    // Get all extensions from the central extension registry
-    ...createAllExtensions(),
-    // Add safety and highlighting extensions
+    atomicIndents,
+    createCustomEnterKeymap(),
+    // Add our Lezer safety plugin with highest precedence to run first
     Prec.highest(createLezerSafetyPlugin()),
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: languages,
+      addKeymap: false,
+    }),
+    // Add the extension to prevent markdown in HTML with high precedence
+    Prec.high(createNoMarkdownInHtmlExtension()),
+    createMarkdownSyntaxPlugin(),
+    htmlDecorator(), // Add HTML decorator extension for HTML rendering
+    markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
     EditorView.lineWrapping,
@@ -382,8 +250,9 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
       safeExtensions.push(syntaxHighlighting(highlightStyle));
     }
   } catch (error) {
-    console.warn('Failed to create syntax highlighting:', error);
+    console.error("Error applying syntax highlighting:", error);
+    // Continue without syntax highlighting
   }
-
+  
   return safeExtensions;
 }; 

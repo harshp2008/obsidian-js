@@ -1,30 +1,36 @@
-/**
- * Main entry point for the obsidian-js package
- */
+// Main entry point for the obsidian-js package
+import { applyHighlightStyleFix } from './app/obsidian-editor/utils/highlightStyleFix';
+import './app/obsidian-editor/utils/lezer-patch'; // Import the Lezer patch
 
-// Re-export types
-export type { ThemeContextType, Theme } from './contexts/ThemeContext';
-export type { CodeMirrorEditorProps } from './app/obsidian-editor/CodeMirrorEditor';
+// Apply the fix as early as possible
+if (typeof window !== 'undefined') {
+  try {
+    // Fix the HighlightStyle to prevent "tags is not iterable" error
+    applyHighlightStyleFix();
+  } catch (e) {
+    console.warn("Failed to apply highlight style fix:", e);
+  }
+}
 
-// Re-export client components
-export * from './client';
-
-// Utils (server-compatible)
-export * from './app/obsidian-editor/utils/formatting';
-
-// Import CSS (will be processed by build tools)
-import './index.css';
-
-// Note: Components that use React hooks are exported from their respective client files
-// Client components will be automatically handled by the Next.js compiler
-
-// Core Components
+// Core Editor Component
 export { default as CodeMirrorEditor } from './app/obsidian-editor/CodeMirrorEditor';
-export { default as EditorCore } from './app/obsidian-editor/components/EditorCore';
-export { default as EditorToolbar } from './app/obsidian-editor/components/EditorToolbar';
-export { default as ThemeSwitcher } from './app/obsidian-editor/components/ThemeSwitcher';
-export { Editor } from './components/Editor';
+export type { CodeMirrorEditorProps } from './app/obsidian-editor/CodeMirrorEditor'; // Exporting props type
+
+// Theme Context and Hook
+export { ThemeProvider, useTheme } from './contexts/ThemeContext';
+export type { ThemeContextType, Theme } from './contexts/ThemeContext'; // Exporting theme types
+
+// UI Components
 export { ThemeToggle } from './components/ThemeToggle';
 
-// Theme Context
-export { ThemeProvider, useTheme } from './contexts/ThemeContext';
+// FileSystem Utilities
+export { createFileSystem, createFileSystemExtension } from './app/obsidian-editor/utils/filesystem';
+export type { FileSystem, FileSystemOptions, FileSystemError } from './app/obsidian-editor/utils/filesystem';
+
+// Utility Functions (if any are intended for public use, export them here)
+// For example:
+// export * from './app/obsidian-editor/utils/FormattingFunctions';
+
+// Extensions (if any are intended for public use or configuration)
+// For example:
+// export { createMarkdownSyntaxPlugin } from './app/obsidian-editor/extensions/markdown-syntax';

@@ -50,28 +50,6 @@ html.light {
   font-size: 16px;
   color: var(--cm-text-normal);
   background-color: var(--cm-background-primary);
-  white-space: pre-wrap;
-}
-
-/* Empty lines need minimum height to be visible in both modes */
-.cm-content .cm-line {
-  min-height: 1.6em; /* Match the line height */
-}
-
-/* In preview mode, ensure lines are styled like paragraphs */
-[data-markdown-mode="preview"] .cm-content .cm-line:empty::before {
-  content: " ";
-  display: inline-block;
-}
-
-/* Additional paragraph spacing in preview mode */
-[data-markdown-mode="preview"] .cm-content .cm-line + .cm-line {
-  margin-top: 0.5em;
-}
-
-/* Double empty line should create paragraph break */
-[data-markdown-mode="preview"] .cm-content .cm-line:empty + .cm-line {
-  margin-top: 1em;
 }
 
 /* Horizontal Rule Widget Styling */
@@ -107,23 +85,8 @@ html.light {
 
 /* Markdown syntax styles - shown when cursor is near, hidden when not */
 .markdown-syntax-dim {
-  opacity: 0 !important; /* Make invisible but keep its space */
-  color: transparent !important;
-  text-shadow: none !important;
-  background-color: transparent !important;
-}
-
-/* Make sure the hidden syntax doesn't interfere with the content */
-[data-markdown-mode="preview"] .markdown-syntax-dim,
-html[data-markdown-mode="preview"] .markdown-syntax-dim,
-.markdown-preview-mode .markdown-syntax-dim {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
+  display: none; /* Completely hidden and takes no space */
+  color: #8b5cf6; /* Use same color as active for consistency */
 }
 
 .markdown-syntax-active {
@@ -785,34 +748,27 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* Line Break Syntax Indicator (Live Mode) */
 .cm-line-break-syntax {
-  background-color: rgba(66, 133, 244, 0.1);
-  border-radius: 1px;
+  background-color: rgba(
+    0,
+    0,
+    0,
+    0.04
+  ); /* Very subtle background for the two spaces */
+  border-radius: 3px;
+  padding: 0 1px; /* Minimal padding to make it less intrusive */
+  /* You could also use a faint border or a different text color */
+  /* border: 1px dotted rgba(0,0,0,0.1); */
 }
 
+/* Dark mode for line break syntax */
 .dark .cm-line-break-syntax {
-  background-color: rgba(138, 180, 248, 0.2);
-}
-
-.cm-line-break-indicator {
-  display: inline-block;
-  color: #8a8a8a;
-  font-size: 0.85em;
-  padding: 0 4px;
-  vertical-align: middle;
-}
-
-/* Force line breaks to be visible in preview mode */
-[data-markdown-mode="preview"] .cm-content .cm-line {
-  white-space: pre-wrap !important;
-}
-
-/* Create visual line breaks at the end of paragraphs */
-[data-markdown-mode="preview"] .cm-content .cm-line:not(:last-child) {
-  margin-bottom: 0.5em;
-}
-
-[data-line-break="true"] + .cm-line {
-  margin-top: 0.8em !important;
+  background-color: rgba(
+    255,
+    255,
+    255,
+    0.06
+  ); /* Subtle background for dark mode */
+  /* border: 1px dotted rgba(255,255,255,0.1); */
 }
 
 /* HTML Tag Syntax (Live Mode) */
@@ -1377,10 +1333,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   flex-direction: column;
   height: 100%;
   width: 100%;
-  border: 1px solid var(--hr-color, #dcddde);
-  border-radius: 4px;
   overflow: hidden;
-  background-color: var(--background-primary, #ffffff);
 }
 
 .obsidian-editor-content {
@@ -1389,411 +1342,439 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   position: relative;
 }
 
-/* Dark mode styles */
-.dark .obsidian-editor-container {
-  background-color: var(--background-primary, #2b2b2b);
-  border-color: var(--hr-color, #444444);
+/* Make sure CodeMirror's scroller can scroll */
+.obsidian-editor-content .cm-scroller {
+  overflow: auto !important;
+  height: 100% !important;
 }
 
-/* Editor toolbar styles */
+/* Editor styles */
 .obsidian-editor-toolbar {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px;
+  gap: 8px;
+  border-bottom: 1px solid var(--hr-color, #e1e1e1);
   background-color: var(--background-secondary, #f8f8f8);
-  border-bottom: 1px solid var(--hr-color, #dcddde);
 }
 
-.dark .obsidian-editor-toolbar {
-  background-color: var(--background-secondary, #363636);
-  border-color: var(--hr-color, #444444);
+.obsidian-editor-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--interactive-normal, #f2f3f5);
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--text-normal, #2e3338);
+  font-size: 14px;
 }
 
-/* CodeMirror specific styles */
-.cm-editor {
-  height: 100%;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
+.obsidian-editor-toolbar button:hover {
+  background-color: var(--interactive-hover, #e9e9e9);
 }
 
-.cm-content {
-  padding: 10px;
-  font-size: 16px;
-  line-height: 1.6;
+.obsidian-editor-toolbar button.active {
+  background-color: var(--interactive-accent, #7b6cd9);
+  color: white;
 }
 
-/* Force hide markdown syntax characters by making them more transparent */
-.cm-formatting {
-  opacity: 0.3;
-  color: var(--text-faint, #999999) !important;
+.obsidian-editor-toolbar .separator {
+  width: 1px;
+  height: 24px;
+  background-color: var(--hr-color, #e1e1e1);
+  margin: 0 4px;
 }
 
-/* Hide markdown syntax formatting characters completely */
-[data-markdown-mode="preview"] .cm-formatting {
-  display: none !important;
-}
-
-/* Make markdown rendered content more prominent */
-.cm-header,
-.cm-strong,
-.cm-em,
-.cm-link,
-.cm-url {
-  color: inherit;
-  font-weight: inherit;
-}
-
-/* Markdown syntax highlighting */
-.cm-strong {
-  font-weight: bold;
-}
-
-.cm-emphasis {
-  font-style: italic;
-}
-
-.cm-heading {
-  font-weight: bold;
-  color: var(--text-accent, #705dcf);
-}
-
-.cm-link {
-  color: var(--link-color, #5e81ac);
-  text-decoration: none;
-}
-
-.cm-url {
-  color: var(--text-muted, #888888);
-}
-
-.cm-formatting {
-  color: var(--text-faint, #999999);
-}
-
-/* Dark mode syntax highlighting */
-.dark .cm-strong {
-  font-weight: bold;
-}
-
-.dark .cm-emphasis {
-  font-style: italic;
-}
-
-.dark .cm-heading {
-  color: var(--text-accent, #a277ff);
-}
-
-.dark .cm-link {
-  color: var(--link-color, #a8c0e0);
-}
-
-.dark .cm-url {
-  color: var(--text-muted, #999999);
-}
-
-.dark .cm-formatting {
-  color: var(--text-faint, #666666);
-}
-
-/* Base styles for the Obsidian-JS editor */
-.obsidian-editor-container {
-  display: flex;
-  flex-direction: column;
+/* Editor core styles */
+.obsidian-editor-core {
   height: 100%;
   width: 100%;
-  border: 1px solid var(--hr-color, #dcddde);
+  overflow: hidden;
+}
+
+/* HTML rendering styles */
+.cm-html-rendered {
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 4px;
-  overflow: hidden;
-  background-color: var(--background-primary, #ffffff);
+  padding: 6px;
+  margin: 4px 0;
+  overflow: auto;
+  max-width: 100%;
 }
 
-.obsidian-editor-content {
-  flex: 1;
-  overflow: hidden;
-  position: relative;
+.cm-html-inline {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 2px 4px;
 }
 
-/* Dark mode styles */
-.dark .obsidian-editor-container {
-  background-color: var(--background-primary, #2b2b2b);
-  border-color: var(--hr-color, #444444);
+.cm-html-block {
+  display: block;
+  width: 100%;
 }
 
-/* Editor toolbar styles */
-.obsidian-editor-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: var(--background-secondary, #f8f8f8);
-  border-bottom: 1px solid var(--hr-color, #dcddde);
+/* Special element styling */
+.cm-html-rendered iframe {
+  border: none;
+  width: 100%;
+  min-height: 300px;
+  background: #f5f5f5;
 }
 
-.dark .obsidian-editor-toolbar {
-  background-color: var(--background-secondary, #363636);
-  border-color: var(--hr-color, #444444);
+.cm-html-rendered audio,
+.cm-html-rendered video {
+  max-width: 100%;
+  display: block;
 }
 
-/* CodeMirror specific styles */
-.cm-editor {
-  height: 100%;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
+.cm-html-rendered img {
+  max-width: 100%;
+  height: auto;
 }
 
-.cm-content {
-  padding: 10px;
-  font-size: 16px;
-  line-height: 1.6;
+.cm-html-rendered table {
+  border-collapse: collapse;
+  width: 100%;
 }
 
-/* CodeMirror Markdown tokens - More specific selectors to ensure they take precedence */
-.cm-editor .cm-content .cm-line .cm-formatting {
-  opacity: 0.35;
-  color: var(--text-faint, #999999) !important;
+.cm-html-rendered td,
+.cm-html-rendered th {
+  border: 1px solid #ddd;
+  padding: 8px;
 }
 
-/* More specific selectors for preview mode to hide formatting */
-html[data-markdown-mode="preview"]
+.cm-html-rendered blockquote {
+  border-left: 4px solid #ddd;
+  padding-left: 16px;
+  margin: 0;
+  color: #666;
+}
+
+/* Script tag display */
+.script-tag {
+  color: #905;
+  font-family: monospace;
+}
+
+.script-tag-content {
+  color: #690;
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 2px;
+  border-radius: 2px;
+}
+
+/* Enhanced HTML element styling */
+.cm-html-span {
+  display: inline;
+}
+
+/* Error styling */
+.obsidian-editor-error {
+  padding: 8px;
+  border: 1px solid #f88;
+  background-color: #fee;
+  border-radius: 4px;
+}
+
+.obsidian-editor-fallback {
+  width: 100%;
+  min-height: 200px;
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-family: monospace;
+}
+
+/* HTML tag level colors for nested tags - updated to match Obsidian style */
+.cm-html-tag-level-0,
+.cm-html-bracket-level-0 {
+  color: #7c7ce3; /* Light blue-purple */
+}
+
+.cm-html-tag-level-1,
+.cm-html-bracket-level-1 {
+  color: #50a14f; /* Muted green */
+}
+
+.cm-html-tag-level-2,
+.cm-html-bracket-level-2 {
+  color: #c18401; /* Gold */
+}
+
+.cm-html-tag-level-3,
+.cm-html-bracket-level-3 {
+  color: #4078f2; /* Bright blue */
+}
+
+.cm-html-tag-level-4,
+.cm-html-bracket-level-4 {
+  color: #a626a4; /* Purple */
+}
+
+.cm-html-tag-level-5,
+.cm-html-bracket-level-5 {
+  color: #e45649; /* Coral red */
+}
+
+/* General HTML syntax highlighting */
+.cm-html-attribute {
+  color: var(--html-attr-color, #986801);
+}
+
+.cm-html-attribute-value {
+  color: var(--html-content-color, #50a14f);
+}
+
+/* HTML code mode background - softer highlight */
+.cm-html-code-mode {
+  background-color: rgba(240, 246, 252, 0.15) !important;
+  border-radius: 2px;
+}
+
+/* OBSIDIAN-STYLE HTML SYNTAX HIGHLIGHTING */
+html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
+  color: #5a9bcf !important; /* Obsidian-like blue for tag names */
+  font-weight: 600 !important; /* Make it bolder */
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-attribute {
+  color: #d99e5f !important; /* Obsidian-like orange for attributes */
+  font-weight: 500 !important;
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-attribute-value {
+  color: #8cad5d !important; /* Obsidian-like green for attribute values */
+  font-weight: normal !important;
+}
+
+html body .cm-editor .cm-content .cm-line .cm-html-bracket {
+  color: #6c6c6c !important; /* Gray for brackets to be less distracting */
+  font-weight: normal !important;
+}
+
+/* Nesting levels with highest specificity - More Obsidian-like colors */
+html
+  body
   .cm-editor
   .cm-content
   .cm-line
-  .cm-formatting,
-.cm-editor[data-markdown-mode="preview"] .cm-content .cm-line .cm-formatting {
-  display: none !important;
+  .cm-html-tag-name.cm-html-tag-level-0 {
+  color: #5a9bcf !important;
+} /* Blue */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-1 {
+  color: #8cad5d !important;
+} /* Green */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-2 {
+  color: #d99e5f !important;
+} /* Orange */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-3 {
+  color: #d35c5c !important;
+} /* Red */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-4 {
+  color: #b97ad4 !important;
+} /* Purple */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-tag-name.cm-html-tag-level-5 {
+  color: #5fb9b9 !important;
+} /* Teal */
+
+/* Bracket colors to match tag colors */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-0 {
+  color: rgba(90, 155, 207, 0.7) !important;
+} /* Blue */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-1 {
+  color: rgba(140, 173, 93, 0.7) !important;
+} /* Green */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-2 {
+  color: rgba(217, 158, 95, 0.7) !important;
+} /* Orange */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-3 {
+  color: rgba(211, 92, 92, 0.7) !important;
+} /* Red */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-4 {
+  color: rgba(185, 122, 212, 0.7) !important;
+} /* Purple */
+html
+  body
+  .cm-editor
+  .cm-content
+  .cm-line
+  .cm-html-bracket.cm-html-bracket-level-5 {
+  color: rgba(95, 185, 185, 0.7) !important;
+} /* Teal */
+
+/* Additional visual cues for HTML code */
+html body .cm-editor .cm-content .cm-line .cm-html-code-mode {
+  background-color: rgba(245, 245, 250, 0.2) !important;
+  border-radius: 3px !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Specific selectors for different syntax elements */
-.cm-editor .cm-content .cm-line .cm-formatting-header,
-.cm-editor .cm-content .cm-line .cm-formatting-strong,
-.cm-editor .cm-content .cm-line .cm-formatting-em,
-.cm-editor .cm-content .cm-line .cm-formatting-link,
-.cm-editor .cm-content .cm-line .cm-formatting-code {
-  color: #8b5cf6 !important;
-  opacity: 0.4;
+/* Make HTML tags stand out more */
+html body .cm-editor .cm-content .cm-line .cm-html-tag-name {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace !important;
+  letter-spacing: 0.03em !important;
 }
 
-/* Style the text content inside markdown elements */
-.cm-editor .cm-content .cm-line .cm-header {
-  font-weight: bold;
-  color: var(--text-accent, #705dcf);
+/* Add specific CSS rules to prevent markdown rendering inside HTML tags */
+.cm-html-content {
+  /* Add a subtle background to make HTML content visually distinct */
+  background-color: rgba(240, 240, 240, 0.5);
+  border-radius: 3px;
 }
 
-.cm-editor .cm-content .cm-line .cm-strong {
-  font-weight: bold;
+/* Override any markdown styling inside HTML content */
+.cm-html-content .cm-strong,
+.cm-html-content .cm-emphasis,
+.cm-html-content .cm-heading,
+.cm-html-content .cm-link,
+.cm-html-content .cm-url,
+.cm-html-content .cm-list,
+.cm-html-content .cm-quote {
+  /* Reset all markdown styling */
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  text-decoration: inherit !important;
+  background-color: inherit !important;
 }
 
-.cm-editor .cm-content .cm-line .cm-em {
-  font-style: italic;
-}
-
-.cm-editor .cm-content .cm-line .cm-link {
-  color: var(--link-color, #5e81ac);
-  text-decoration: underline;
-}
-
-.cm-editor .cm-content .cm-line .cm-url {
-  color: var(--text-muted, #888888);
-}
-
-.cm-editor .cm-content .cm-line .cm-header-1 {
-  font-size: 2em;
-}
-
-.cm-editor .cm-content .cm-line .cm-header-2 {
-  font-size: 1.5em;
-}
-
-.cm-editor .cm-content .cm-line .cm-header-3 {
-  font-size: 1.25em;
-}
-
-/* Dark mode syntax highlighting */
-.dark .cm-editor .cm-content .cm-line .cm-header {
-  color: var(--text-accent, #a277ff);
-}
-
-.dark .cm-editor .cm-content .cm-line .cm-link {
-  color: var(--link-color, #a8c0e0);
-}
-
-.dark .cm-editor .cm-content .cm-line .cm-formatting {
-  color: var(--text-faint, #666666) !important;
-}
-
-/* Explicit classes for code blocks */
-.cm-editor .cm-content .cm-line .cm-formatting-code-block {
-  opacity: 0.4;
-  color: #10b981 !important;
-}
-
-.cm-editor .cm-content .cm-line .cm-hmd-codeblock {
+/* Ensure HTML tags are clearly visible */
+.cm-html-tag {
+  color: #0550ae !important;
   font-family: monospace;
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #10b981;
 }
 
-/* Lists */
-.cm-editor .cm-content .cm-line .cm-formatting-list {
-  color: var(--text-accent, #705dcf) !important;
-  opacity: 0.6;
+/* Ensure the cm-disable-markdown-parsing class works */
+.cm-disable-markdown-parsing * {
+  /* Reset all markdown styling */
+  font-weight: inherit !important;
+  font-style: inherit !important;
+  font-size: inherit !important;
+  color: inherit !important;
 }
 
-/* Ensure markdown syntax is fully hidden in preview mode */
-html[data-markdown-mode="preview"] .markdown-syntax-dim,
-.markdown-preview-mode .markdown-syntax-dim,
-[data-markdown-mode="preview"] .markdown-syntax-dim {
-  display: none !important;
-  opacity: 0 !important;
+/* Ensure plain text markers work */
+.cm-plain-text-marker {
+  /* Make it a higher z-index than other decorations */
+  z-index: 5;
 }
 
-.cm-editor[data-markdown-mode="preview"] .cm-content .cm-line .cm-formatting {
-  display: none !important;
+/* Specific override for list bullets */
+.cm-html-content .cm-list-bullet {
+  font-weight: normal !important;
 }
 
-/* Blockquote styling */
-.cm-blockquote-indent,
-.cm-blockquote-bar {
-  color: #6d6d6d;
-  display: inline-block;
-  width: 3px;
-  background-color: #e0e0e0;
-  margin-right: 5px;
-  vertical-align: middle;
-  height: 1.2em;
-  border-radius: 2px;
+/* Keep HTML tags looking like code even when inside HTML content */
+.cm-html-content .cm-tag,
+.cm-html-content .cm-bracket,
+.cm-html-content .cm-attribute,
+.cm-html-content .cm-attribute-value {
+  color: #0550ae !important;
+  font-family: monospace;
 }
 
-.dark .cm-blockquote-indent,
-.dark .cm-blockquote-bar {
-  background-color: #444;
-  color: #aaa;
+/* Preserve the HTML syntax highlighting */
+.cm-html-code-mode {
+  font-family: monospace;
 }
 
-/* Atomic indentation styling */
-.cm-atomic-indent,
-.cm-atomicIndent {
-  caret-color: transparent;
+/* Ensure H1-H6 tags in HTML don't get markdown styling */
+.cm-html-content h1,
+.cm-html-content h2,
+.cm-html-content h3,
+.cm-html-content h4,
+.cm-html-content h5,
+.cm-html-content h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
 }
 
-/* Better visualization for atomic indents */
-.cm-blockquote-indent,
-.cm-list-indent {
-  background-color: rgba(0, 0, 0, 0.03);
-}
-
-/* Make blockquote spaces navigable but visually distinct */
-.cm-blockquote .cm-content {
-  caret-color: auto !important;
-}
-
-/* List indent specific styling - make it clearly visible */
-.cm-list-indent {
-  background-color: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
-  z-index: 11; /* Higher than standard atomic indents */
-  border-left: 1px solid rgba(0, 0, 0, 0.1);
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
-  width: 16px; /* Fixed width for visibility */
-  margin-right: 0 !important; /* No margin */
-  box-sizing: content-box;
-  display: inline-block !important;
-}
-
-.dark .cm-list-indent {
-  background-color: rgba(255, 255, 255, 0.08);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Blockquote indent specific styling - make it clearly visible */
-.cm-blockquote-indent {
-  background-color: rgba(224, 224, 224, 0.8);
-  border-radius: 2px;
-  z-index: 12 !important; /* Highest priority */
-  border-left: 2px solid rgba(0, 0, 0, 0.15);
-  color: #6b7280 !important; /* Ensure the > character is visible */
-  font-weight: bold;
-  min-width: 16px !important; /* Ensure visible width */
-  cursor: default !important;
-  box-sizing: content-box;
-  margin-right: 0 !important;
+/* Add more aggressive list-specific overrides */
+.cm-no-list-rendering .cm-list,
+.cm-no-list-rendering .cm-list-bullet,
+.cm-no-list-rendering .cm-list-marker,
+.cm-no-list-rendering .cm-hmd-list-indent,
+.cm-no-list-rendering .cm-formatting-list,
+.cm-no-list-rendering .cm-formatting-list-ul,
+.cm-no-list-rendering .cm-formatting-list-ol {
+  /* Reset all list-related styling */
+  font-weight: normal !important;
+  font-size: inherit !important;
+  color: inherit !important;
+  /* Ensure bullets don't show up as list bullets */
+  display: inline !important;
+  list-style: none !important;
+  margin: 0 !important;
   padding: 0 !important;
-  display: inline-block !important;
 }
 
-.dark .cm-blockquote-indent {
-  background-color: rgba(100, 100, 100, 0.3);
-  border-left: 2px solid rgba(255, 255, 255, 0.15);
-  color: #9ca3af !important;
+/* Override the actual list bullet characters */
+.cm-no-list-rendering .cm-list-bullet::before,
+.cm-no-list-rendering .cm-formatting-list::before,
+.cm-no-list-rendering .cm-formatting-list-ul::before,
+.cm-no-list-rendering .cm-formatting-list-ol::before {
+  content: none !important;
+  display: none !important;
 }
 
-/* Enhance visibility on hover */
-.cm-atomic-indent:hover,
-.cm-list-indent:hover,
-.cm-blockquote-indent:hover {
-  background-color: rgba(0, 0, 0, 0.08);
-}
-
-.dark .cm-atomic-indent:hover,
-.dark .cm-list-indent:hover,
-.dark .cm-blockquote-indent:hover {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-/* Blockquote styling for entire blockquote lines */
-.cm-line:has(.cm-blockquote-indent) {
-  border-left: 3px solid #e0e0e0;
-  padding-left: 8px;
-  background-color: rgba(0, 0, 0, 0.02);
-  position: relative; /* For absolute positioning within the line */
-}
-
-.dark .cm-line:has(.cm-blockquote-indent) {
-  border-left: 3px solid #444;
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
-/* Enhanced styling for list items */
-.cm-line:has(.cm-list-indent) {
-  padding-left: 4px;
-}
-
-/* Make sure indentation works in both modes */
-.markdown-live-mode .cm-atomic-indent,
-.markdown-preview-mode .cm-atomic-indent,
-[data-markdown-mode="preview"] .cm-atomic-indent,
-[data-markdown-mode="preview"] .cm-list-indent,
-[data-markdown-mode="preview"] .cm-blockquote-indent {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Force blockquote and list markers to be visible even when other syntax is hidden */
-.cm-blockquote-indent.markdown-syntax-dim,
-.cm-list-indent.markdown-syntax-dim {
-  opacity: 1 !important;
-  display: inline-block !important;
-  visibility: visible !important;
-}
-
-/* Explicit styling for white spaces in blockquotes and indented content */
-.cm-blockquote-indent .cm-space,
-.cm-blockquote-indent .cm-tab,
-.cm-list-indent .cm-space,
-.cm-list-indent .cm-tab {
-  display: inline-block !important;
-  min-width: 4px !important;
-  background-color: rgba(128, 128, 128, 0.1);
-  border-radius: 2px;
-  margin: 0;
-  padding: 0;
-}
-
-/* Add debug highlighting for spaces */
-.cm-whitespace-debug {
-  background-color: rgba(255, 0, 0, 0.1) !important;
-  border: 1px dotted #ccc;
-  display: inline-block !important;
-  min-width: 4px !important;
+/* Make sure markdown list indentation doesn't apply */
+.cm-no-list-rendering .cm-hmd-list-indent {
+  display: inline !important;
+  margin-left: 0 !important;
+  padding-left: 0 !important;
+  text-indent: 0 !important;
 }

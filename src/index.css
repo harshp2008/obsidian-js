@@ -1,8 +1,0 @@
-/* Base styles for the Obsidian-JS editor */
-@import "./app/obsidian-editor/CodeMirrorEditor.css";
-
-/* This file serves as the main entry point for all CSS in the package */
-/* When using the package, import 'obsidian-js/css' in your application */
-
-/* Additional CSS files are loaded dynamically based on the theme */
-/* See the CodeMirrorEditor component for details */

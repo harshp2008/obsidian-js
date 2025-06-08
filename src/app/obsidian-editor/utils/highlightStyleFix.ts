@@ -6,18 +6,90 @@
 import { HighlightStyle } from '@codemirror/language';
 
 /**
- * This utility fixes an issue with HighlightStyle in CodeMirror 6
- * where "tags is not iterable" error can occur in certain environments
- */
-
-/**
- * Apply a fix for HighlightStyle to prevent "tags is not iterable" error
+ * Monkey patches the HighlightStyle.define method to make it more resilient
+ * to the "tags is not iterable" error that can occur with certain versions
+ * of the @lezer/highlight package.
+ * 
+ * This should be called as early as possible, ideally in your application's entry point.
  */
 export function applyHighlightStyleFix(): void {
-  // This is a placeholder for the actual implementation
-  // In a real implementation, this would patch the HighlightStyle class
-  // to ensure the tags property is always iterable
-  console.log('Applying highlight style fix');
+  try {
+    // Skip if already patched
+    if ((HighlightStyle as any).__patched) return;
+    
+    // Store the original define method
+    const originalDefine = HighlightStyle.define;
+    
+    // Replace with a safer version that handles errors
+    HighlightStyle.define = function(specs) {
+      try {
+        const style = originalDefine.call(this, specs);
+        
+        // Get the original style function
+        const originalStyleFn = style.style;
+        
+        // Create a safer version of the style function
+        Object.defineProperty(style, 'style', {
+          value: function(tags) {
+            // Handle undefined or non-iterable tags
+            if (!tags) return "";
+            
+            try {
+              // Fix for "Cannot read properties of undefined (reading 'some')"
+              // Make sure tags.some exists and is callable before using it
+              if (typeof tags.some !== 'function') {
+                if (Array.isArray(tags)) {
+                  // If tags is an array but somehow doesn't have .some
+                  return originalStyleFn.call(this, tags);
+                }
+                // If tags.some doesn't exist, return empty string instead of crashing
+                console.warn("Tags object doesn't have .some method", tags);
+                return "";
+              }
+              
+              return originalStyleFn.call(this, tags);
+            } catch (e) {
+              console.warn("Error in highlight style:", e);
+              return "";
+            }
+          },
+          writable: false,
+          configurable: true
+        });
+        
+        // Patch the matcher function as well for additional safety
+        if (style.match) {
+          const originalMatchFn = style.match;
+          Object.defineProperty(style, 'match', {
+            value: function(tag) {
+              try {
+                if (!tag) return false;
+                return originalMatchFn.call(this, tag);
+              } catch (e) {
+                console.warn("Error in highlight style match:", e);
+                return false;
+              }
+            },
+            writable: false,
+            configurable: true
+          });
+        }
+        
+        return style;
+      } catch (error) {
+        console.error("Error creating HighlightStyle:", error);
+        // Return an empty style as fallback
+        return originalDefine.call(this, []);
+      }
+    };
+    
+    // Mark as patched to avoid double patching
+    (HighlightStyle as any).__patched = true;
+    console.info("HighlightStyle successfully patched to prevent 'tags is not iterable' error");
+    
+  } catch (error) {
+    console.error("Failed to patch HighlightStyle:", error);
+  }
 }
 
 /**

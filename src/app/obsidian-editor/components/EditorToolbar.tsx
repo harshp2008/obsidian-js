@@ -138,8 +138,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         <ThemeSwitcher onThemeChange={onThemeChange} />
       </div>
       
-      <style>
-        {`
+      <style jsx>{`
         .obsidian-editor-toolbar {
           display: flex;
           justify-content: space-between;
@@ -213,8 +212,7 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         .dark .format-button:hover {
           background: var(--interactive-hover, #4a4a4a);
         }
-        `}
-      </style>
+      `}</style>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 /**
  * Represents the possible theme states.
@@ -10,21 +10,16 @@ export type Theme = 'light' | 'dark';
 /**
  * Defines the shape of the ThemeContext.
  */
-export interface ThemeContextType {
+export type ThemeContextType = {
   /** The current active theme ('light' or 'dark'). */
   theme: Theme;
   /** Function to toggle the current theme. */
   toggleTheme: () => void;
   /** Whether the provider has mounted on the client */
   mounted: boolean;
-}
+};
 
-// Create the context with a default value
-const ThemeContext = createContext<ThemeContextType>({
-  theme: 'light',
-  mounted: false,
-  toggleTheme: () => {},
-});
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 /**
  * Provides the theme state and toggle function to its children components.
@@ -34,49 +29,48 @@ const ThemeContext = createContext<ThemeContextType>({
  * @param {React.ReactNode} props.children - The child components to be wrapped by the provider.
  * @returns {JSX.Element} The ThemeProvider component (always renders children to avoid hydration issues).
  */
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Use state to track both theme and mounting status
+export function ThemeProvider({ children }: { children: React.ReactNode }) {
+  // Start with a default theme that won't change during SSR
   const [theme, setTheme] = useState<Theme>('light');
   const [mounted, setMounted] = useState(false);
 
-  // Effect for initializing theme
+  // Initialize theme from localStorage or system preference ONLY on client-side
   useEffect(() => {
-    // Get stored theme or detect from system preferences
-    const storedTheme = localStorage.getItem('theme');
+    // This only runs on client, after hydration
+    const savedTheme = localStorage.getItem('theme') as Theme | null;
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    if (storedTheme === 'dark' || (!storedTheme && prefersDark)) {
-      setTheme('dark');
-      document.documentElement.classList.add('dark');
-    } else {
-      setTheme('light');
-      document.documentElement.classList.remove('dark');
-    }
-    
-    // Mark as mounted to prevent SSR hydration mismatch
+    const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
+    setTheme(initialTheme);
     setMounted(true);
+    
+    // Apply theme to HTML only after mounting
+    applyThemeToHTML(initialTheme, true);
   }, []);
 
-  // Toggle theme function
   const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
+    // Only allow toggling after mounted
+    if (!mounted) return;
     
-    // Apply the theme to the document
-    if (newTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    setTheme(prevTheme => {
+      const newTheme = prevTheme === 'light' ? 'dark' : 'light';
+      
+      // Update localStorage
+      localStorage.setItem('theme', newTheme);
+      
+      // Apply theme to HTML
+      applyThemeToHTML(newTheme, true);
+      
+      return newTheme;
+    });
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, mounted, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, mounted }}>
       {children}
     </ThemeContext.Provider>
   );
-};
+}
 
 /**
  * Custom hook to access the theme context (theme state and toggle function).
@@ -85,7 +79,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
  * @throws {Error} If used outside of a `ThemeProvider`.
  * @returns {ThemeContextType} The theme context.
  */
-export const useTheme = () => useContext(ThemeContext);
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+}
 
 /**
  * Apply the HTML theme class to document

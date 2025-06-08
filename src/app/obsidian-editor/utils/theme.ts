@@ -8,17 +8,17 @@
  */
 import { EditorView } from '@codemirror/view';
 import { vanillaLightTheme, vanillaDarkTheme } from '../themes/vanilla';
+import { loadThemeCSS } from './applyTheme';
 
 /**
- * Available editor theme names
+ * Editor theme names
  */
-export type EditorThemeName = 'default' | 'vanilla';
+export type EditorThemeName = 'vanilla';
 
-// Local storage key for the editor theme
-const THEME_STORAGE_KEY = 'obsidian-js-editor-theme';
-
-// Default theme if none is set
-const DEFAULT_THEME: EditorThemeName = 'default';
+/**
+ * Theme storage key
+ */
+const THEME_STORAGE_KEY = 'obsidian-editor-theme';
 
 /**
  * Get the current document theme (light/dark) based on system preferences
@@ -40,45 +40,31 @@ export const getCurrentDocumentTheme = (): 'light' | 'dark' => {
 };
 
 /**
- * Get the current editor theme from localStorage or use the default
+ * Get the current editor theme
  * 
- * @returns The current editor theme name
+ * @returns {EditorThemeName} The current theme name
  */
 export function getCurrentEditorTheme(): EditorThemeName {
-  if (typeof window === 'undefined') {
-    return DEFAULT_THEME;
-  }
+  if (typeof window === 'undefined') return 'vanilla'; // Default for SSR
   
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY) as EditorThemeName | null;
-  return storedTheme || DEFAULT_THEME;
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  return (savedTheme as EditorThemeName) || 'vanilla';
 }
 
 /**
- * Set the editor theme and save it to localStorage
+ * Set the editor theme
  * 
- * @param themeName - The theme name to set
+ * @param {EditorThemeName} theme - The theme to set
  */
-export function setEditorTheme(themeName: EditorThemeName): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
+export function setEditorTheme(theme: EditorThemeName): void {
+  if (typeof window === 'undefined') return; // Skip for SSR
   
-  // Save to localStorage
-  localStorage.setItem(THEME_STORAGE_KEY, themeName);
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
   
-  // Apply theme class to document
-  const root = document.documentElement;
-  const isDark = root.classList.contains('dark');
-  const mode = isDark ? 'dark' : 'light';
-  
-  // Set data-theme attribute for CSS targeting
-  root.setAttribute('data-theme', `${themeName}-${mode}`);
-  
-  // Dispatch custom event for theme change
-  const event = new CustomEvent('editorThemeChange', { 
-    detail: { theme: themeName, mode } 
-  });
-  document.dispatchEvent(event);
+  // Apply theme to document
+  const isDarkMode = document.documentElement.classList.contains('dark');
+  const themeClass = isDarkMode ? `${theme}-dark` : `${theme}-light`;
+  document.documentElement.setAttribute('data-theme', themeClass);
 }
 
 /**
@@ -229,7 +215,7 @@ export const darkTheme = EditorView.theme({
 export { vanillaLightTheme, vanillaDarkTheme };
 
 // Get the appropriate theme based on theme name and mode
-export const getTheme = (themeName: EditorThemeName, mode: 'light' | 'dark') => {
+export const getTheme = (themeName: EditorThemeName, mode: 'light' | 'dark'): EditorView.Theme => {
   if (themeName === 'vanilla') {
     return mode === 'dark' ? vanillaDarkTheme : vanillaLightTheme;
   } else {
@@ -246,6 +232,7 @@ if (typeof window !== 'undefined') {
     
     // Load theme CSS based on current editor theme
     const editorTheme = getCurrentEditorTheme();
+    loadThemeCSS(editorTheme === 'vanilla' ? 'vanilla' : 'default');
     
     // Listen for theme changes
     if (window.matchMedia) {

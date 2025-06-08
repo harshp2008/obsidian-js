@@ -5,12 +5,13 @@ import { syntaxTree } from '@codemirror/language';
 
 /**
  * Regular expression to match two or more spaces at the end of a line (markdown line break)
- * This pattern is more specific to find exactly two spaces followed by nothing or a newline
  */
-const LINE_BREAK_REGEX = /\s{2,}(?=$|\n)/gm;
+const LINE_BREAK_REGEX = /\s{2,}$/m;
 
 /**
- * Widget for preview mode that renders a visual indicator for line breaks
+ * Widget for preview mode that renders a visual indicator for line breaks.
+ * Instead of actually replacing the breaks, which causes issues, we just
+ * style them differently.
  */
 class LineBreakVisualIndicator extends WidgetType {
   toDOM() {
@@ -45,70 +46,45 @@ function buildLineBreakDecorations(view: EditorView): DecorationSet {
   const modeState = view.state.field(markdownSyntaxStateField, false);
   const currentMode = modeState ? modeState.currentMode : 'live';
 
-  // Process each visible line in the document
   for (const { from, to } of view.visibleRanges) {
-    // Go through line by line for more precise control
-    let pos = from;
-    while (pos <= to) {
+    for (let pos = from; pos < to; ) {
       const line = view.state.doc.lineAt(pos);
-      
-      // Check for trailing spaces at the end of the line
-      let lineText = line.text;
-      let trailingSpacesMatch = lineText.match(/(\s{2,})$/);
-      
-      if (trailingSpacesMatch && trailingSpacesMatch[1]) {
-        const trailingSpaces = trailingSpacesMatch[1];
-        const spacesStartPos = line.to - trailingSpaces.length;
+      const match = LINE_BREAK_REGEX.exec(line.text);
+
+      if (match) {
+        const lineBreakStart = line.from + match.index;
+        const lineBreakEnd = line.to; 
         
-        // In preview mode, we want to show a visual line break indicator
         if (currentMode === 'preview') {
-          // Style the trailing spaces
+          // Instead of replacing the spaces with a widget that includes line breaks,
+          // we'll mark the spaces and add a widget after them
           builder.add(
-            spacesStartPos,
-            line.to,
+            lineBreakEnd - 2,
+            lineBreakEnd,
             liveLineBreakMark
           );
           
-          // Add a visual indicator (↵) right after the spaces
+          // Add a visual indicator (↵) after the spaces but before actual line break
           builder.add(
-            line.to,
-            line.to,
+            lineBreakEnd,
+            lineBreakEnd,
             Decoration.widget({
               widget: new LineBreakVisualIndicator(),
-              side: -1 // Position before the newline
+              side: -1 // Position before the line break
             })
           );
-          
-          // Also ensure the next line gets proper paragraph styling in preview mode
-          // by adding extra space after
-          if (pos < view.state.doc.length) {
-            builder.add(
-              line.to,
-              line.to,
-              Decoration.mark({
-                class: 'cm-line-break-after',
-                attributes: { 'data-line-break': 'true' }
-              })
-            );
-          }
         } else {
-          // In live mode, just subtly highlight the spaces
+          // In live mode, just mark the spaces
           builder.add(
-            spacesStartPos,
-            line.to,
-            Decoration.mark({
-              class: 'cm-line-break-syntax',
-              attributes: { 'data-line-break': 'true' }
-            })
+            lineBreakEnd - 2,
+            lineBreakEnd,
+            liveLineBreakMark
           );
         }
       }
-      
-      // Move to the next line
       pos = line.to + 1;
     }
   }
-  
   return builder.finish();
 }
 
@@ -124,10 +100,7 @@ export const LineBreakDecorator = ViewPlugin.fromClass(
     }
 
     update(update: ViewUpdate) {
-      // Check if mode has changed or document/viewport has changed
-      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== 
-                              update.state.field(markdownSyntaxStateField, false)?.currentMode;
-                              
+      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
       if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
         this.decorations = buildLineBreakDecorations(update.view);
       }

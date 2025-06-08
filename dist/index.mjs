@@ -1,48 +1,171 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
-import { EditorView, ViewPlugin, Decoration, keymap, WidgetType, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-import { LRLanguage, HighlightStyle, indentNodeProp, foldNodeProp, continuedIndent, delimitedIndent, flatIndent, foldInside, sublanguageProp, defineLanguageFacet, syntaxTree, syntaxHighlighting, LanguageSupport, Language, foldService, LanguageDescription, ParseContext, bracketMatchingHandle, indentUnit, languageDataProp } from '@codemirror/language';
-import { styleTags, tags } from '@lezer/highlight';
-import { StateEffect, StateField, RangeSetBuilder, RangeSet, Compartment, EditorSelection, EditorState, Prec, countColumn } from '@codemirror/state';
-import { snippetCompletion, ifNotIn, completeFromList, CompletionContext } from '@codemirror/autocomplete';
-import { MarkdownParser, parseCode, parser as parser$1, GFM, Subscript, Superscript, Emoji } from '@lezer/markdown';
-import { languages } from '@codemirror/language-data';
-import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
-
-var ThemeContext = createContext({
-  theme: "light",
-  mounted: false,
-  toggleTheme: () => {
+// src/app/obsidian-editor/utils/highlightStyleFix.ts
+import { HighlightStyle } from "@codemirror/language";
+function applyHighlightStyleFix() {
+  try {
+    if (HighlightStyle.__patched) return;
+    const originalDefine2 = HighlightStyle.define;
+    HighlightStyle.define = function(specs) {
+      try {
+        const style = originalDefine2.call(this, specs);
+        const originalStyleFn = style.style;
+        Object.defineProperty(style, "style", {
+          value: function(tags8) {
+            if (!tags8) return "";
+            try {
+              if (typeof tags8.some !== "function") {
+                if (Array.isArray(tags8)) {
+                  return originalStyleFn.call(this, tags8);
+                }
+                console.warn("Tags object doesn't have .some method", tags8);
+                return "";
+              }
+              return originalStyleFn.call(this, tags8);
+            } catch (e) {
+              console.warn("Error in highlight style:", e);
+              return "";
+            }
+          },
+          writable: false,
+          configurable: true
+        });
+        if (style.match) {
+          const originalMatchFn = style.match;
+          Object.defineProperty(style, "match", {
+            value: function(tag) {
+              try {
+                if (!tag) return false;
+                return originalMatchFn.call(this, tag);
+              } catch (e) {
+                console.warn("Error in highlight style match:", e);
+                return false;
+              }
+            },
+            writable: false,
+            configurable: true
+          });
+        }
+        return style;
+      } catch (error) {
+        console.error("Error creating HighlightStyle:", error);
+        return originalDefine2.call(this, []);
+      }
+    };
+    HighlightStyle.__patched = true;
+    console.info("HighlightStyle successfully patched to prevent 'tags is not iterable' error");
+  } catch (error) {
+    console.error("Failed to patch HighlightStyle:", error);
   }
-});
-var ThemeProvider = ({ children }) => {
+}
+
+// src/app/obsidian-editor/utils/lezer-patch.ts
+function applyLezerPatches() {
+  try {
+    if (!patchesApplied) {
+      console.log("Attempting to patch Lezer hasChild function");
+      const applyPatch = () => {
+        if (typeof window !== "undefined") {
+          const scripts = document.querySelectorAll("script");
+          if (scripts.length > 0) {
+            window.__patchedLezerHasChild = function(type, node, predicate) {
+              if (!node || !node.children) {
+                console.warn("Lezer node or node.children is undefined, returning false");
+                return false;
+              }
+              return node.children.some((ch) => ch.type.is(type) && (!predicate || predicate(ch)));
+            };
+            const originalCreateView = window.__originalCreateView || window.CodeMirror && window.CodeMirror.EditorView && window.CodeMirror.EditorView.constructor;
+            if (originalCreateView) {
+              console.log("Found CodeMirror View constructor, attempting to patch");
+              if (!window.__originalCreateView) {
+                window.__originalCreateView = originalCreateView;
+              }
+            }
+            patchesApplied = true;
+            console.log("Lezer patches prepared successfully");
+          }
+        }
+      };
+      applyPatch();
+      if (typeof window !== "undefined") {
+        window.addEventListener("load", applyPatch);
+      }
+    }
+  } catch (error) {
+    console.error("Error preparing Lezer patches:", error);
+  }
+}
+var patchesApplied = false;
+applyLezerPatches();
+
+// src/app/obsidian-editor/CodeMirrorEditor.tsx
+import { useState as useState4 } from "react";
+
+// src/contexts/ThemeContext.tsx
+import { createContext, useContext, useEffect, useState } from "react";
+import { jsx } from "react/jsx-runtime";
+var ThemeContext = createContext(void 0);
+function ThemeProvider({ children }) {
   const [theme, setTheme] = useState("light");
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    const storedTheme = localStorage.getItem("theme");
+    const savedTheme = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (storedTheme === "dark" || !storedTheme && prefersDark) {
-      setTheme("dark");
-      document.documentElement.classList.add("dark");
-    } else {
-      setTheme("light");
-      document.documentElement.classList.remove("dark");
-    }
+    const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
+    setTheme(initialTheme);
     setMounted(true);
+    applyThemeToHTML(initialTheme, true);
   }, []);
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light";
-    setTheme(newTheme);
-    localStorage.setItem("theme", newTheme);
-    if (newTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    if (!mounted) return;
+    setTheme((prevTheme) => {
+      const newTheme = prevTheme === "light" ? "dark" : "light";
+      localStorage.setItem("theme", newTheme);
+      applyThemeToHTML(newTheme, true);
+      return newTheme;
+    });
   };
-  return /* @__PURE__ */ jsx(ThemeContext.Provider, { value: { theme, mounted, toggleTheme }, children });
-};
-var useTheme = () => useContext(ThemeContext);
+  return /* @__PURE__ */ jsx(ThemeContext.Provider, { value: { theme, toggleTheme, mounted }, children });
+}
+function useTheme() {
+  const context = useContext(ThemeContext);
+  if (context === void 0) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+}
+function applyThemeToHTML(theme, isMounted = false) {
+  if (typeof document !== "undefined") {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+      document.body.classList.add("dark");
+      document.body.classList.remove("light");
+      if (isMounted) {
+        document.documentElement.style.setProperty("--background-primary", "#1e1e1e");
+        document.documentElement.style.setProperty("--background-secondary", "#252525");
+        document.documentElement.style.setProperty("--text-normal", "#dcddde");
+      }
+    } else {
+      document.documentElement.classList.add("light");
+      document.documentElement.classList.remove("dark");
+      document.body.classList.add("light");
+      document.body.classList.remove("dark");
+      if (isMounted) {
+        document.documentElement.style.setProperty("--background-primary", "#ffffff");
+        document.documentElement.style.setProperty("--background-secondary", "#f5f5f5");
+        document.documentElement.style.setProperty("--text-normal", "#1e1e1e");
+      }
+    }
+  }
+}
+
+// src/app/obsidian-editor/utils/theme.ts
+import { EditorView as EditorView4 } from "@codemirror/view";
+
+// src/app/obsidian-editor/themes/vanilla/themeConnector.ts
+import { EditorView } from "@codemirror/view";
+import { HighlightStyle as HighlightStyle2 } from "@codemirror/language";
+import { tags } from "@lezer/highlight";
 function createVanillaLightTheme() {
   return EditorView.theme(
     {
@@ -158,7 +281,7 @@ function createVanillaDarkTheme() {
   );
 }
 function createVanillaHighlightStyle() {
-  return HighlightStyle.define([
+  return HighlightStyle2.define([
     // Light theme styles
     {
       tag: tags.heading1,
@@ -301,11 +424,168 @@ function createVanillaHighlightStyle() {
 // src/app/obsidian-editor/themes/vanilla/index.ts
 var vanillaLightTheme = createVanillaLightTheme();
 var vanillaDarkTheme = createVanillaDarkTheme();
-createVanillaHighlightStyle();
+var vanillaHighlightStyle = createVanillaHighlightStyle();
+
+// src/app/obsidian-editor/utils/applyTheme.ts
+import { EditorView as EditorView3 } from "@codemirror/view";
+
+// src/app/obsidian-editor/themes/editorThemes.ts
+import { HighlightStyle as HighlightStyle4 } from "@codemirror/language";
+
+// src/app/obsidian-editor/themes/themeVariables.ts
+import { EditorView as EditorView2 } from "@codemirror/view";
+import { HighlightStyle as HighlightStyle3 } from "@codemirror/language";
+import { tags as tags2 } from "@lezer/highlight";
+function createLightThemeFromCssVars() {
+  return EditorView2.theme(
+    {
+      "&": {
+        color: "var(--light-text-normal, #1a1a1a)",
+        backgroundColor: "var(--light-background-primary, #ffffff)"
+      },
+      ".cm-content": { caretColor: "var(--light-cursor, #3b82f6)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--light-background-secondary, #f8f9fa)",
+        color: "var(--light-text-muted, #6c757d)",
+        border: "none"
+      },
+      ".cm-activeLine": { backgroundColor: "var(--light-active-line, rgba(0, 0, 0, 0.03))" },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--light-active-line-gutter, rgba(0, 0, 0, 0.05))"
+      },
+      ".cm-selectionBackground": { backgroundColor: "var(--light-selection-bg, #b3d7ff)" },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--light-cursor, #3b82f6)"
+      }
+    },
+    { dark: false }
+  );
+}
+function createDarkThemeFromCssVars() {
+  return EditorView2.theme(
+    {
+      "&": {
+        color: "var(--dark-text-normal, #e0e0e0)",
+        backgroundColor: "var(--dark-background-primary, #1e1e1e)"
+      },
+      ".cm-content": { caretColor: "var(--dark-cursor, #3b82f6)" },
+      ".cm-gutters": {
+        backgroundColor: "var(--dark-background-secondary, #252525)",
+        color: "var(--dark-text-muted, #858585)",
+        border: "none"
+      },
+      ".cm-activeLine": { backgroundColor: "var(--dark-active-line, rgba(255, 255, 255, 0.05))" },
+      ".cm-activeLineGutter": {
+        backgroundColor: "var(--dark-active-line-gutter, rgba(255, 255, 255, 0.1))"
+      },
+      ".cm-selectionBackground": { backgroundColor: "var(--dark-selection-bg, #3a4b6d)" },
+      ".cm-line": { padding: "0 4px" },
+      ".cm-cursor": {
+        borderLeftWidth: "2px",
+        borderLeftColor: "var(--dark-cursor, #3b82f6)"
+      }
+    },
+    { dark: true }
+  );
+}
+function createHighlightStyleFromCssVars() {
+  return HighlightStyle3.define([
+    {
+      tag: tags2.heading1,
+      fontSize: "1.6em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: tags2.heading2,
+      fontSize: "1.4em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: tags2.heading3,
+      fontSize: "1.2em",
+      fontWeight: "bold",
+      color: "var(--light-heading-color, #1a1a1a)"
+    },
+    {
+      tag: tags2.emphasis,
+      fontStyle: "italic",
+      color: "var(--light-emphasis-color, #1a1a1a)"
+    },
+    {
+      tag: tags2.strong,
+      fontWeight: "bold",
+      color: "var(--light-strong-color, #1a1a1a)"
+    },
+    {
+      tag: tags2.link,
+      color: "var(--light-link-color, #2563eb)",
+      textDecoration: "underline"
+    },
+    {
+      tag: tags2.monospace,
+      color: "var(--light-code-color, #10b981)",
+      fontFamily: "monospace"
+    }
+  ]);
+}
+
+// src/app/obsidian-editor/themes/editorThemes.ts
+var originalDefine = HighlightStyle4.define;
+HighlightStyle4.define = function(specs) {
+  try {
+    const style = originalDefine.call(this, specs);
+    const originalStyleFn = style.style;
+    Object.defineProperty(style, "style", {
+      value: function(tags8) {
+        if (!tags8) return "";
+        try {
+          return originalStyleFn.call(this, tags8);
+        } catch (e) {
+          console.warn("Error in highlight style:", e);
+          return "";
+        }
+      },
+      writable: false,
+      configurable: true
+    });
+    return style;
+  } catch (error) {
+    console.error("Error creating HighlightStyle:", error);
+    return originalDefine.call(this, []);
+  }
+};
+var lightTheme = createLightThemeFromCssVars();
+var darkTheme = createDarkThemeFromCssVars();
+var customHighlightStyle = createHighlightStyleFromCssVars();
+
+// src/app/obsidian-editor/utils/applyTheme.ts
+function loadThemeCSS(name) {
+  if (typeof document !== "undefined") {
+    const existingLinks = document.querySelectorAll("link[data-theme-css]");
+    existingLinks.forEach((link) => link.remove());
+    if (name === "vanilla") {
+      const lightCSS = document.createElement("link");
+      lightCSS.rel = "stylesheet";
+      lightCSS.href = "/css/vanilla-light.css";
+      lightCSS.setAttribute("data-theme-css", "vanilla-light");
+      document.head.appendChild(lightCSS);
+      const darkCSS = document.createElement("link");
+      darkCSS.rel = "stylesheet";
+      darkCSS.href = "/css/vanilla-dark.css";
+      darkCSS.setAttribute("data-theme-css", "vanilla-dark");
+      document.head.appendChild(darkCSS);
+      console.log("Loaded vanilla theme CSS");
+    } else {
+    }
+  }
+}
 
 // src/app/obsidian-editor/utils/theme.ts
-var THEME_STORAGE_KEY = "obsidian-js-editor-theme";
-var DEFAULT_THEME = "default";
+var THEME_STORAGE_KEY = "obsidian-editor-theme";
 var getCurrentDocumentTheme = () => {
   if (typeof window !== "undefined") {
     const storedTheme = localStorage.getItem("obsidian-theme");
@@ -319,25 +599,16 @@ var getCurrentDocumentTheme = () => {
   return "light";
 };
 function getCurrentEditorTheme() {
-  if (typeof window === "undefined") {
-    return DEFAULT_THEME;
-  }
-  const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
-  return storedTheme || DEFAULT_THEME;
+  if (typeof window === "undefined") return "vanilla";
+  const savedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+  return savedTheme || "vanilla";
 }
-function setEditorTheme(themeName) {
-  if (typeof window === "undefined") {
-    return;
-  }
-  localStorage.setItem(THEME_STORAGE_KEY, themeName);
-  const root = document.documentElement;
-  const isDark = root.classList.contains("dark");
-  const mode = isDark ? "dark" : "light";
-  root.setAttribute("data-theme", `${themeName}-${mode}`);
-  const event = new CustomEvent("editorThemeChange", {
-    detail: { theme: themeName, mode }
-  });
-  document.dispatchEvent(event);
+function setEditorTheme(theme) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+  const isDarkMode = document.documentElement.classList.contains("dark");
+  const themeClass = isDarkMode ? `${theme}-dark` : `${theme}-light`;
+  document.documentElement.setAttribute("data-theme", themeClass);
 }
 var obsidianCssVariables = {
   light: {
@@ -393,7 +664,7 @@ var applyThemeVariables = (theme) => {
     }
   }
 };
-var lightTheme = EditorView.theme({
+var lightTheme2 = EditorView4.theme({
   "&": {
     backgroundColor: "var(--background-primary, #ffffff)",
     color: "var(--text-normal, #2e3338)"
@@ -414,7 +685,7 @@ var lightTheme = EditorView.theme({
     backgroundColor: "var(--background-secondary, #f5f6f8)"
   }
 }, { dark: false });
-var darkTheme = EditorView.theme({
+var darkTheme2 = EditorView4.theme({
   "&": {
     backgroundColor: "var(--background-primary, #202020)",
     color: "var(--text-normal, #dcddde)"
@@ -439,14 +710,15 @@ var getTheme = (themeName, mode) => {
   if (themeName === "vanilla") {
     return mode === "dark" ? vanillaDarkTheme : vanillaLightTheme;
   } else {
-    return mode === "dark" ? darkTheme : lightTheme;
+    return mode === "dark" ? darkTheme2 : lightTheme2;
   }
 };
 if (typeof window !== "undefined") {
   setTimeout(() => {
     const initialTheme = getCurrentDocumentTheme();
     applyThemeVariables(initialTheme);
-    getCurrentEditorTheme();
+    const editorTheme = getCurrentEditorTheme();
+    loadThemeCSS(editorTheme === "vanilla" ? "vanilla" : "default");
     if (window.matchMedia) {
       window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
         if (!localStorage.getItem("obsidian-theme")) {
@@ -457,6 +729,943 @@ if (typeof window !== "undefined") {
     }
   }, 0);
 }
+
+// src/app/obsidian-editor/components/EditorCore.tsx
+import { useEffect as useEffect2, useRef, useState as useState2 } from "react";
+import { EditorState as EditorState3, Compartment as Compartment2 } from "@codemirror/state";
+import { EditorView as EditorView18 } from "@codemirror/view";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
+import { EditorView as EditorView9, Decoration as Decoration12 } from "@codemirror/view";
+import { RangeSetBuilder, StateField, StateEffect } from "@codemirror/state";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
+import { Decoration } from "@codemirror/view";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/utils.ts
+function isCursorNearRange(cursorPositions, rangeFrom, rangeTo, proximity = 0) {
+  for (const cursor of cursorPositions) {
+    if (cursor >= rangeFrom - proximity && cursor <= rangeTo + proximity) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
+var HeadingDecorator = class {
+  constructor() {
+    this.headingRegex = /^(#{1,6})\s(.*)$/gm;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    let match;
+    const localRegex = new RegExp(this.headingRegex.source, "gm");
+    while ((match = localRegex.exec(docText)) !== null) {
+      const matchStartIndexInSlice = match.index;
+      const lineStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+        continue;
+      }
+      const hashMarks = match[1];
+      const headingTextContent = match[2];
+      const hashCount = hashMarks.length;
+      const hashStartInDoc = lineStartInDoc;
+      const hashEndInDoc = hashStartInDoc + hashCount;
+      const spaceAfterHashInDoc = hashEndInDoc + 1;
+      const lineEndInDoc = lineStartInDoc + match[0].length;
+      const headingTextStartInDoc = spaceAfterHashInDoc;
+      const headingTextEndInDoc = lineEndInDoc;
+      const isNearSyntax = isCursorNearRange(cursorPositions, hashStartInDoc, spaceAfterHashInDoc);
+      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+      if (decorations) {
+        decorations.push({
+          from: hashStartInDoc,
+          to: spaceAfterHashInDoc,
+          decoration: Decoration.mark({ class: syntaxClass })
+        });
+        if (headingTextContent.trim().length > 0) {
+          decorations.push({
+            from: headingTextStartInDoc,
+            to: headingTextEndInDoc,
+            decoration: Decoration.mark({ class: `markdown-heading-${hashCount}` })
+          });
+        }
+      } else {
+        builder.add(hashStartInDoc, spaceAfterHashInDoc, Decoration.mark({ class: syntaxClass }));
+        if (headingTextContent.trim().length > 0) {
+          builder.add(
+            headingTextStartInDoc,
+            headingTextEndInDoc,
+            Decoration.mark({ class: `markdown-heading-${hashCount}` })
+          );
+        }
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
+import { Decoration as Decoration2 } from "@codemirror/view";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/baseDecorator.ts
+var BaseDecorator = class {
+  /**
+   * Check if a position is within any HTML edit region
+   * @param pos - The position to check
+   * @param htmlEditRegions - Array of HTML edit regions
+   * @returns True if the position is within any HTML edit region
+   */
+  isWithinHtmlEditRegion(pos, htmlEditRegions) {
+    if (!htmlEditRegions || !htmlEditRegions.length) return false;
+    for (const region of htmlEditRegions) {
+      if (pos >= region.from && pos < region.to) {
+        return true;
+      }
+    }
+    return false;
+  }
+  /**
+   * Check if a range overlaps with any HTML edit region
+   * @param from - Start position
+   * @param to - End position
+   * @param htmlEditRegions - Array of HTML edit regions
+   * @returns True if the range overlaps with any HTML edit region
+   */
+  rangeOverlapsHtmlEditRegion(from, to, htmlEditRegions) {
+    if (!htmlEditRegions || !htmlEditRegions.length) return false;
+    for (const region of htmlEditRegions) {
+      if (from < region.to && to > region.from) {
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
+var BoldDecorator = class extends BaseDecorator {
+  constructor() {
+    super(...arguments);
+    /**
+     * Regular expression to match bold text
+     * Matches **bold text** or __bold text__
+     */
+    this.regex = /(\*\*|__)([^\s*_]|[^\s*_].*?[^\s*_])\1/g;
+  }
+  /**
+   * Process the document and add decorations for bold text
+   * @param context - Context containing document state and decoration builder
+   */
+  process(context) {
+    const { docText, textSliceFrom, decorations, htmlEditRegions } = context;
+    let match;
+    while ((match = this.regex.exec(docText)) !== null) {
+      const matchFrom = textSliceFrom + match.index;
+      const matchTo = textSliceFrom + match.index + match[0].length;
+      if (this.rangeOverlapsHtmlEditRegion(matchFrom, matchTo, htmlEditRegions)) {
+        continue;
+      }
+      const startMarkerFrom = matchFrom;
+      const startMarkerTo = startMarkerFrom + match[1].length;
+      const contentFrom = startMarkerTo;
+      const contentTo = matchTo - match[1].length;
+      const endMarkerFrom = contentTo;
+      const endMarkerTo = matchTo;
+      decorations.push({
+        from: startMarkerFrom,
+        to: startMarkerTo,
+        decoration: Decoration2.mark({ class: "cm-formatting-strong" })
+      });
+      decorations.push({
+        from: endMarkerFrom,
+        to: endMarkerTo,
+        decoration: Decoration2.mark({ class: "cm-formatting-strong" })
+      });
+      decorations.push({
+        from: contentFrom,
+        to: contentTo,
+        decoration: Decoration2.mark({ class: "cm-strong" })
+      });
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/italicDecorator.ts
+import { Decoration as Decoration3 } from "@codemirror/view";
+var ItalicDecorator = class {
+  constructor() {
+    // Regex for *italic* and _italic_
+    // It avoids matching parts of **bold** or __bold__ by ensuring the characters immediately
+    // outside the single markers are not the same marker character.
+    // It also ensures the content is not empty, e.g. ** or __
+    this.italicPatterns = [
+      // Matches *italic* but not **bold** or ***italicbold*** components directly
+      { marker: "*", regex: /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g },
+      // Matches _italic_ but not __bold__ or ___italicbold___ components directly
+      { marker: "_", regex: /(?<!__|_)(?:^|[^_])_(?!\s|__)([^_\n]+?)(?<!\s)_(?!_)/g }
+    ];
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    this.italicPatterns.forEach((patternInfo) => {
+      const marker = patternInfo.marker;
+      const markerLen = marker.length;
+      const localRegex = new RegExp(patternInfo.regex.source, "g");
+      let match;
+      while ((match = localRegex.exec(docText)) !== null) {
+        let fullMatchText = match[0];
+        let contentText = match[1];
+        let matchStartIndexInSlice = match.index;
+        if (fullMatchText.startsWith(marker) === false && fullMatchText.length > contentText.length + 2) {
+          matchStartIndexInSlice += fullMatchText.indexOf(marker + contentText + marker);
+          fullMatchText = marker + contentText + marker;
+        }
+        if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+          continue;
+        }
+        const charBeforeOpenMarker = matchStartIndexInSlice > 0 ? docText.charAt(matchStartIndexInSlice - 1) : " ";
+        const charAfterCloseMarker = matchStartIndexInSlice + fullMatchText.length < docText.length ? docText.charAt(matchStartIndexInSlice + fullMatchText.length) : " ";
+        const wordCharRegex = /[a-zA-Z0-9]/;
+        if (wordCharRegex.test(charBeforeOpenMarker) && wordCharRegex.test(charAfterCloseMarker)) {
+          if (docText.charAt(matchStartIndexInSlice + markerLen) !== " " && docText.charAt(matchStartIndexInSlice + fullMatchText.length - markerLen - 1) !== " ") {
+          }
+        }
+        const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+        const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+        const openMarkerStartInDoc = fullMatchStartInDoc;
+        const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+        const contentStartInDoc = openMarkerEndInDoc;
+        const contentEndInDoc = fullMatchEndInDoc - markerLen;
+        const closeMarkerStartInDoc = contentEndInDoc;
+        const closeMarkerEndInDoc = fullMatchEndInDoc;
+        if (contentStartInDoc >= contentEndInDoc) {
+          continue;
+        }
+        const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+        const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+        if (decorations) {
+          decorations.push({
+            from: openMarkerStartInDoc,
+            to: openMarkerEndInDoc,
+            decoration: Decoration3.mark({ class: syntaxClass })
+          });
+          decorations.push({
+            from: contentStartInDoc,
+            to: contentEndInDoc,
+            decoration: Decoration3.mark({ class: "markdown-italic-active" })
+          });
+          decorations.push({
+            from: closeMarkerStartInDoc,
+            to: closeMarkerEndInDoc,
+            decoration: Decoration3.mark({ class: syntaxClass })
+          });
+        } else {
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration3.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, Decoration3.mark({ class: "markdown-italic-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration3.mark({ class: syntaxClass }));
+        }
+      }
+    });
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/strikethroughDecorator.ts
+import { Decoration as Decoration4 } from "@codemirror/view";
+var StrikethroughDecorator = class {
+  constructor() {
+    // Improved regex for ~~strikethrough~~ with proper boundary conditions
+    this.strikethroughRegex = /(?<!\\|~)(~~)(?!\s|~)([^~\n]+?)(?<!\s)(~~)(?!~)/g;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    const localRegex = new RegExp(this.strikethroughRegex.source, "g");
+    let match;
+    const markerLen = 2;
+    while ((match = localRegex.exec(docText)) !== null) {
+      const matchStartIndexInSlice = match.index;
+      const fullMatchText = match[0];
+      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+        continue;
+      }
+      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+      const openMarkerStartInDoc = fullMatchStartInDoc;
+      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+      const contentStartInDoc = openMarkerEndInDoc;
+      const contentEndInDoc = fullMatchEndInDoc - markerLen;
+      const closeMarkerStartInDoc = contentEndInDoc;
+      const closeMarkerEndInDoc = fullMatchEndInDoc;
+      if (contentStartInDoc >= contentEndInDoc) {
+        continue;
+      }
+      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+      const contentClass = "markdown-strikethrough-active";
+      if (decorations) {
+        decorations.push({
+          from: openMarkerStartInDoc,
+          to: openMarkerEndInDoc,
+          decoration: Decoration4.mark({ class: syntaxClass })
+        });
+        decorations.push({
+          from: contentStartInDoc,
+          to: contentEndInDoc,
+          decoration: Decoration4.mark({ class: contentClass })
+        });
+        decorations.push({
+          from: closeMarkerStartInDoc,
+          to: closeMarkerEndInDoc,
+          decoration: Decoration4.mark({ class: syntaxClass })
+        });
+      } else {
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration4.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, Decoration4.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration4.mark({ class: syntaxClass }));
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/codeDecorator.ts
+import { Decoration as Decoration5 } from "@codemirror/view";
+var CodeDecorator = class {
+  constructor() {
+    // Regex for `code`
+    // It looks for non-greedy content between single backticks.
+    // It also tries to avoid matching parts of code blocks (```) by not allowing backticks right next to the content ones,
+    // though full code block handling is typically a separate, more complex parser.
+    this.codeRegex = /(?<!\\)(?<!`)`(?=\S)([^`\n]+?)(?<=\S)`(?!`)/g;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    const localRegex = new RegExp(this.codeRegex.source, "g");
+    let match;
+    const markerLen = 1;
+    try {
+      while ((match = localRegex.exec(docText)) !== null) {
+        const matchStartIndexInSlice = match.index;
+        const fullMatchText = match[0];
+        if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+          continue;
+        }
+        const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+        const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+        const openMarkerStartInDoc = fullMatchStartInDoc;
+        const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+        const contentStartInDoc = openMarkerEndInDoc;
+        const contentEndInDoc = fullMatchEndInDoc - markerLen;
+        const closeMarkerStartInDoc = contentEndInDoc;
+        const closeMarkerEndInDoc = fullMatchEndInDoc;
+        if (contentStartInDoc >= contentEndInDoc) {
+          continue;
+        }
+        const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+        const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+        if (decorations) {
+          decorations.push({
+            from: openMarkerStartInDoc,
+            to: openMarkerEndInDoc,
+            decoration: Decoration5.mark({ class: syntaxClass })
+          });
+          decorations.push({
+            from: contentStartInDoc,
+            to: contentEndInDoc,
+            decoration: Decoration5.mark({ class: "markdown-code-active" })
+          });
+          decorations.push({
+            from: closeMarkerStartInDoc,
+            to: closeMarkerEndInDoc,
+            decoration: Decoration5.mark({ class: syntaxClass })
+          });
+        } else {
+          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration5.mark({ class: syntaxClass }));
+          builder.add(contentStartInDoc, contentEndInDoc, Decoration5.mark({ class: "markdown-code-active" }));
+          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration5.mark({ class: syntaxClass }));
+        }
+      }
+    } catch (error) {
+      console.error("Error processing code syntax:", error);
+    }
+  }
+  // End of process method
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/highlightDecorator.ts
+import { Decoration as Decoration6 } from "@codemirror/view";
+var HighlightDecorator = class {
+  constructor() {
+    // Regex for ==highlight== with proper boundary conditions
+    this.highlightRegex = /(?<![\\=])(==)(?!\s|=)([^=\n]+?)(?<!\s)(==)(?!=)/g;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    const localRegex = new RegExp(this.highlightRegex.source, "g");
+    let match;
+    const markerLen = 2;
+    while ((match = localRegex.exec(docText)) !== null) {
+      const matchStartIndexInSlice = match.index;
+      const fullMatchText = match[0];
+      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+        continue;
+      }
+      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+      const openMarkerStartInDoc = fullMatchStartInDoc;
+      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+      const contentStartInDoc = openMarkerEndInDoc;
+      const contentEndInDoc = fullMatchEndInDoc - markerLen;
+      const closeMarkerStartInDoc = contentEndInDoc;
+      const closeMarkerEndInDoc = fullMatchEndInDoc;
+      if (contentStartInDoc >= contentEndInDoc) {
+        continue;
+      }
+      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+      const contentClass = "markdown-highlight-active";
+      if (decorations) {
+        decorations.push({
+          from: openMarkerStartInDoc,
+          to: openMarkerEndInDoc,
+          decoration: Decoration6.mark({ class: syntaxClass })
+        });
+        decorations.push({
+          from: contentStartInDoc,
+          to: contentEndInDoc,
+          decoration: Decoration6.mark({ class: contentClass })
+        });
+        decorations.push({
+          from: closeMarkerStartInDoc,
+          to: closeMarkerEndInDoc,
+          decoration: Decoration6.mark({ class: syntaxClass })
+        });
+      } else {
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration6.mark({ class: syntaxClass }));
+        builder.add(contentStartInDoc, contentEndInDoc, Decoration6.mark({ class: contentClass }));
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration6.mark({ class: syntaxClass }));
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/oldBoldDecorator.ts
+import { Decoration as Decoration7 } from "@codemirror/view";
+var OldBoldDecorator = class {
+  constructor() {
+    // Regex for __bold__ (old style markdown)
+    this.oldBoldRegex = /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    const markerLen = 2;
+    const localRegex = new RegExp(this.oldBoldRegex.source, "g");
+    let match;
+    while ((match = localRegex.exec(docText)) !== null) {
+      const matchStartIndexInSlice = match.index;
+      const fullMatchText = match[0];
+      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+        continue;
+      }
+      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+      const openMarkerStartInDoc = fullMatchStartInDoc;
+      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+      const contentStartInDoc = openMarkerEndInDoc;
+      const contentEndInDoc = fullMatchEndInDoc - markerLen;
+      const closeMarkerStartInDoc = contentEndInDoc;
+      const closeMarkerEndInDoc = fullMatchEndInDoc;
+      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+      if (decorations) {
+        decorations.push({
+          from: openMarkerStartInDoc,
+          to: openMarkerEndInDoc,
+          decoration: Decoration7.mark({ class: syntaxClass })
+        });
+        if (contentStartInDoc < contentEndInDoc) {
+          decorations.push({
+            from: contentStartInDoc,
+            to: contentEndInDoc,
+            decoration: Decoration7.mark({
+              class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
+            })
+          });
+        }
+        decorations.push({
+          from: closeMarkerStartInDoc,
+          to: closeMarkerEndInDoc,
+          decoration: Decoration7.mark({ class: syntaxClass })
+        });
+      } else {
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration7.mark({ class: syntaxClass }));
+        if (contentStartInDoc < contentEndInDoc) {
+          builder.add(
+            contentStartInDoc,
+            contentEndInDoc,
+            Decoration7.mark({
+              class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
+            })
+          );
+        }
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration7.mark({ class: syntaxClass }));
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/oldItalicDecorator.ts
+import { Decoration as Decoration8 } from "@codemirror/view";
+var OldItalicDecorator = class {
+  constructor() {
+    // Regex for *italic* (old style markdown)
+    this.oldItalicRegex = /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
+    const markerLen = 1;
+    const localRegex = new RegExp(this.oldItalicRegex.source, "g");
+    let match;
+    while ((match = localRegex.exec(docText)) !== null) {
+      let fullMatchText = match[0];
+      let contentText = match[1];
+      let matchStartIndexInSlice = match.index;
+      if (fullMatchText.startsWith("*") === false && fullMatchText.length > contentText.length + 2) {
+        matchStartIndexInSlice += fullMatchText.indexOf("*" + contentText + "*");
+        fullMatchText = "*" + contentText + "*";
+      }
+      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
+        continue;
+      }
+      const charBeforeOpenMarker = matchStartIndexInSlice > 0 ? docText.charAt(matchStartIndexInSlice - 1) : " ";
+      const charAfterCloseMarker = matchStartIndexInSlice + fullMatchText.length < docText.length ? docText.charAt(matchStartIndexInSlice + fullMatchText.length) : " ";
+      const wordCharRegex = /[a-zA-Z0-9]/;
+      if (wordCharRegex.test(charBeforeOpenMarker) && wordCharRegex.test(charAfterCloseMarker)) {
+        if (docText.charAt(matchStartIndexInSlice + markerLen) !== " " && docText.charAt(matchStartIndexInSlice + fullMatchText.length - markerLen - 1) !== " ") {
+          continue;
+        }
+      }
+      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
+      const openMarkerStartInDoc = fullMatchStartInDoc;
+      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
+      const contentStartInDoc = openMarkerEndInDoc;
+      const contentEndInDoc = fullMatchEndInDoc - markerLen;
+      const closeMarkerStartInDoc = contentEndInDoc;
+      const closeMarkerEndInDoc = fullMatchEndInDoc;
+      if (contentStartInDoc >= contentEndInDoc) {
+        continue;
+      }
+      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
+      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
+      if (decorations) {
+        decorations.push({
+          from: openMarkerStartInDoc,
+          to: openMarkerEndInDoc,
+          decoration: Decoration8.mark({ class: syntaxClass })
+        });
+        decorations.push({
+          from: contentStartInDoc,
+          to: contentEndInDoc,
+          decoration: Decoration8.mark({
+            class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
+          })
+        });
+        decorations.push({
+          from: closeMarkerStartInDoc,
+          to: closeMarkerEndInDoc,
+          decoration: Decoration8.mark({ class: syntaxClass })
+        });
+      } else {
+        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration8.mark({ class: syntaxClass }));
+        builder.add(
+          contentStartInDoc,
+          contentEndInDoc,
+          Decoration8.mark({
+            class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
+          })
+        );
+        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration8.mark({ class: syntaxClass }));
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/listDecorator.ts
+import { Decoration as Decoration9, WidgetType } from "@codemirror/view";
+var ListDecorator = class {
+  constructor() {
+    // Regex to match list items at the beginning of a line
+    // Captures the specific marker used (-, +, *) or (1., 2., etc.)
+    this.listItemRegex = /^(\s*)([-+*]|\d+\.)(\s+)(.*)$/gm;
+  }
+  process(context) {
+    const { builder, docText, textSliceFrom, cursorPositions } = context;
+    const extContext = context;
+    const decorations = extContext.decorations || [];
+    this.processListItems(context, this.listItemRegex);
+  }
+  processListItems(context, regex) {
+    const { builder, docText, textSliceFrom, cursorPositions } = context;
+    const extContext = context;
+    const decorations = extContext.decorations || [];
+    const htmlRegions = extContext.htmlEditRegions || [];
+    const localRegex = new RegExp(regex.source, "gm");
+    let match;
+    while ((match = localRegex.exec(docText)) !== null) {
+      const [fullMatch, leadingWhitespace, marker, spacesAfterMarker, content] = match;
+      const isNumberedList = /^\d+\.$/.test(marker);
+      const matchStartIndexInSlice = match.index;
+      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
+      const markerStartInDoc = fullMatchStartInDoc + leadingWhitespace.length;
+      const markerEndInDoc = markerStartInDoc + marker.length;
+      const isInsideHtml2 = htmlRegions.some(
+        (region) => markerStartInDoc >= region.from && markerEndInDoc <= region.to
+      );
+      if (isInsideHtml2) {
+        continue;
+      }
+      const isAdjacentToMarker = cursorPositions.some(
+        (cursor) => cursor === markerStartInDoc || cursor === markerEndInDoc
+      );
+      if (isNumberedList) {
+        const decoration = Decoration9.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
+        if (decorations) {
+          decorations.push({
+            from: markerStartInDoc,
+            to: markerEndInDoc,
+            decoration
+          });
+        } else {
+          builder.add(markerStartInDoc, markerEndInDoc, decoration);
+        }
+      } else if (isAdjacentToMarker) {
+        const decoration = Decoration9.mark({ class: "markdown-syntax-active" });
+        if (decorations) {
+          decorations.push({
+            from: markerStartInDoc,
+            to: markerEndInDoc,
+            decoration
+          });
+        } else {
+          builder.add(markerStartInDoc, markerEndInDoc, decoration);
+        }
+      } else {
+        if (decorations) {
+          decorations.push({
+            from: markerStartInDoc,
+            to: markerEndInDoc,
+            decoration: Decoration9.replace({
+              widget: new ListBulletWidget(marker),
+              class: "markdown-list-dim"
+            })
+          });
+        } else {
+          builder.add(markerStartInDoc, markerEndInDoc, Decoration9.replace({
+            widget: new ListBulletWidget(marker),
+            class: "markdown-list-dim"
+          }));
+        }
+      }
+    }
+  }
+};
+var ListBulletWidget = class extends WidgetType {
+  constructor(originalMarker = "\u2022", isOrdered = false) {
+    super();
+    this.originalMarker = originalMarker;
+    this.isOrdered = isOrdered;
+  }
+  eq(other) {
+    return other.originalMarker === this.originalMarker && other.isOrdered === this.isOrdered;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    span.textContent = "\u2022";
+    span.className = "markdown-list-dim";
+    return span;
+  }
+  ignoreEvent() {
+    return false;
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/FencedCodeBlockDecorator.ts
+import { Decoration as Decoration10, WidgetType as WidgetType2 } from "@codemirror/view";
+function createCopyButton(textToCopy) {
+  const button = document.createElement("button");
+  button.className = "cm-indent-copy-button";
+  button.innerHTML = "<span>Copy</span>";
+  button.title = "Copy code block";
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      const originalText = button.innerHTML;
+      button.innerHTML = "<span>Copied!</span>";
+      setTimeout(() => {
+        button.innerHTML = originalText;
+      }, 1500);
+    }).catch((err) => {
+      console.error("Failed to copy text: ", err);
+    });
+  });
+  return button;
+}
+var CodeBlockWidget = class extends WidgetType2 {
+  constructor(codeLines, language, fullBlockRawText) {
+    super();
+    this.codeLines = codeLines;
+    this.language = language;
+    this.fullBlockRawText = fullBlockRawText;
+  }
+  toDOM(view) {
+    const container = document.createElement("div");
+    container.className = "cm-preview-indent-block cm-fenced-code-block-preview";
+    const preElement = document.createElement("pre");
+    preElement.className = "cm-preview-indent-text";
+    const codeElement = document.createElement("code");
+    if (this.language) {
+      codeElement.className = `language-${this.language.toLowerCase()}`;
+    }
+    codeElement.textContent = this.codeLines.join("\n");
+    preElement.appendChild(codeElement);
+    container.appendChild(preElement);
+    container.appendChild(createCopyButton(this.fullBlockRawText));
+    return container;
+  }
+  ignoreEvent(event) {
+    if (event.type === "click" && event.target.closest(".cm-indent-copy-button")) {
+      return false;
+    }
+    return true;
+  }
+};
+var FencedCodeBlockDecorator = class {
+  process(context) {
+    const { state, docText, textSliceFrom, decorations, currentMode } = context;
+    if (!decorations) {
+      return;
+    }
+    const lines = docText.split("\n");
+    if (currentMode === "preview") {
+      let i = 0;
+      while (i < lines.length) {
+        const lineText = lines[i];
+        const fenceMatch = lineText.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+        if (fenceMatch) {
+          const leadingWhitespace = fenceMatch[1];
+          const fenceType = fenceMatch[2];
+          const langSpecifierRaw = fenceMatch[3].trim();
+          const language = langSpecifierRaw.split(/\s+/)[0] || null;
+          const blockStartLineIndex = i;
+          let currentPosInSliceOffset = 0;
+          for (let k = 0; k < blockStartLineIndex; k++) {
+            currentPosInSliceOffset += lines[k].length + 1;
+          }
+          const blockStartPosInDoc = textSliceFrom + currentPosInSliceOffset;
+          let currentBlockRawLines = [lineText];
+          let codeContentLines = [];
+          i++;
+          let blockEndLineIndex = -1;
+          while (i < lines.length) {
+            const currentLineText = lines[i];
+            currentBlockRawLines.push(currentLineText);
+            const closingFenceMatch = currentLineText.match(/^(\s*)(`{3,}|~{3,})\s*$/);
+            if (closingFenceMatch && closingFenceMatch[1] === leadingWhitespace && closingFenceMatch[2] === fenceType) {
+              blockEndLineIndex = i;
+              currentPosInSliceOffset = 0;
+              for (let k = 0; k <= blockEndLineIndex; k++) {
+                currentPosInSliceOffset += lines[k].length + 1;
+              }
+              let blockEndPosInDoc = textSliceFrom + currentPosInSliceOffset;
+              if (blockEndLineIndex === lines.length - 1 && !docText.endsWith("\n")) {
+                blockEndPosInDoc = textSliceFrom + currentPosInSliceOffset - 1;
+              }
+              const fullBlockRawText = currentBlockRawLines.join("\n");
+              const widget = new CodeBlockWidget(codeContentLines, language, fullBlockRawText);
+              decorations.push({
+                from: blockStartPosInDoc,
+                to: blockEndPosInDoc,
+                decoration: Decoration10.replace({ widget, block: true })
+              });
+              break;
+            } else {
+              if (leadingWhitespace.length > 0 && currentLineText.startsWith(leadingWhitespace)) {
+                codeContentLines.push(currentLineText.substring(leadingWhitespace.length));
+              } else if (leadingWhitespace.length === 0) {
+                codeContentLines.push(currentLineText);
+              } else {
+                codeContentLines.push(currentLineText);
+              }
+            }
+            i++;
+          }
+          if (blockEndLineIndex === -1) {
+          }
+        }
+        i++;
+      }
+    } else if (currentMode === "live") {
+      let lineStartIndexInSlice = 0;
+      for (let i = 0; i < lines.length; ) {
+        const lineText = lines[i];
+        const currentLineActualStartInDoc = textSliceFrom + lineStartIndexInSlice;
+        const currentLineActualEndInDoc = currentLineActualStartInDoc + lineText.length;
+        const fenceMatch = lineText.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
+        if (fenceMatch) {
+          const leadingWhitespace = fenceMatch[1];
+          const fenceType = fenceMatch[2];
+          const langSpecifierRaw = fenceMatch[3].trim();
+          decorations.push({
+            from: currentLineActualStartInDoc,
+            to: currentLineActualStartInDoc,
+            // For Decoration.line
+            decoration: Decoration10.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+          });
+          if (langSpecifierRaw) {
+            const langSpecOffsetInLine = leadingWhitespace.length + fenceType.length;
+            decorations.push({
+              from: currentLineActualStartInDoc + langSpecOffsetInLine,
+              to: currentLineActualStartInDoc + langSpecOffsetInLine + langSpecifierRaw.length,
+              decoration: Decoration10.mark({ class: "cm-live-fenced-code-lang" })
+            });
+          }
+          let nextLineStartInSliceForInnerLoop = lineStartIndexInSlice + lineText.length + 1;
+          let foundClosingFence = false;
+          for (let j = i + 1; j < lines.length; j++) {
+            const innerLineText = lines[j];
+            const innerLineActualStartInDoc = textSliceFrom + nextLineStartInSliceForInnerLoop;
+            const innerLineActualEndInDoc = innerLineActualStartInDoc + innerLineText.length;
+            const closingFenceMatch = innerLineText.match(/^(\s*)(`{3,}|~{3,})\s*$/);
+            if (closingFenceMatch && closingFenceMatch[1] === leadingWhitespace && closingFenceMatch[2] === fenceType) {
+              decorations.push({
+                from: innerLineActualStartInDoc,
+                to: innerLineActualStartInDoc,
+                // For Decoration.line
+                decoration: Decoration10.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
+              });
+              lineStartIndexInSlice = nextLineStartInSliceForInnerLoop + innerLineText.length + 1;
+              i = j + 1;
+              foundClosingFence = true;
+              break;
+            } else {
+              decorations.push({
+                from: innerLineActualStartInDoc,
+                to: innerLineActualStartInDoc,
+                // For Decoration.line, 'to' is same as 'from'
+                decoration: Decoration10.line({
+                  attributes: { class: "cm-live-fenced-code-content-line" },
+                  atomic: true
+                  // Prevent other Markdown rules from processing inside
+                })
+              });
+              nextLineStartInSliceForInnerLoop += innerLineText.length + 1;
+            }
+          }
+          if (!foundClosingFence) {
+            lineStartIndexInSlice = nextLineStartInSliceForInnerLoop;
+            i = lines.length;
+          }
+          continue;
+        }
+        lineStartIndexInSlice += lineText.length + 1;
+        i++;
+      }
+    }
+  }
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/rules/blockquoteDecorator.ts
+import { Decoration as Decoration11, WidgetType as WidgetType3 } from "@codemirror/view";
+var VerticalBarWidget = class extends WidgetType3 {
+  toDOM() {
+    const bar = document.createElement("span");
+    bar.className = "cm-blockquote-bar";
+    return bar;
+  }
+  ignoreEvent() {
+    return true;
+  }
+};
+var BlockquoteBarWidget = class extends WidgetType3 {
+  constructor(level) {
+    super();
+    this.level = level;
+  }
+  toDOM() {
+    const span = document.createElement("span");
+    for (let i = 0; i < this.level; i++) {
+      const bar = document.createElement("span");
+      bar.className = "cm-blockquote-bar";
+      span.appendChild(bar);
+    }
+    return span;
+  }
+  ignoreEvent() {
+    return true;
+  }
+};
+var BlockquoteDecorator = class {
+  process(context) {
+    const { docText, textSliceFrom, decorations, currentMode, cursorPositions, view } = context;
+    if (!decorations) return;
+    const lines = docText.split("\n");
+    if (currentMode === "preview") {
+      let charPos = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
+        if (match && lineText.length > 0) {
+          const markerStr = String(match[2]);
+          const barCount = (markerStr.match(/>/g) || []).length;
+          const lineStartInDoc = charPos;
+          const markerStart = lineStartInDoc + match[1].length;
+          decorations.push({
+            from: markerStart,
+            to: markerStart + markerStr.length,
+            decoration: Decoration11.replace({ widget: new BlockquoteBarWidget(barCount) })
+          });
+        }
+        charPos += lineText.length + 1;
+      }
+    } else {
+      let charPos = 0;
+      const lineSpacingEm = 0.8;
+      const lineWidthPx = 4;
+      const textPaddingEm = 0.4;
+      for (let i = 0; i < lines.length; i++) {
+        const lineText = lines[i];
+        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
+        if (match && lineText.length > 0) {
+          const markerStr = String(match[2]);
+          const level = (markerStr.match(/>/g) || []).length;
+          const lineStartInDoc = charPos;
+          const lineEndInDoc = charPos + lineText.length;
+          const isActive = cursorPositions.some((pos) => pos >= lineStartInDoc && pos <= lineEndInDoc);
+          if (!isActive && level > 0) {
+            const markerStart = lineStartInDoc + match[1].length;
+            for (let k = 0; k < markerStr.length; k++) {
+              if (markerStr[k] === ">") {
+                decorations.push({
+                  from: markerStart + k,
+                  to: markerStart + k + 1,
+                  decoration: Decoration11.replace({ widget: new VerticalBarWidget() })
+                });
+              }
+            }
+          }
+        }
+        charPos += lineText.length + 1;
+      }
+    }
+  }
+};
+
+// node_modules/@codemirror/lang-markdown/dist/index.js
+import { EditorSelection as EditorSelection3, countColumn, Prec, EditorState } from "@codemirror/state";
+import { keymap } from "@codemirror/view";
+import { defineLanguageFacet as defineLanguageFacet2, foldNodeProp as foldNodeProp4, indentNodeProp as indentNodeProp4, languageDataProp, foldService, syntaxTree as syntaxTree4, Language, LanguageDescription, ParseContext, indentUnit, LanguageSupport as LanguageSupport4 } from "@codemirror/language";
+import { CompletionContext } from "@codemirror/autocomplete";
+import { parser as parser4, GFM, Subscript, Superscript, Emoji, MarkdownParser, parseCode } from "@lezer/markdown";
 
 // node_modules/@lezer/common/dist/index.js
 var DefaultBufferLength = 1024;
@@ -4244,6 +5453,9 @@ function getSpecializer(spec) {
   }
   return spec.get;
 }
+
+// node_modules/@lezer/html/dist/index.js
+import { styleTags, tags as tags3 } from "@lezer/highlight";
 var scriptText = 54;
 var StartCloseScriptTag = 1;
 var styleText = 55;
@@ -4493,17 +5705,17 @@ var scriptTokens = contentTokenizer("script", scriptText, StartCloseScriptTag);
 var styleTokens = contentTokenizer("style", styleText, StartCloseStyleTag);
 var textareaTokens = contentTokenizer("textarea", textareaText, StartCloseTextareaTag);
 var htmlHighlighting = styleTags({
-  "Text RawText": tags.content,
-  "StartTag StartCloseTag SelfClosingEndTag EndTag": tags.angleBracket,
-  TagName: tags.tagName,
-  "MismatchedCloseTag/TagName": [tags.tagName, tags.invalid],
-  AttributeName: tags.attributeName,
-  "AttributeValue UnquotedAttributeValue": tags.attributeValue,
-  Is: tags.definitionOperator,
-  "EntityReference CharacterReference": tags.character,
-  Comment: tags.blockComment,
-  ProcessingInst: tags.processingInstruction,
-  DoctypeDecl: tags.documentMeta
+  "Text RawText": tags3.content,
+  "StartTag StartCloseTag SelfClosingEndTag EndTag": tags3.angleBracket,
+  TagName: tags3.tagName,
+  "MismatchedCloseTag/TagName": [tags3.tagName, tags3.invalid],
+  AttributeName: tags3.attributeName,
+  "AttributeValue UnquotedAttributeValue": tags3.attributeValue,
+  Is: tags3.definitionOperator,
+  "EntityReference CharacterReference": tags3.character,
+  Comment: tags3.blockComment,
+  ProcessingInst: tags3.processingInstruction,
+  DoctypeDecl: tags3.documentMeta
 });
 var parser = LRParser.deserialize({
   version: 14,
@@ -4540,17 +5752,17 @@ function findTagName(openTag, input) {
   let tagNameNode = openTag.getChild(TagName);
   return tagNameNode ? input.read(tagNameNode.from, tagNameNode.to) : " ";
 }
-function maybeNest(node, input, tags7) {
+function maybeNest(node, input, tags8) {
   let attrs;
-  for (let tag of tags7) {
+  for (let tag of tags8) {
     if (!tag.attrs || tag.attrs(attrs || (attrs = getAttrs(node.node.parent.firstChild, input))))
       return { parser: tag.parser };
   }
   return null;
 }
-function configureNesting(tags7 = [], attributes = []) {
+function configureNesting(tags8 = [], attributes = []) {
   let script = [], style = [], textarea = [], other = [];
-  for (let tag of tags7) {
+  for (let tag of tags8) {
     let array = tag.tag == "script" ? script : tag.tag == "style" ? style : tag.tag == "textarea" ? textarea : other;
     array.push(tag);
   }
@@ -4592,6 +5804,9 @@ function configureNesting(tags7 = [], attributes = []) {
     return null;
   });
 }
+
+// node_modules/@lezer/css/dist/index.js
+import { styleTags as styleTags2, tags as tags4 } from "@lezer/highlight";
 var descendantOp = 107;
 var Unit = 1;
 var callee = 108;
@@ -4684,39 +5899,39 @@ var unitToken = new ExternalTokenizer((input) => {
     }
   }
 });
-var cssHighlighting = styleTags({
-  "AtKeyword import charset namespace keyframes media supports": tags.definitionKeyword,
-  "from to selector": tags.keyword,
-  NamespaceName: tags.namespace,
-  KeyframeName: tags.labelName,
-  KeyframeRangeName: tags.operatorKeyword,
-  TagName: tags.tagName,
-  ClassName: tags.className,
-  PseudoClassName: tags.constant(tags.className),
-  IdName: tags.labelName,
-  "FeatureName PropertyName": tags.propertyName,
-  AttributeName: tags.attributeName,
-  NumberLiteral: tags.number,
-  KeywordQuery: tags.keyword,
-  UnaryQueryOp: tags.operatorKeyword,
-  "CallTag ValueName": tags.atom,
-  VariableName: tags.variableName,
-  Callee: tags.operatorKeyword,
-  Unit: tags.unit,
-  "UniversalSelector NestingSelector": tags.definitionOperator,
-  "MatchOp CompareOp": tags.compareOperator,
-  "ChildOp SiblingOp, LogicOp": tags.logicOperator,
-  BinOp: tags.arithmeticOperator,
-  Important: tags.modifier,
-  Comment: tags.blockComment,
-  ColorLiteral: tags.color,
-  "ParenthesizedContent StringLiteral": tags.string,
-  ":": tags.punctuation,
-  "PseudoOp #": tags.derefOperator,
-  "; ,": tags.separator,
-  "( )": tags.paren,
-  "[ ]": tags.squareBracket,
-  "{ }": tags.brace
+var cssHighlighting = styleTags2({
+  "AtKeyword import charset namespace keyframes media supports": tags4.definitionKeyword,
+  "from to selector": tags4.keyword,
+  NamespaceName: tags4.namespace,
+  KeyframeName: tags4.labelName,
+  KeyframeRangeName: tags4.operatorKeyword,
+  TagName: tags4.tagName,
+  ClassName: tags4.className,
+  PseudoClassName: tags4.constant(tags4.className),
+  IdName: tags4.labelName,
+  "FeatureName PropertyName": tags4.propertyName,
+  AttributeName: tags4.attributeName,
+  NumberLiteral: tags4.number,
+  KeywordQuery: tags4.keyword,
+  UnaryQueryOp: tags4.operatorKeyword,
+  "CallTag ValueName": tags4.atom,
+  VariableName: tags4.variableName,
+  Callee: tags4.operatorKeyword,
+  Unit: tags4.unit,
+  "UniversalSelector NestingSelector": tags4.definitionOperator,
+  "MatchOp CompareOp": tags4.compareOperator,
+  "ChildOp SiblingOp, LogicOp": tags4.logicOperator,
+  BinOp: tags4.arithmeticOperator,
+  Important: tags4.modifier,
+  Comment: tags4.blockComment,
+  ColorLiteral: tags4.color,
+  "ParenthesizedContent StringLiteral": tags4.string,
+  ":": tags4.punctuation,
+  "PseudoOp #": tags4.derefOperator,
+  "; ,": tags4.separator,
+  "( )": tags4.paren,
+  "[ ]": tags4.squareBracket,
+  "{ }": tags4.brace
 });
 var spec_callee = { __proto__: null, lang: 34, "nth-child": 34, "nth-last-child": 34, "nth-of-type": 34, "nth-last-of-type": 34, dir: 34, "host-context": 34, url: 62, "url-prefix": 62, domain: 62, regexp: 62 };
 var spec_AtKeyword = { __proto__: null, "@import": 120, "@media": 154, "@charset": 158, "@namespace": 162, "@keyframes": 168, "@supports": 180 };
@@ -4742,6 +5957,9 @@ var parser2 = LRParser.deserialize({
   specialized: [{ term: 108, get: (value) => spec_callee[value] || -1 }, { term: 59, get: (value) => spec_AtKeyword[value] || -1 }, { term: 110, get: (value) => spec_queryIdentifier[value] || -1 }],
   tokenPrec: 1441
 });
+
+// node_modules/@codemirror/lang-css/dist/index.js
+import { syntaxTree, LRLanguage, indentNodeProp, continuedIndent, foldNodeProp, foldInside, LanguageSupport } from "@codemirror/language";
 var _properties = null;
 function properties() {
   if (!_properties && typeof document == "object" && document.body) {
@@ -5390,7 +6608,7 @@ var values = /* @__PURE__ */ [
   "yellow",
   "yellowgreen"
 ].map((name) => ({ type: "constant", label: name })));
-var tags4 = /* @__PURE__ */ [
+var tags5 = /* @__PURE__ */ [
   "a",
   "abbr",
   "address",
@@ -5564,7 +6782,7 @@ var defineCSSCompletionSource = (isVariable) => (context) => {
     for (let { parent } = node; parent; parent = parent.parent)
       if (parent.name == "Block")
         return { from: node.from, options: properties(), validFor: identifier2 };
-    return { from: node.from, options: tags4, validFor: identifier2 };
+    return { from: node.from, options: tags5, validFor: identifier2 };
   }
   if (node.name == "AtKeyword")
     return { from: node.from, options: atRules, validFor: identifier2 };
@@ -5601,6 +6819,9 @@ var cssLanguage = /* @__PURE__ */ LRLanguage.define({
 function css() {
   return new LanguageSupport(cssLanguage, cssLanguage.data.of({ autocomplete: cssCompletionSource }));
 }
+
+// node_modules/@lezer/javascript/dist/index.js
+import { styleTags as styleTags3, tags as tags6 } from "@lezer/highlight";
 var noSemi = 315;
 var noSemiType = 316;
 var incdec = 1;
@@ -5725,63 +6946,63 @@ var jsx2 = new ExternalTokenizer((input, stack) => {
   }
   input.acceptToken(JSXStartTag, -back);
 });
-var jsHighlight = styleTags({
-  "get set async static": tags.modifier,
-  "for while do if else switch try catch finally return throw break continue default case": tags.controlKeyword,
-  "in of await yield void typeof delete instanceof as satisfies": tags.operatorKeyword,
-  "let var const using function class extends": tags.definitionKeyword,
-  "import export from": tags.moduleKeyword,
-  "with debugger new": tags.keyword,
-  TemplateString: tags.special(tags.string),
-  super: tags.atom,
-  BooleanLiteral: tags.bool,
-  this: tags.self,
-  null: tags.null,
-  Star: tags.modifier,
-  VariableName: tags.variableName,
-  "CallExpression/VariableName TaggedTemplateExpression/VariableName": tags.function(tags.variableName),
-  VariableDefinition: tags.definition(tags.variableName),
-  Label: tags.labelName,
-  PropertyName: tags.propertyName,
-  PrivatePropertyName: tags.special(tags.propertyName),
-  "CallExpression/MemberExpression/PropertyName": tags.function(tags.propertyName),
-  "FunctionDeclaration/VariableDefinition": tags.function(tags.definition(tags.variableName)),
-  "ClassDeclaration/VariableDefinition": tags.definition(tags.className),
-  "NewExpression/VariableName": tags.className,
-  PropertyDefinition: tags.definition(tags.propertyName),
-  PrivatePropertyDefinition: tags.definition(tags.special(tags.propertyName)),
-  UpdateOp: tags.updateOperator,
-  "LineComment Hashbang": tags.lineComment,
-  BlockComment: tags.blockComment,
-  Number: tags.number,
-  String: tags.string,
-  Escape: tags.escape,
-  ArithOp: tags.arithmeticOperator,
-  LogicOp: tags.logicOperator,
-  BitOp: tags.bitwiseOperator,
-  CompareOp: tags.compareOperator,
-  RegExp: tags.regexp,
-  Equals: tags.definitionOperator,
-  Arrow: tags.function(tags.punctuation),
-  ": Spread": tags.punctuation,
-  "( )": tags.paren,
-  "[ ]": tags.squareBracket,
-  "{ }": tags.brace,
-  "InterpolationStart InterpolationEnd": tags.special(tags.brace),
-  ".": tags.derefOperator,
-  ", ;": tags.separator,
-  "@": tags.meta,
-  TypeName: tags.typeName,
-  TypeDefinition: tags.definition(tags.typeName),
-  "type enum interface implements namespace module declare": tags.definitionKeyword,
-  "abstract global Privacy readonly override": tags.modifier,
-  "is keyof unique infer asserts": tags.operatorKeyword,
-  JSXAttributeValue: tags.attributeValue,
-  JSXText: tags.content,
-  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": tags.angleBracket,
-  "JSXIdentifier JSXNameSpacedName": tags.tagName,
-  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": tags.attributeName,
-  "JSXBuiltin/JSXIdentifier": tags.standard(tags.tagName)
+var jsHighlight = styleTags3({
+  "get set async static": tags6.modifier,
+  "for while do if else switch try catch finally return throw break continue default case": tags6.controlKeyword,
+  "in of await yield void typeof delete instanceof as satisfies": tags6.operatorKeyword,
+  "let var const using function class extends": tags6.definitionKeyword,
+  "import export from": tags6.moduleKeyword,
+  "with debugger new": tags6.keyword,
+  TemplateString: tags6.special(tags6.string),
+  super: tags6.atom,
+  BooleanLiteral: tags6.bool,
+  this: tags6.self,
+  null: tags6.null,
+  Star: tags6.modifier,
+  VariableName: tags6.variableName,
+  "CallExpression/VariableName TaggedTemplateExpression/VariableName": tags6.function(tags6.variableName),
+  VariableDefinition: tags6.definition(tags6.variableName),
+  Label: tags6.labelName,
+  PropertyName: tags6.propertyName,
+  PrivatePropertyName: tags6.special(tags6.propertyName),
+  "CallExpression/MemberExpression/PropertyName": tags6.function(tags6.propertyName),
+  "FunctionDeclaration/VariableDefinition": tags6.function(tags6.definition(tags6.variableName)),
+  "ClassDeclaration/VariableDefinition": tags6.definition(tags6.className),
+  "NewExpression/VariableName": tags6.className,
+  PropertyDefinition: tags6.definition(tags6.propertyName),
+  PrivatePropertyDefinition: tags6.definition(tags6.special(tags6.propertyName)),
+  UpdateOp: tags6.updateOperator,
+  "LineComment Hashbang": tags6.lineComment,
+  BlockComment: tags6.blockComment,
+  Number: tags6.number,
+  String: tags6.string,
+  Escape: tags6.escape,
+  ArithOp: tags6.arithmeticOperator,
+  LogicOp: tags6.logicOperator,
+  BitOp: tags6.bitwiseOperator,
+  CompareOp: tags6.compareOperator,
+  RegExp: tags6.regexp,
+  Equals: tags6.definitionOperator,
+  Arrow: tags6.function(tags6.punctuation),
+  ": Spread": tags6.punctuation,
+  "( )": tags6.paren,
+  "[ ]": tags6.squareBracket,
+  "{ }": tags6.brace,
+  "InterpolationStart InterpolationEnd": tags6.special(tags6.brace),
+  ".": tags6.derefOperator,
+  ", ;": tags6.separator,
+  "@": tags6.meta,
+  TypeName: tags6.typeName,
+  TypeDefinition: tags6.definition(tags6.typeName),
+  "type enum interface implements namespace module declare": tags6.definitionKeyword,
+  "abstract global Privacy readonly override": tags6.modifier,
+  "is keyof unique infer asserts": tags6.operatorKeyword,
+  JSXAttributeValue: tags6.attributeValue,
+  JSXText: tags6.content,
+  "JSXStartTag JSXStartCloseTag JSXSelfCloseEndTag JSXEndTag": tags6.angleBracket,
+  "JSXIdentifier JSXNameSpacedName": tags6.tagName,
+  "JSXAttribute/JSXIdentifier JSXAttribute/JSXNameSpacedName": tags6.attributeName,
+  "JSXBuiltin/JSXIdentifier": tags6.standard(tags6.tagName)
 });
 var spec_identifier = { __proto__: null, export: 20, as: 25, from: 33, default: 36, async: 41, function: 42, in: 52, out: 55, const: 56, extends: 60, this: 64, true: 72, false: 72, null: 84, void: 88, typeof: 92, super: 108, new: 142, delete: 154, yield: 163, await: 167, class: 172, public: 235, private: 235, protected: 235, readonly: 237, instanceof: 256, satisfies: 259, import: 292, keyof: 349, unique: 353, infer: 359, asserts: 395, is: 397, abstract: 417, implements: 419, type: 421, let: 424, var: 426, using: 429, interface: 435, enum: 439, namespace: 445, module: 447, declare: 451, global: 455, for: 474, of: 483, while: 486, with: 490, do: 494, if: 498, else: 500, switch: 504, case: 510, try: 516, catch: 520, finally: 524, return: 528, throw: 532, break: 536, continue: 540, debugger: 544 };
 var spec_word = { __proto__: null, async: 129, get: 131, set: 133, declare: 195, public: 197, private: 197, protected: 197, static: 199, abstract: 201, override: 203, readonly: 209, accessor: 211, new: 401 };
@@ -5811,6 +7032,12 @@ var parser3 = LRParser.deserialize({
   specialized: [{ term: 326, get: (value) => spec_identifier[value] || -1 }, { term: 342, get: (value) => spec_word[value] || -1 }, { term: 95, get: (value) => spec_LessThan[value] || -1 }],
   tokenPrec: 15124
 });
+
+// node_modules/@codemirror/lang-javascript/dist/index.js
+import { syntaxTree as syntaxTree2, LRLanguage as LRLanguage2, indentNodeProp as indentNodeProp2, continuedIndent as continuedIndent2, flatIndent, delimitedIndent, foldNodeProp as foldNodeProp2, foldInside as foldInside2, defineLanguageFacet, sublanguageProp, LanguageSupport as LanguageSupport2 } from "@codemirror/language";
+import { EditorSelection } from "@codemirror/state";
+import { EditorView as EditorView7 } from "@codemirror/view";
+import { snippetCompletion, ifNotIn, completeFromList } from "@codemirror/autocomplete";
 var snippets = [
   /* @__PURE__ */ snippetCompletion("function ${name}(${params}) {\n	${}\n}", {
     label: "function",
@@ -5968,7 +7195,7 @@ var dontComplete = [
   "?."
 ];
 function localCompletionSource(context) {
-  let inner = syntaxTree(context.state).resolveInner(context.pos, -1);
+  let inner = syntaxTree2(context.state).resolveInner(context.pos, -1);
   if (dontComplete.indexOf(inner.name) > -1)
     return null;
   let isWord = inner.name == "VariableName" || inner.to - inner.from < 20 && Identifier.test(context.state.sliceDoc(inner.from, inner.to));
@@ -5985,13 +7212,13 @@ function localCompletionSource(context) {
     validFor: Identifier
   };
 }
-var javascriptLanguage = /* @__PURE__ */ LRLanguage.define({
+var javascriptLanguage = /* @__PURE__ */ LRLanguage2.define({
   name: "javascript",
   parser: /* @__PURE__ */ parser3.configure({
     props: [
-      /* @__PURE__ */ indentNodeProp.add({
-        IfStatement: /* @__PURE__ */ continuedIndent({ except: /^\s*({|else\b)/ }),
-        TryStatement: /* @__PURE__ */ continuedIndent({ except: /^\s*({|catch\b|finally\b)/ }),
+      /* @__PURE__ */ indentNodeProp2.add({
+        IfStatement: /* @__PURE__ */ continuedIndent2({ except: /^\s*({|else\b)/ }),
+        TryStatement: /* @__PURE__ */ continuedIndent2({ except: /^\s*({|catch\b|finally\b)/ }),
         LabeledStatement: flatIndent,
         SwitchBody: (context) => {
           let after = context.textAfter, closed = /^\s*\}/.test(after), isCase = /^\s*(case|default)\b/.test(after);
@@ -6000,7 +7227,7 @@ var javascriptLanguage = /* @__PURE__ */ LRLanguage.define({
         Block: /* @__PURE__ */ delimitedIndent({ closing: "}" }),
         ArrowFunction: (cx) => cx.baseIndent + cx.unit,
         "TemplateString BlockComment": () => null,
-        "Statement Property": /* @__PURE__ */ continuedIndent({ except: /^\s*{/ }),
+        "Statement Property": /* @__PURE__ */ continuedIndent2({ except: /^\s*{/ }),
         JSXElement(context) {
           let closed = /^\s*<\//.test(context.textAfter);
           return context.lineIndent(context.node.from) + (closed ? 0 : context.unit);
@@ -6013,8 +7240,8 @@ var javascriptLanguage = /* @__PURE__ */ LRLanguage.define({
           return context.column(context.node.from) + context.unit;
         }
       }),
-      /* @__PURE__ */ foldNodeProp.add({
-        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": foldInside,
+      /* @__PURE__ */ foldNodeProp2.add({
+        "Block ClassBody SwitchBody EnumBody ObjectExpression ArrayExpression ObjectType": foldInside2,
         BlockComment(tree) {
           return { from: tree.from + 2, to: tree.to - 2 };
         }
@@ -6047,7 +7274,7 @@ var typescriptKeywords = /* @__PURE__ */ keywords.concat(/* @__PURE__ */ ["decla
 function javascript(config = {}) {
   let lang = config.jsx ? config.typescript ? tsxLanguage : jsxLanguage : config.typescript ? typescriptLanguage : javascriptLanguage;
   let completions = config.typescript ? typescriptSnippets.concat(typescriptKeywords) : snippets.concat(keywords);
-  return new LanguageSupport(lang, [
+  return new LanguageSupport2(lang, [
     javascriptLanguage.data.of({
       autocomplete: ifNotIn(dontComplete, completeFromList(completions))
     }),
@@ -6074,13 +7301,13 @@ function elementName(doc, tree, max = doc.length) {
   return "";
 }
 var android = typeof navigator == "object" && /* @__PURE__ */ /Android\b/.test(navigator.userAgent);
-var autoCloseTags = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, text, defaultInsert) => {
+var autoCloseTags = /* @__PURE__ */ EditorView7.inputHandler.of((view, from, to, text, defaultInsert) => {
   if ((android ? view.composing : view.compositionStarted) || view.state.readOnly || from != to || text != ">" && text != "/" || !javascriptLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = defaultInsert(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a;
-    let { head } = range, around = syntaxTree(state).resolveInner(head - 1, -1), name;
+    let { head } = range, around = syntaxTree2(state).resolveInner(head - 1, -1), name;
     if (around.name == "JSXStartTag")
       around = around.parent;
     if (state.doc.sliceString(head - 1, head) != text || around.name == "JSXAttributeValue" && around.to > head) ;
@@ -6107,6 +7334,11 @@ var autoCloseTags = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, 
   ]);
   return true;
 });
+
+// node_modules/@codemirror/lang-html/dist/index.js
+import { EditorView as EditorView8 } from "@codemirror/view";
+import { EditorSelection as EditorSelection2 } from "@codemirror/state";
+import { syntaxTree as syntaxTree3, LRLanguage as LRLanguage3, indentNodeProp as indentNodeProp3, foldNodeProp as foldNodeProp3, bracketMatchingHandle, LanguageSupport as LanguageSupport3 } from "@codemirror/language";
 var Targets = ["_blank", "_self", "_top", "_parent"];
 var Charsets = ["ascii", "utf-8", "utf-16", "latin1", "latin1"];
 var Methods = ["get", "post", "put", "delete"];
@@ -6650,7 +7882,7 @@ function completeAttrValue(state, schema, tree, from, to) {
   return { from, to, options, validFor: token };
 }
 function htmlCompletionFor(schema, context) {
-  let { state, pos } = context, tree = syntaxTree(state).resolveInner(pos, -1), around = tree.resolve(pos);
+  let { state, pos } = context, tree = syntaxTree3(state).resolveInner(pos, -1), around = tree.resolve(pos);
   for (let scan = pos, before; around == tree && (before = tree.childBefore(scan)); ) {
     let last = before.lastChild;
     if (!last || !last.type.isError || last.from < last.to)
@@ -6727,11 +7959,11 @@ var defaultAttrs = /* @__PURE__ */ [
     parser: /* @__PURE__ */ cssLanguage.parser.configure({ top: "Styles" })
   }
 ].concat(/* @__PURE__ */ eventAttributes.map((name) => ({ name, parser: javascriptLanguage.parser })));
-var htmlPlain = /* @__PURE__ */ LRLanguage.define({
+var htmlPlain = /* @__PURE__ */ LRLanguage3.define({
   name: "html",
   parser: /* @__PURE__ */ parser.configure({
     props: [
-      /* @__PURE__ */ indentNodeProp.add({
+      /* @__PURE__ */ indentNodeProp3.add({
         Element(context) {
           let after = /^(\s*)(<\/)?/.exec(context.textAfter);
           if (context.node.to <= context.pos + after[0].length)
@@ -6756,7 +7988,7 @@ var htmlPlain = /* @__PURE__ */ LRLanguage.define({
           return null;
         }
       }),
-      /* @__PURE__ */ foldNodeProp.add({
+      /* @__PURE__ */ foldNodeProp3.add({
         Element(node) {
           let first = node.firstChild, last = node.lastChild;
           if (!first || first.name != "OpenTag")
@@ -6787,7 +8019,7 @@ function html(config = {}) {
   if (config.nestedLanguages && config.nestedLanguages.length || config.nestedAttributes && config.nestedAttributes.length)
     wrap = configureNesting((config.nestedLanguages || []).concat(defaultNesting), (config.nestedAttributes || []).concat(defaultAttrs));
   let lang = wrap ? htmlPlain.configure({ wrap, dialect }) : dialect ? htmlLanguage.configure({ dialect }) : htmlLanguage;
-  return new LanguageSupport(lang, [
+  return new LanguageSupport3(lang, [
     htmlLanguage.data.of({ autocomplete: htmlCompletionSourceWith(config) }),
     config.autoCloseTags !== false ? autoCloseTags2 : [],
     javascript().support,
@@ -6795,14 +8027,14 @@ function html(config = {}) {
   ]);
 }
 var selfClosers2 = /* @__PURE__ */ new Set(/* @__PURE__ */ "area base br col command embed frame hr img input keygen link meta param source track wbr menuitem".split(" "));
-var autoCloseTags2 = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to, text, insertTransaction) => {
+var autoCloseTags2 = /* @__PURE__ */ EditorView8.inputHandler.of((view, from, to, text, insertTransaction) => {
   if (view.composing || view.state.readOnly || from != to || text != ">" && text != "/" || !htmlLanguage.isActiveAt(view.state, from, -1))
     return false;
   let base = insertTransaction(), { state } = base;
   let closeTags = state.changeByRange((range) => {
     var _a, _b, _c;
     let didType = state.doc.sliceString(range.from - 1, range.to) == text;
-    let { head } = range, after = syntaxTree(state).resolveInner(head, -1), name;
+    let { head } = range, after = syntaxTree3(state).resolveInner(head, -1), name;
     if (didType && text == ">" && after.name == "EndTag") {
       let tag = after.parent;
       if (((_b = (_a = tag.parent) === null || _a === void 0 ? void 0 : _a.lastChild) === null || _b === void 0 ? void 0 : _b.name) != "CloseTag" && (name = elementName2(state.doc, tag.parent, head)) && !selfClosers2.has(name)) {
@@ -6816,7 +8048,7 @@ var autoCloseTags2 = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to,
         let to2 = head + (state.doc.sliceString(head, head + 1) === ">" ? 1 : 0);
         let insert = `${name}>`;
         return {
-          range: EditorSelection.cursor(head + insert.length, -1),
+          range: EditorSelection2.cursor(head + insert.length, -1),
           changes: { from: head, to: to2, insert }
         };
       }
@@ -6836,15 +8068,15 @@ var autoCloseTags2 = /* @__PURE__ */ EditorView.inputHandler.of((view, from, to,
 });
 
 // node_modules/@codemirror/lang-markdown/dist/index.js
-var data = /* @__PURE__ */ defineLanguageFacet({ commentTokens: { block: { open: "<!--", close: "-->" } } });
+var data = /* @__PURE__ */ defineLanguageFacet2({ commentTokens: { block: { open: "<!--", close: "-->" } } });
 var headingProp = /* @__PURE__ */ new NodeProp();
-var commonmark = /* @__PURE__ */ parser$1.configure({
+var commonmark = /* @__PURE__ */ parser4.configure({
   props: [
-    /* @__PURE__ */ foldNodeProp.add((type) => {
+    /* @__PURE__ */ foldNodeProp4.add((type) => {
       return !type.is("Block") || type.is("Document") || isHeading(type) != null || isList(type) ? void 0 : (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to });
     }),
     /* @__PURE__ */ headingProp.add(isHeading),
-    /* @__PURE__ */ indentNodeProp.add({
+    /* @__PURE__ */ indentNodeProp4.add({
       Document: () => null
     }),
     /* @__PURE__ */ languageDataProp.add({
@@ -6870,7 +8102,7 @@ function findSectionEnd(headerNode, level) {
   return last.to;
 }
 var headerIndent = /* @__PURE__ */ foldService.of((state, start, end) => {
-  for (let node = syntaxTree(state).resolveInner(end, -1); node; node = node.parent) {
+  for (let node = syntaxTree4(state).resolveInner(end, -1); node; node = node.parent) {
     if (node.from < start)
       break;
     let heading = node.type.prop(headingProp);
@@ -6888,7 +8120,7 @@ function mkLang(parser5) {
 var commonmarkLanguage = /* @__PURE__ */ mkLang(commonmark);
 var extended = /* @__PURE__ */ commonmark.configure([GFM, Subscript, Superscript, Emoji, {
   props: [
-    /* @__PURE__ */ foldNodeProp.add({
+    /* @__PURE__ */ foldNodeProp4.add({
       Table: (tree, state) => ({ from: state.doc.lineAt(tree.from).to, to: tree.to })
     })
   ]
@@ -7011,7 +8243,7 @@ function normalizeIndent(content, state) {
   return space3 + content.slice(blank);
 }
 var insertNewlineContinueMarkup = ({ state, dispatch }) => {
-  let tree = syntaxTree(state), { doc } = state;
+  let tree = syntaxTree4(state), { doc } = state;
   let dont = null, changes = state.changeByRange((range) => {
     if (!range.empty || !markdownLanguage.isActiveAt(state, range.from, 0))
       return dont = { range };
@@ -7041,11 +8273,11 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
           renumberList(inner.item, doc, changes3, -2);
         if (next && next.node.name == "OrderedList")
           renumberList(next.item, doc, changes3);
-        return { range: EditorSelection.cursor(delTo + insert2.length), changes: changes3 };
+        return { range: EditorSelection3.cursor(delTo + insert2.length), changes: changes3 };
       } else {
         let insert2 = blankLine(context, state, line);
         return {
-          range: EditorSelection.cursor(pos + insert2.length + 1),
+          range: EditorSelection3.cursor(pos + insert2.length + 1),
           changes: { from: line.from, insert: insert2 + state.lineBreak }
         };
       }
@@ -7077,7 +8309,7 @@ var insertNewlineContinueMarkup = ({ state, dispatch }) => {
     if (nonTightList(inner.node, state.doc))
       insert = blankLine(context, state, line) + state.lineBreak + insert;
     changes2.push({ from, to: pos, insert: state.lineBreak + insert });
-    return { range: EditorSelection.cursor(from + insert.length + 1), changes: changes2 };
+    return { range: EditorSelection3.cursor(from + insert.length + 1), changes: changes2 };
   });
   if (dont)
     return false;
@@ -7123,7 +8355,7 @@ function contextNodeForDelete(tree, pos) {
   return node;
 }
 var deleteMarkupBackward = ({ state, dispatch }) => {
-  let tree = syntaxTree(state);
+  let tree = syntaxTree4(state);
   let dont = null, changes = state.changeByRange((range) => {
     let pos = range.from, { doc } = state;
     if (range.empty && markdownLanguage.isActiveAt(state, range.from)) {
@@ -7134,7 +8366,7 @@ var deleteMarkupBackward = ({ state, dispatch }) => {
         let spaceEnd = inner.to - inner.spaceAfter.length + (inner.spaceAfter ? 1 : 0);
         if (pos - line.from > spaceEnd && !/\S/.test(line.text.slice(spaceEnd, pos - line.from)))
           return {
-            range: EditorSelection.cursor(line.from + spaceEnd),
+            range: EditorSelection3.cursor(line.from + spaceEnd),
             changes: { from: line.from + spaceEnd, to: pos }
           };
         if (pos - line.from == spaceEnd && // Only apply this if we're on the line that has the
@@ -7147,12 +8379,12 @@ var deleteMarkupBackward = ({ state, dispatch }) => {
             if (start == line.from)
               insert = normalizeIndent(insert, state);
             return {
-              range: EditorSelection.cursor(start + insert.length),
+              range: EditorSelection3.cursor(start + insert.length),
               changes: { from: start, to: line.from + inner.to, insert }
             };
           }
           if (start < pos)
-            return { range: EditorSelection.cursor(start), changes: { from: start, to: pos } };
+            return { range: EditorSelection3.cursor(start), changes: { from: start, to: pos } };
         }
       }
     }
@@ -7174,7 +8406,7 @@ function markdown(config = {}) {
     throw new RangeError("Base parser provided to `markdown` should be a Markdown parser");
   let extensions = config.extensions ? [config.extensions] : [];
   let support = [htmlTagLanguage.support], defaultCode;
-  if (defaultCodeLanguage instanceof LanguageSupport) {
+  if (defaultCodeLanguage instanceof LanguageSupport4) {
     support.push(defaultCodeLanguage.support);
     defaultCode = defaultCodeLanguage.language;
   } else if (defaultCodeLanguage) {
@@ -7187,13 +8419,13 @@ function markdown(config = {}) {
   let lang = mkLang(parser5.configure(extensions));
   if (completeHTMLTags)
     support.push(lang.data.of({ autocomplete: htmlTagCompletion }));
-  return new LanguageSupport(lang, support);
+  return new LanguageSupport4(lang, support);
 }
 function htmlTagCompletion(context) {
   let { state, pos } = context, m = /<[:\-\.\w\u00b7-\uffff]*$/.exec(state.sliceDoc(pos - 25, pos));
   if (!m)
     return null;
-  let tree = syntaxTree(state).resolveInner(pos, -1);
+  let tree = syntaxTree4(state).resolveInner(pos, -1);
   while (tree && !tree.type.isTop) {
     if (tree.name == "CodeBlock" || tree.name == "FencedCode" || tree.name == "ProcessingInstructionBlock" || tree.name == "CommentBlock" || tree.name == "Link" || tree.name == "Image")
       return null;
@@ -7213,1039 +8445,350 @@ function htmlTagCompletions() {
   let result = htmlCompletionSource(new CompletionContext(EditorState.create({ extensions: htmlNoMatch }), 0, true));
   return _tagCompletions = result ? result.options : [];
 }
+
+// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
+import { languages } from "@codemirror/language-data";
+import { Compartment } from "@codemirror/state";
+import { syntaxTree as syntaxTree5 } from "@codemirror/language";
+var syntaxRules = [
+  new HeadingDecorator(),
+  new BoldDecorator(),
+  new ItalicDecorator(),
+  new StrikethroughDecorator(),
+  new CodeDecorator(),
+  new HighlightDecorator(),
+  new OldBoldDecorator(),
+  new OldItalicDecorator(),
+  new ListDecorator(),
+  new BlockquoteDecorator(),
+  new FencedCodeBlockDecorator()
+  // HorizontalRuleDecorator is now a ViewPlugin and managed separately
+];
 var setMarkdownSyntaxMode = StateEffect.define();
-StateField.define({
-  create() {
-    return "live";
+function buildLegacyDecorations(state, currentMode, view) {
+  const builder = new RangeSetBuilder();
+  const allDecorations = [];
+  const cursorPositions = [];
+  for (const range of state.selection.ranges) {
+    cursorPositions.push(range.head);
+  }
+  const rangesToProcess = view ? view.visibleRanges : [{ from: 0, to: state.doc.length }];
+  const htmlRegions = findHtmlRegions(state);
+  for (const { from, to } of rangesToProcess) {
+    const docTextSlice = state.doc.sliceString(from, to);
+    const context = {
+      builder,
+      docText: docTextSlice,
+      textSliceFrom: from,
+      cursorPositions,
+      state,
+      view,
+      decorations: allDecorations,
+      currentMode,
+      htmlEditRegions: htmlRegions
+      // Pass HTML regions to avoid processing markdown inside them
+    };
+    for (const rule of syntaxRules) {
+      try {
+        if (typeof rule.process === "function") {
+          rule.process(context);
+        } else {
+          console.warn(`Rule ${rule.constructor.name} does not have a process method.`);
+        }
+      } catch (error) {
+        console.error("Error processing legacy rule:", rule.constructor.name, error);
+      }
+    }
+  }
+  for (const region of htmlRegions) {
+    allDecorations.push({
+      from: region.from,
+      to: region.to,
+      decoration: Decoration12.mark({
+        class: "cm-plain-text cm-html-content cm-disable-markdown-parsing cm-no-list-rendering",
+        attributes: { "data-html-content": "true", "data-no-markdown": "true" }
+      })
+    });
+  }
+  const groupedDecorations = /* @__PURE__ */ new Map();
+  for (const item of allDecorations) {
+    if (!item.decoration.spec.class?.includes("cm-html-content") && isInsideHtml(item.from, item.to, htmlRegions)) {
+      continue;
+    }
+    if (!groupedDecorations.has(item.from)) {
+      groupedDecorations.set(item.from, []);
+    }
+    if (item.decoration) {
+      groupedDecorations.get(item.from).push(item);
+    } else {
+      console.warn("Encountered an item with undefined decoration during legacy build:", item);
+    }
+  }
+  const sortedFromPositions = [...groupedDecorations.keys()].sort((a, b) => a - b);
+  for (const fromPos of sortedFromPositions) {
+    const group = groupedDecorations.get(fromPos);
+    group.sort((a, b) => a.to - b.to);
+    for (const item of group) {
+      builder.add(item.from, item.to, item.decoration);
+    }
+  }
+  return builder.finish();
+}
+var markdownSyntaxStateField = StateField.define({
+  /**
+   * Creates the initial state for the field
+   * @param state - The editor state
+   * @returns The initial field value
+   */
+  create(state) {
+    const initialMode = "live";
+    return {
+      decorations: buildLegacyDecorations(state, initialMode, void 0),
+      currentMode: initialMode
+    };
   },
+  /**
+   * Updates the field value based on transactions
+   * @param value - The current field value
+   * @param tr - The transaction to apply
+   * @returns The updated field value
+   */
   update(value, tr) {
+    let newMode = value.currentMode;
+    let needsRebuild = false;
     for (const effect of tr.effects) {
       if (effect.is(setMarkdownSyntaxMode)) {
-        return effect.value;
+        newMode = effect.value;
+        needsRebuild = true;
       }
+    }
+    let modeChangedByEffect = false;
+    for (const effect of tr.effects) {
+      if (effect.is(setMarkdownSyntaxMode)) {
+        if (newMode !== effect.value) {
+          newMode = effect.value;
+          modeChangedByEffect = true;
+        }
+      }
+    }
+    if (tr.docChanged || tr.selection && !tr.startState.selection.eq(tr.selection) || modeChangedByEffect) {
+      return {
+        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
+        currentMode: newMode
+      };
+    }
+    if (value.currentMode !== newMode) {
+      return {
+        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
+        currentMode: newMode
+      };
     }
     return value;
   },
-  provide(field) {
-    return EditorView.contentAttributes.from(field, (mode) => ({
-      "data-markdown-mode": mode
-    }));
-  }
+  /**
+   * Provides the decorations to the editor view
+   */
+  provide: (f) => EditorView9.decorations.from(f, (value) => value.decorations)
 });
-function createLezerSafetyPlugin() {
-  return ViewPlugin.define(() => {
-    console.log("Initializing Lezer safety plugin");
-    return {
-      update(update) {
-        try {
-          const view = update.view;
-          if (view && view.plugin && view.dispatch) {
-            const viewPlugins = view._plugins || view.state.facet({ name: "plugins" });
-            if (viewPlugins && Array.isArray(viewPlugins)) {
-              viewPlugins.forEach((plugin) => {
-                if (plugin && plugin.extension && plugin.extension.parser) {
-                  const parser5 = plugin.extension.parser;
-                  const originalHasChild = parser5.hasChild;
-                  if (typeof originalHasChild === "function") {
-                    parser5.hasChild = function safeHasChild(type, node, predicate) {
-                      if (!node || !node.children) {
-                        console.warn("SafeHasChild: node or node.children is undefined");
-                        return false;
-                      }
-                      try {
-                        return originalHasChild(type, node, predicate);
-                      } catch (e) {
-                        console.warn("SafeHasChild: caught error", e);
-                        return false;
-                      }
-                    };
-                    console.log("Successfully patched parser.hasChild");
-                  }
-                }
-              });
-            }
-          }
-        } catch (error) {
-          console.warn("Error applying Lezer safety patches:", error);
-        }
+var markdownCompartment = new Compartment();
+function createMarkdownSyntaxPlugin(options = {}) {
+  const { highlightHTML = true } = options;
+  const markdownConfig = {
+    // Add markdown extensions
+    extensions: [
+      // GitHub Flavored Markdown: tables, strikethrough, etc.
+      {
+        name: "table",
+        enable: true
+      },
+      {
+        name: "strikethrough",
+        enable: true
+      },
+      {
+        name: "taggedTemplate",
+        enable: true
+      },
+      {
+        name: "tasklist",
+        enable: true
       }
-    };
-  });
+    ],
+    codeLanguages: languages
+  };
+  return [
+    markdownCompartment.of(markdown(markdownConfig)),
+    markdownSyntaxStateField
+  ];
 }
-
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/utils.ts
-function isCursorNearRange(cursorPositions, rangeFrom, rangeTo, proximity = 0) {
-  for (const cursor of cursorPositions) {
-    if (cursor >= rangeFrom - proximity && cursor <= rangeTo + proximity) {
+function findHtmlRegions(state) {
+  const regions = [];
+  const tree = syntaxTree5(state);
+  tree.iterate({
+    enter: (node) => {
+      if (node.name.includes("HtmlTag") || node.name.includes("HtmlBlock") || node.name.includes("OpenTag") || node.name.includes("CloseTag") || node.name.includes("SelfClosingTag") || node.name.includes("Element")) {
+        regions.push({ from: node.from, to: node.to });
+      }
+    }
+  });
+  return regions;
+}
+function isInsideHtml(from, to, htmlRegions) {
+  for (const region of htmlRegions) {
+    if (from >= region.from && to <= region.to) {
       return true;
     }
   }
   return false;
 }
 
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/headingDecorator.ts
-var HeadingDecorator = class {
-  constructor() {
-    this.headingRegex = /^(#{1,6})\s(.*)$/gm;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    let match;
-    const localRegex = new RegExp(this.headingRegex.source, "gm");
-    while ((match = localRegex.exec(docText)) !== null) {
-      const matchStartIndexInSlice = match.index;
-      const lineStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-        continue;
-      }
-      const hashMarks = match[1];
-      const headingTextContent = match[2];
-      const hashCount = hashMarks.length;
-      const hashStartInDoc = lineStartInDoc;
-      const hashEndInDoc = hashStartInDoc + hashCount;
-      const spaceAfterHashInDoc = hashEndInDoc + 1;
-      const lineEndInDoc = lineStartInDoc + match[0].length;
-      const headingTextStartInDoc = spaceAfterHashInDoc;
-      const headingTextEndInDoc = lineEndInDoc;
-      const isNearSyntax = isCursorNearRange(cursorPositions, hashStartInDoc, spaceAfterHashInDoc);
-      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-      if (decorations) {
-        decorations.push({
-          from: hashStartInDoc,
-          to: spaceAfterHashInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-        if (headingTextContent.trim().length > 0) {
-          decorations.push({
-            from: headingTextStartInDoc,
-            to: headingTextEndInDoc,
-            decoration: Decoration.mark({ class: `markdown-heading-${hashCount}` })
-          });
-        }
-      } else {
-        builder.add(hashStartInDoc, spaceAfterHashInDoc, Decoration.mark({ class: syntaxClass }));
-        if (headingTextContent.trim().length > 0) {
-          builder.add(
-            headingTextStartInDoc,
-            headingTextEndInDoc,
-            Decoration.mark({ class: `markdown-heading-${hashCount}` })
-          );
-        }
-      }
-    }
-  }
+// src/app/obsidian-editor/utils/editorExtensions.ts
+import { Prec as Prec3 } from "@codemirror/state";
+import { keymap as keymap2, highlightActiveLine, highlightActiveLineGutter, EditorView as EditorView17 } from "@codemirror/view";
+import { languages as languages2 } from "@codemirror/language-data";
+import { syntaxHighlighting, HighlightStyle as HighlightStyle5 } from "@codemirror/language";
+import { tags as tags7 } from "@lezer/highlight";
+import { defaultKeymap, historyKeymap, history } from "@codemirror/commands";
+
+// src/app/obsidian-editor/extensions/AtomicIndents.ts
+import { ViewPlugin, Decoration as Decoration13, EditorView as CMEditorView } from "@codemirror/view";
+import { RangeSet, RangeSetBuilder as RangeSetBuilder2 } from "@codemirror/state";
+
+// src/app/obsidian-editor/utils/formatting/linkAndListFormatting.ts
+var isListItem = (lineText) => {
+  return /^\s*([-*+]|\d+\.)\s/.test(lineText);
 };
 
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/baseDecorator.ts
-var BaseDecorator = class {
-  /**
-   * Check if a position is within any HTML edit region
-   * @param pos - The position to check
-   * @param htmlEditRegions - Array of HTML edit regions
-   * @returns True if the position is within any HTML edit region
-   */
-  isWithinHtmlEditRegion(pos, htmlEditRegions) {
-    if (!htmlEditRegions || !htmlEditRegions.length) return false;
-    for (const region of htmlEditRegions) {
-      if (pos >= region.from && pos < region.to) {
-        return true;
-      }
-    }
-    return false;
-  }
-  /**
-   * Check if a range overlaps with any HTML edit region
-   * @param from - Start position
-   * @param to - End position
-   * @param htmlEditRegions - Array of HTML edit regions
-   * @returns True if the range overlaps with any HTML edit region
-   */
-  rangeOverlapsHtmlEditRegion(from, to, htmlEditRegions) {
-    if (!htmlEditRegions || !htmlEditRegions.length) return false;
-    for (const region of htmlEditRegions) {
-      if (from < region.to && to > region.from) {
-        return true;
-      }
-    }
-    return false;
-  }
+// src/app/obsidian-editor/utils/formatting/indentationUtils.ts
+import { EditorSelection as EditorSelection4 } from "@codemirror/state";
+var NBSP = "\xA0";
+var INDENT_UNIT = NBSP.repeat(4);
+var isBlockquote = (lineText) => {
+  return /^\s*>/.test(lineText);
 };
 
-// src/app/obsidian-editor/extensions/markdown-syntax/rules/boldDecorator.ts
-var BoldDecorator = class extends BaseDecorator {
-  constructor() {
-    super(...arguments);
-    /**
-     * Regular expression to match bold text
-     * Matches **bold text** or __bold text__
-     */
-    this.regex = /(\*\*|__)([^\s*_]|[^\s*_].*?[^\s*_])\1/g;
+// src/app/obsidian-editor/extensions/AtomicIndents.ts
+var NBSP2 = "\xA0";
+var INDENT_UNIT2 = NBSP2.repeat(4);
+var AtomicIndentPluginValue = class {
+  /**
+   * Creates a new instance of the atomic indent plugin
+   * @param view - The CodeMirror editor view
+   */
+  constructor(view) {
+    this.atomicRanges = this.buildAtomicRanges(view);
   }
   /**
-   * Process the document and add decorations for bold text
-   * @param context - Context containing document state and decoration builder
+   * Updates the atomic ranges when the document or viewport changes
+   * @param update - The view update object
    */
-  process(context) {
-    const { docText, textSliceFrom, decorations, htmlEditRegions } = context;
-    let match;
-    while ((match = this.regex.exec(docText)) !== null) {
-      const matchFrom = textSliceFrom + match.index;
-      const matchTo = textSliceFrom + match.index + match[0].length;
-      if (this.rangeOverlapsHtmlEditRegion(matchFrom, matchTo, htmlEditRegions)) {
-        continue;
-      }
-      const startMarkerFrom = matchFrom;
-      const startMarkerTo = startMarkerFrom + match[1].length;
-      const contentFrom = startMarkerTo;
-      const contentTo = matchTo - match[1].length;
-      const endMarkerFrom = contentTo;
-      const endMarkerTo = matchTo;
-      decorations.push({
-        from: startMarkerFrom,
-        to: startMarkerTo,
-        decoration: Decoration.mark({ class: "cm-formatting-strong" })
-      });
-      decorations.push({
-        from: endMarkerFrom,
-        to: endMarkerTo,
-        decoration: Decoration.mark({ class: "cm-formatting-strong" })
-      });
-      decorations.push({
-        from: contentFrom,
-        to: contentTo,
-        decoration: Decoration.mark({ class: "cm-strong" })
-      });
+  update(update) {
+    if (update.docChanged || update.viewportChanged) {
+      this.atomicRanges = this.buildAtomicRanges(update.view);
     }
   }
-};
-var ItalicDecorator = class {
-  constructor() {
-    // Regex for *italic* and _italic_
-    // It avoids matching parts of **bold** or __bold__ by ensuring the characters immediately
-    // outside the single markers are not the same marker character.
-    // It also ensures the content is not empty, e.g. ** or __
-    this.italicPatterns = [
-      // Matches *italic* but not **bold** or ***italicbold*** components directly
-      { marker: "*", regex: /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g },
-      // Matches _italic_ but not __bold__ or ___italicbold___ components directly
-      { marker: "_", regex: /(?<!__|_)(?:^|[^_])_(?!\s|__)([^_\n]+?)(?<!\s)_(?!_)/g }
-    ];
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    this.italicPatterns.forEach((patternInfo) => {
-      const marker = patternInfo.marker;
-      const markerLen = marker.length;
-      const localRegex = new RegExp(patternInfo.regex.source, "g");
-      let match;
-      while ((match = localRegex.exec(docText)) !== null) {
-        let fullMatchText = match[0];
-        let contentText = match[1];
-        let matchStartIndexInSlice = match.index;
-        if (fullMatchText.startsWith(marker) === false && fullMatchText.length > contentText.length + 2) {
-          matchStartIndexInSlice += fullMatchText.indexOf(marker + contentText + marker);
-          fullMatchText = marker + contentText + marker;
-        }
-        if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-          continue;
-        }
-        const charBeforeOpenMarker = matchStartIndexInSlice > 0 ? docText.charAt(matchStartIndexInSlice - 1) : " ";
-        const charAfterCloseMarker = matchStartIndexInSlice + fullMatchText.length < docText.length ? docText.charAt(matchStartIndexInSlice + fullMatchText.length) : " ";
-        const wordCharRegex = /[a-zA-Z0-9]/;
-        if (wordCharRegex.test(charBeforeOpenMarker) && wordCharRegex.test(charAfterCloseMarker)) {
-          if (docText.charAt(matchStartIndexInSlice + markerLen) !== " " && docText.charAt(matchStartIndexInSlice + fullMatchText.length - markerLen - 1) !== " ") ;
-        }
-        const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-        const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-        const openMarkerStartInDoc = fullMatchStartInDoc;
-        const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-        const contentStartInDoc = openMarkerEndInDoc;
-        const contentEndInDoc = fullMatchEndInDoc - markerLen;
-        const closeMarkerStartInDoc = contentEndInDoc;
-        const closeMarkerEndInDoc = fullMatchEndInDoc;
-        if (contentStartInDoc >= contentEndInDoc) {
-          continue;
-        }
-        const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-        const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-        if (decorations) {
-          decorations.push({
-            from: openMarkerStartInDoc,
-            to: openMarkerEndInDoc,
-            decoration: Decoration.mark({ class: syntaxClass })
-          });
-          decorations.push({
-            from: contentStartInDoc,
-            to: contentEndInDoc,
-            decoration: Decoration.mark({ class: "markdown-italic-active" })
-          });
-          decorations.push({
-            from: closeMarkerStartInDoc,
-            to: closeMarkerEndInDoc,
-            decoration: Decoration.mark({ class: syntaxClass })
-          });
-        } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, Decoration.mark({ class: "markdown-italic-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        }
-      }
-    });
-  }
-};
-var StrikethroughDecorator = class {
-  constructor() {
-    // Improved regex for ~~strikethrough~~ with proper boundary conditions
-    this.strikethroughRegex = /(?<!\\|~)(~~)(?!\s|~)([^~\n]+?)(?<!\s)(~~)(?!~)/g;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    const localRegex = new RegExp(this.strikethroughRegex.source, "g");
-    let match;
-    const markerLen = 2;
-    while ((match = localRegex.exec(docText)) !== null) {
-      const matchStartIndexInSlice = match.index;
-      const fullMatchText = match[0];
-      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-        continue;
-      }
-      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-      const openMarkerStartInDoc = fullMatchStartInDoc;
-      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-      const contentStartInDoc = openMarkerEndInDoc;
-      const contentEndInDoc = fullMatchEndInDoc - markerLen;
-      const closeMarkerStartInDoc = contentEndInDoc;
-      const closeMarkerEndInDoc = fullMatchEndInDoc;
-      if (contentStartInDoc >= contentEndInDoc) {
-        continue;
-      }
-      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-      const contentClass = "markdown-strikethrough-active";
-      if (decorations) {
-        decorations.push({
-          from: openMarkerStartInDoc,
-          to: openMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-        decorations.push({
-          from: contentStartInDoc,
-          to: contentEndInDoc,
-          decoration: Decoration.mark({ class: contentClass })
-        });
-        decorations.push({
-          from: closeMarkerStartInDoc,
-          to: closeMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-      } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-      }
-    }
-  }
-};
-var CodeDecorator = class {
-  constructor() {
-    // Regex for `code`
-    // It looks for non-greedy content between single backticks.
-    // It also tries to avoid matching parts of code blocks (```) by not allowing backticks right next to the content ones,
-    // though full code block handling is typically a separate, more complex parser.
-    this.codeRegex = /(?<!\\)(?<!`)`(?=\S)([^`\n]+?)(?<=\S)`(?!`)/g;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    const localRegex = new RegExp(this.codeRegex.source, "g");
-    let match;
-    const markerLen = 1;
-    try {
-      while ((match = localRegex.exec(docText)) !== null) {
-        const matchStartIndexInSlice = match.index;
-        const fullMatchText = match[0];
-        if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-          continue;
-        }
-        const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-        const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-        const openMarkerStartInDoc = fullMatchStartInDoc;
-        const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-        const contentStartInDoc = openMarkerEndInDoc;
-        const contentEndInDoc = fullMatchEndInDoc - markerLen;
-        const closeMarkerStartInDoc = contentEndInDoc;
-        const closeMarkerEndInDoc = fullMatchEndInDoc;
-        if (contentStartInDoc >= contentEndInDoc) {
-          continue;
-        }
-        const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-        const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-        if (decorations) {
-          decorations.push({
-            from: openMarkerStartInDoc,
-            to: openMarkerEndInDoc,
-            decoration: Decoration.mark({ class: syntaxClass })
-          });
-          decorations.push({
-            from: contentStartInDoc,
-            to: contentEndInDoc,
-            decoration: Decoration.mark({ class: "markdown-code-active" })
-          });
-          decorations.push({
-            from: closeMarkerStartInDoc,
-            to: closeMarkerEndInDoc,
-            decoration: Decoration.mark({ class: syntaxClass })
-          });
-        } else {
-          builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-          builder.add(contentStartInDoc, contentEndInDoc, Decoration.mark({ class: "markdown-code-active" }));
-          builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        }
-      }
-    } catch (error) {
-      console.error("Error processing code syntax:", error);
-    }
-  }
-  // End of process method
-};
-var HighlightDecorator = class {
-  constructor() {
-    // Regex for ==highlight== with proper boundary conditions
-    this.highlightRegex = /(?<![\\=])(==)(?!\s|=)([^=\n]+?)(?<!\s)(==)(?!=)/g;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    const localRegex = new RegExp(this.highlightRegex.source, "g");
-    let match;
-    const markerLen = 2;
-    while ((match = localRegex.exec(docText)) !== null) {
-      const matchStartIndexInSlice = match.index;
-      const fullMatchText = match[0];
-      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-        continue;
-      }
-      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-      const openMarkerStartInDoc = fullMatchStartInDoc;
-      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-      const contentStartInDoc = openMarkerEndInDoc;
-      const contentEndInDoc = fullMatchEndInDoc - markerLen;
-      const closeMarkerStartInDoc = contentEndInDoc;
-      const closeMarkerEndInDoc = fullMatchEndInDoc;
-      if (contentStartInDoc >= contentEndInDoc) {
-        continue;
-      }
-      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-      const contentClass = "markdown-highlight-active";
-      if (decorations) {
-        decorations.push({
-          from: openMarkerStartInDoc,
-          to: openMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-        decorations.push({
-          from: contentStartInDoc,
-          to: contentEndInDoc,
-          decoration: Decoration.mark({ class: contentClass })
-        });
-        decorations.push({
-          from: closeMarkerStartInDoc,
-          to: closeMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-      } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        builder.add(contentStartInDoc, contentEndInDoc, Decoration.mark({ class: contentClass }));
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-      }
-    }
-  }
-};
-var OldBoldDecorator = class {
-  constructor() {
-    // Regex for __bold__ (old style markdown)
-    this.oldBoldRegex = /(?<!_)_{2}(?!\s)([^_]+?)(?<!\s)_{2}(?!_)/g;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    const markerLen = 2;
-    const localRegex = new RegExp(this.oldBoldRegex.source, "g");
-    let match;
-    while ((match = localRegex.exec(docText)) !== null) {
-      const matchStartIndexInSlice = match.index;
-      const fullMatchText = match[0];
-      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-        continue;
-      }
-      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-      const openMarkerStartInDoc = fullMatchStartInDoc;
-      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-      const contentStartInDoc = openMarkerEndInDoc;
-      const contentEndInDoc = fullMatchEndInDoc - markerLen;
-      const closeMarkerStartInDoc = contentEndInDoc;
-      const closeMarkerEndInDoc = fullMatchEndInDoc;
-      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-      if (decorations) {
-        decorations.push({
-          from: openMarkerStartInDoc,
-          to: openMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-        if (contentStartInDoc < contentEndInDoc) {
-          decorations.push({
-            from: contentStartInDoc,
-            to: contentEndInDoc,
-            decoration: Decoration.mark({
-              class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
-            })
-          });
-        }
-        decorations.push({
-          from: closeMarkerStartInDoc,
-          to: closeMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-      } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        if (contentStartInDoc < contentEndInDoc) {
-          builder.add(
-            contentStartInDoc,
-            contentEndInDoc,
-            Decoration.mark({
-              class: isNearSyntax ? "markdown-bold-active" : "markdown-old-syntax-red"
-            })
-          );
-        }
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-      }
-    }
-  }
-};
-var OldItalicDecorator = class {
-  constructor() {
-    // Regex for *italic* (old style markdown)
-    this.oldItalicRegex = /(?<!\*\*|\*)(?:^|[^\*])\*(?!\s|\*\*)([^\*\n]+?)(?<!\s)\*(?!\*)/g;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions, decorations } = context;
-    const markerLen = 1;
-    const localRegex = new RegExp(this.oldItalicRegex.source, "g");
-    let match;
-    while ((match = localRegex.exec(docText)) !== null) {
-      let fullMatchText = match[0];
-      let contentText = match[1];
-      let matchStartIndexInSlice = match.index;
-      if (fullMatchText.startsWith("*") === false && fullMatchText.length > contentText.length + 2) {
-        matchStartIndexInSlice += fullMatchText.indexOf("*" + contentText + "*");
-        fullMatchText = "*" + contentText + "*";
-      }
-      if (matchStartIndexInSlice > 0 && docText.charAt(matchStartIndexInSlice - 1) === "\\") {
-        continue;
-      }
-      const charBeforeOpenMarker = matchStartIndexInSlice > 0 ? docText.charAt(matchStartIndexInSlice - 1) : " ";
-      const charAfterCloseMarker = matchStartIndexInSlice + fullMatchText.length < docText.length ? docText.charAt(matchStartIndexInSlice + fullMatchText.length) : " ";
-      const wordCharRegex = /[a-zA-Z0-9]/;
-      if (wordCharRegex.test(charBeforeOpenMarker) && wordCharRegex.test(charAfterCloseMarker)) {
-        if (docText.charAt(matchStartIndexInSlice + markerLen) !== " " && docText.charAt(matchStartIndexInSlice + fullMatchText.length - markerLen - 1) !== " ") {
-          continue;
-        }
-      }
-      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      const fullMatchEndInDoc = fullMatchStartInDoc + fullMatchText.length;
-      const openMarkerStartInDoc = fullMatchStartInDoc;
-      const openMarkerEndInDoc = openMarkerStartInDoc + markerLen;
-      const contentStartInDoc = openMarkerEndInDoc;
-      const contentEndInDoc = fullMatchEndInDoc - markerLen;
-      const closeMarkerStartInDoc = contentEndInDoc;
-      const closeMarkerEndInDoc = fullMatchEndInDoc;
-      if (contentStartInDoc >= contentEndInDoc) {
-        continue;
-      }
-      const isNearSyntax = isCursorNearRange(cursorPositions, openMarkerStartInDoc, closeMarkerEndInDoc);
-      const syntaxClass = isNearSyntax ? "markdown-syntax-active" : "markdown-syntax-dim";
-      if (decorations) {
-        decorations.push({
-          from: openMarkerStartInDoc,
-          to: openMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-        decorations.push({
-          from: contentStartInDoc,
-          to: contentEndInDoc,
-          decoration: Decoration.mark({
-            class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
-          })
-        });
-        decorations.push({
-          from: closeMarkerStartInDoc,
-          to: closeMarkerEndInDoc,
-          decoration: Decoration.mark({ class: syntaxClass })
-        });
-      } else {
-        builder.add(openMarkerStartInDoc, openMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-        builder.add(
-          contentStartInDoc,
-          contentEndInDoc,
-          Decoration.mark({
-            class: isNearSyntax ? "markdown-italic-active" : "markdown-old-syntax-red"
-          })
-        );
-        builder.add(closeMarkerStartInDoc, closeMarkerEndInDoc, Decoration.mark({ class: syntaxClass }));
-      }
-    }
-  }
-};
-var ListDecorator = class {
-  constructor() {
-    // Regex to match list items at the beginning of a line
-    // Captures the specific marker used (-, +, *) or (1., 2., etc.)
-    this.listItemRegex = /^(\s*)([-+*]|\d+\.)(\s+)(.*)$/gm;
-  }
-  process(context) {
-    const { builder, docText, textSliceFrom, cursorPositions } = context;
-    const extContext = context;
-    extContext.decorations || [];
-    this.processListItems(context, this.listItemRegex);
-  }
-  processListItems(context, regex) {
-    const { builder, docText, textSliceFrom, cursorPositions } = context;
-    const extContext = context;
-    const decorations = extContext.decorations || [];
-    const htmlRegions = extContext.htmlEditRegions || [];
-    const localRegex = new RegExp(regex.source, "gm");
-    let match;
-    while ((match = localRegex.exec(docText)) !== null) {
-      const [fullMatch, leadingWhitespace, marker, spacesAfterMarker, content] = match;
-      const isNumberedList = /^\d+\.$/.test(marker);
-      const matchStartIndexInSlice = match.index;
-      const fullMatchStartInDoc = textSliceFrom + matchStartIndexInSlice;
-      const markerStartInDoc = fullMatchStartInDoc + leadingWhitespace.length;
-      const markerEndInDoc = markerStartInDoc + marker.length;
-      const isInsideHtml2 = htmlRegions.some(
-        (region) => markerStartInDoc >= region.from && markerEndInDoc <= region.to
-      );
-      if (isInsideHtml2) {
-        continue;
-      }
-      const isAdjacentToMarker = cursorPositions.some(
-        (cursor) => cursor === markerStartInDoc || cursor === markerEndInDoc
-      );
-      if (isNumberedList) {
-        const decoration = Decoration.mark({ class: isAdjacentToMarker ? "markdown-syntax-active" : "markdown-list-dim" });
-        if (decorations) {
-          decorations.push({
-            from: markerStartInDoc,
-            to: markerEndInDoc,
-            decoration
-          });
-        } else {
-          builder.add(markerStartInDoc, markerEndInDoc, decoration);
-        }
-      } else if (isAdjacentToMarker) {
-        const decoration = Decoration.mark({ class: "markdown-syntax-active" });
-        if (decorations) {
-          decorations.push({
-            from: markerStartInDoc,
-            to: markerEndInDoc,
-            decoration
-          });
-        } else {
-          builder.add(markerStartInDoc, markerEndInDoc, decoration);
-        }
-      } else {
-        if (decorations) {
-          decorations.push({
-            from: markerStartInDoc,
-            to: markerEndInDoc,
-            decoration: Decoration.replace({
-              widget: new ListBulletWidget(marker),
-              class: "markdown-list-dim"
-            })
-          });
-        } else {
-          builder.add(markerStartInDoc, markerEndInDoc, Decoration.replace({
-            widget: new ListBulletWidget(marker),
-            class: "markdown-list-dim"
-          }));
-        }
-      }
-    }
-  }
-};
-var ListBulletWidget = class extends WidgetType {
-  constructor(originalMarker = "\u2022", isOrdered = false) {
-    super();
-    this.originalMarker = originalMarker;
-    this.isOrdered = isOrdered;
-  }
-  eq(other) {
-    return other.originalMarker === this.originalMarker && other.isOrdered === this.isOrdered;
-  }
-  toDOM() {
-    const span = document.createElement("span");
-    span.textContent = "\u2022";
-    span.className = "markdown-list-dim";
-    return span;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-function createCopyButton(textToCopy) {
-  const button = document.createElement("button");
-  button.className = "cm-indent-copy-button";
-  button.innerHTML = "<span>Copy</span>";
-  button.title = "Copy code block";
-  button.addEventListener("click", (event) => {
-    event.stopPropagation();
-    navigator.clipboard.writeText(textToCopy).then(() => {
-      const originalText = button.innerHTML;
-      button.innerHTML = "<span>Copied!</span>";
-      setTimeout(() => {
-        button.innerHTML = originalText;
-      }, 1500);
-    }).catch((err) => {
-      console.error("Failed to copy text: ", err);
-    });
-  });
-  return button;
-}
-var CodeBlockWidget = class extends WidgetType {
-  constructor(codeLines, language, fullBlockRawText) {
-    super();
-    this.codeLines = codeLines;
-    this.language = language;
-    this.fullBlockRawText = fullBlockRawText;
-  }
-  toDOM(view) {
-    const container = document.createElement("div");
-    container.className = "cm-preview-indent-block cm-fenced-code-block-preview";
-    const preElement = document.createElement("pre");
-    preElement.className = "cm-preview-indent-text";
-    const codeElement = document.createElement("code");
-    if (this.language) {
-      codeElement.className = `language-${this.language.toLowerCase()}`;
-    }
-    codeElement.textContent = this.codeLines.join("\n");
-    preElement.appendChild(codeElement);
-    container.appendChild(preElement);
-    container.appendChild(createCopyButton(this.fullBlockRawText));
-    return container;
-  }
-  ignoreEvent(event) {
-    if (event.type === "click" && event.target.closest(".cm-indent-copy-button")) {
-      return false;
-    }
-    return true;
-  }
-};
-var FencedCodeBlockDecorator = class {
-  process(context) {
-    const { state, docText, textSliceFrom, decorations, currentMode } = context;
-    if (!decorations) {
-      return;
-    }
-    const lines = docText.split("\n");
-    if (currentMode === "preview") {
-      let i = 0;
-      while (i < lines.length) {
-        const lineText = lines[i];
-        const fenceMatch = lineText.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
-        if (fenceMatch) {
-          const leadingWhitespace = fenceMatch[1];
-          const fenceType = fenceMatch[2];
-          const langSpecifierRaw = fenceMatch[3].trim();
-          const language = langSpecifierRaw.split(/\s+/)[0] || null;
-          const blockStartLineIndex = i;
-          let currentPosInSliceOffset = 0;
-          for (let k = 0; k < blockStartLineIndex; k++) {
-            currentPosInSliceOffset += lines[k].length + 1;
+  /**
+   * Builds the set of atomic ranges based on the current document content
+   * @param view - The CodeMirror editor view
+   * @returns A RangeSet containing all atomic indent ranges
+   */
+  buildAtomicRanges(view) {
+    const builder = new RangeSetBuilder2();
+    for (const { from, to } of view.visibleRanges) {
+      let pos = from;
+      while (pos <= to) {
+        const line = view.state.doc.lineAt(pos);
+        const lineText = line.text;
+        let searchPosInLine = 0;
+        while ((searchPosInLine = lineText.indexOf(INDENT_UNIT2, searchPosInLine)) !== -1) {
+          const matchStart = line.from + searchPosInLine;
+          const matchEnd = matchStart + INDENT_UNIT2.length;
+          if (matchStart < to && matchEnd > from) {
+            builder.add(matchStart, matchEnd, Decoration13.mark({
+              class: "cm-atomic-indent"
+            }));
           }
-          const blockStartPosInDoc = textSliceFrom + currentPosInSliceOffset;
-          let currentBlockRawLines = [lineText];
-          let codeContentLines = [];
-          i++;
-          let blockEndLineIndex = -1;
-          while (i < lines.length) {
-            const currentLineText = lines[i];
-            currentBlockRawLines.push(currentLineText);
-            const closingFenceMatch = currentLineText.match(/^(\s*)(`{3,}|~{3,})\s*$/);
-            if (closingFenceMatch && closingFenceMatch[1] === leadingWhitespace && closingFenceMatch[2] === fenceType) {
-              blockEndLineIndex = i;
-              currentPosInSliceOffset = 0;
-              for (let k = 0; k <= blockEndLineIndex; k++) {
-                currentPosInSliceOffset += lines[k].length + 1;
-              }
-              let blockEndPosInDoc = textSliceFrom + currentPosInSliceOffset;
-              if (blockEndLineIndex === lines.length - 1 && !docText.endsWith("\n")) {
-                blockEndPosInDoc = textSliceFrom + currentPosInSliceOffset - 1;
-              }
-              const fullBlockRawText = currentBlockRawLines.join("\n");
-              const widget = new CodeBlockWidget(codeContentLines, language, fullBlockRawText);
-              decorations.push({
-                from: blockStartPosInDoc,
-                to: blockEndPosInDoc,
-                decoration: Decoration.replace({ widget, block: true })
-              });
-              break;
-            } else {
-              if (leadingWhitespace.length > 0 && currentLineText.startsWith(leadingWhitespace)) {
-                codeContentLines.push(currentLineText.substring(leadingWhitespace.length));
-              } else if (leadingWhitespace.length === 0) {
-                codeContentLines.push(currentLineText);
-              } else {
-                codeContentLines.push(currentLineText);
+          searchPosInLine = searchPosInLine + INDENT_UNIT2.length;
+          if (searchPosInLine >= line.length) break;
+        }
+        if (isListItem(lineText)) {
+          const leadingSpacesMatch = lineText.match(/^(\s+)/);
+          if (leadingSpacesMatch && leadingSpacesMatch[1]) {
+            const spaces2 = leadingSpacesMatch[1];
+            for (let i = 0; i < spaces2.length; i += 4) {
+              const chunkSize = Math.min(4, spaces2.length - i);
+              if (chunkSize === 4) {
+                builder.add(
+                  line.from + i,
+                  line.from + i + 4,
+                  Decoration13.mark({
+                    class: "cm-atomic-indent cm-list-indent"
+                  })
+                );
               }
             }
-            i++;
           }
         }
-        i++;
-      }
-    } else if (currentMode === "live") {
-      let lineStartIndexInSlice = 0;
-      for (let i = 0; i < lines.length; ) {
-        const lineText = lines[i];
-        const currentLineActualStartInDoc = textSliceFrom + lineStartIndexInSlice;
-        currentLineActualStartInDoc + lineText.length;
-        const fenceMatch = lineText.match(/^(\s*)(`{3,}|~{3,})(.*)$/);
-        if (fenceMatch) {
-          const leadingWhitespace = fenceMatch[1];
-          const fenceType = fenceMatch[2];
-          const langSpecifierRaw = fenceMatch[3].trim();
-          decorations.push({
-            from: currentLineActualStartInDoc,
-            to: currentLineActualStartInDoc,
-            // For Decoration.line
-            decoration: Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
-          });
-          if (langSpecifierRaw) {
-            const langSpecOffsetInLine = leadingWhitespace.length + fenceType.length;
-            decorations.push({
-              from: currentLineActualStartInDoc + langSpecOffsetInLine,
-              to: currentLineActualStartInDoc + langSpecOffsetInLine + langSpecifierRaw.length,
-              decoration: Decoration.mark({ class: "cm-live-fenced-code-lang" })
-            });
-          }
-          let nextLineStartInSliceForInnerLoop = lineStartIndexInSlice + lineText.length + 1;
-          let foundClosingFence = false;
-          for (let j = i + 1; j < lines.length; j++) {
-            const innerLineText = lines[j];
-            const innerLineActualStartInDoc = textSliceFrom + nextLineStartInSliceForInnerLoop;
-            innerLineActualStartInDoc + innerLineText.length;
-            const closingFenceMatch = innerLineText.match(/^(\s*)(`{3,}|~{3,})\s*$/);
-            if (closingFenceMatch && closingFenceMatch[1] === leadingWhitespace && closingFenceMatch[2] === fenceType) {
-              decorations.push({
-                from: innerLineActualStartInDoc,
-                to: innerLineActualStartInDoc,
-                // For Decoration.line
-                decoration: Decoration.line({ attributes: { class: "cm-live-fenced-code-fence-line" } })
-              });
-              lineStartIndexInSlice = nextLineStartInSliceForInnerLoop + innerLineText.length + 1;
-              i = j + 1;
-              foundClosingFence = true;
-              break;
-            } else {
-              decorations.push({
-                from: innerLineActualStartInDoc,
-                to: innerLineActualStartInDoc,
-                // For Decoration.line, 'to' is same as 'from'
-                decoration: Decoration.line({
-                  attributes: { class: "cm-live-fenced-code-content-line" },
-                  atomic: true
-                  // Prevent other Markdown rules from processing inside
+        if (isBlockquote(lineText)) {
+          const blockquoteMatches = lineText.matchAll(/>\s*/g);
+          let offset = 0;
+          for (const match of blockquoteMatches) {
+            if (match.index !== void 0) {
+              const matchPos = line.from + match.index;
+              const matchLen = match[0].length;
+              builder.add(
+                matchPos,
+                matchPos + matchLen,
+                Decoration13.mark({
+                  class: "cm-atomic-indent cm-blockquote-indent"
                 })
-              });
-              nextLineStartInSliceForInnerLoop += innerLineText.length + 1;
+              );
+              offset += matchLen;
             }
-          }
-          if (!foundClosingFence) {
-            lineStartIndexInSlice = nextLineStartInSliceForInnerLoop;
-            i = lines.length;
-          }
-          continue;
-        }
-        lineStartIndexInSlice += lineText.length + 1;
-        i++;
-      }
-    }
-  }
-};
-var HR_REGEX = /^(?:---|___|\*\*\*)\s*$/;
-var HorizontalRuleWidget = class extends WidgetType {
-  get estimatedHeight() {
-    return 26;
-  }
-  toDOM() {
-    const hr = document.createElement("hr");
-    hr.className = "cm-rendered-hr";
-    return hr;
-  }
-  ignoreEvent() {
-    return false;
-  }
-};
-var HorizontalRuleDecorator = ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = this.buildDecorations(view);
-    }
-    update(update) {
-      if (update.docChanged || update.viewportChanged || update.selectionSet || // Rebuild if selection changes (cursor moves)
-      update.state.field(markdownSyntaxStateField, false) !== update.startState.field(markdownSyntaxStateField, false)) {
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    buildDecorations(view) {
-      const builder = new RangeSetBuilder();
-      const { state } = view;
-      const currentMode = state.field(markdownSyntaxStateField).currentMode;
-      const cursorPos = state.selection.main.head;
-      if (currentMode === "live") {
-        for (const { from, to } of view.visibleRanges) {
-          for (let pos = from; pos <= to; ) {
-            const line = state.doc.lineAt(pos);
-            if (line.length === 0 && pos === to && line.from !== line.to) {
-              pos = line.to + 1;
-              continue;
-            }
-            const match = HR_REGEX.exec(line.text);
-            if (match) {
-              const lineStart = line.from;
-              const lineEnd = line.to;
-              let showSyntaxAsText = false;
-              if (cursorPos >= lineStart && cursorPos <= lineEnd) {
-                showSyntaxAsText = true;
-              } else {
-                for (const selectionRange of state.selection.ranges) {
-                  if (selectionRange.from <= lineEnd && selectionRange.to >= lineStart) {
-                    showSyntaxAsText = true;
-                    break;
-                  }
-                }
-              }
-              if (showSyntaxAsText) {
-                builder.add(lineStart, lineEnd, Decoration.mark({ class: "cm-hr-syntax-active" }));
-              } else {
-                builder.add(lineStart, lineEnd, Decoration.replace({ widget: new HorizontalRuleWidget() }));
-              }
-            }
-            pos = line.to + 1;
           }
         }
-      } else if (currentMode === "preview") {
-        for (const { from, to } of view.visibleRanges) {
-          for (let pos = from; pos <= to; ) {
-            const line = state.doc.lineAt(pos);
-            if (line.length === 0 && pos === to && line.from !== line.to) {
-              pos = line.to + 1;
-              continue;
-            }
-            const match = HR_REGEX.exec(line.text);
-            if (match) {
-              builder.add(line.from, line.to, Decoration.replace({ widget: new HorizontalRuleWidget() }));
-            }
-            pos = line.to + 1;
-          }
-        }
+        pos = line.to + 1;
       }
-      return builder.finish();
     }
-  },
-  {
-    decorations: (v) => v.decorations
-  }
-);
-var LineBreakVisualIndicator = class extends WidgetType {
-  toDOM() {
-    const span = document.createElement("span");
-    span.className = "cm-line-break-indicator";
-    span.innerHTML = "\u21B5";
-    span.style.color = "#888";
-    span.style.fontSize = "0.85em";
-    span.style.verticalAlign = "text-top";
-    return span;
-  }
-  ignoreEvent() {
-    return false;
+    const result = builder.finish();
+    return result;
   }
 };
-var liveLineBreakMark = Decoration.mark({
-  class: "cm-line-break-syntax"
+var atomicIndentPlugin = ViewPlugin.fromClass(AtomicIndentPluginValue);
+var atomicRangesFacetProvider = CMEditorView.atomicRanges.of((view) => {
+  const pluginValue = view.plugin(atomicIndentPlugin);
+  if (pluginValue) {
+    return pluginValue.atomicRanges || RangeSet.empty;
+  }
+  return RangeSet.empty;
 });
-function buildLineBreakDecorations(view) {
-  const builder = new RangeSetBuilder();
-  const modeState = view.state.field(markdownSyntaxStateField, false);
-  const currentMode = modeState ? modeState.currentMode : "live";
-  for (const { from, to } of view.visibleRanges) {
-    let pos = from;
-    while (pos <= to) {
-      const line = view.state.doc.lineAt(pos);
-      let lineText = line.text;
-      let trailingSpacesMatch = lineText.match(/(\s{2,})$/);
-      if (trailingSpacesMatch && trailingSpacesMatch[1]) {
-        const trailingSpaces = trailingSpacesMatch[1];
-        const spacesStartPos = line.to - trailingSpaces.length;
-        if (currentMode === "preview") {
-          builder.add(
-            spacesStartPos,
-            line.to,
-            liveLineBreakMark
-          );
-          builder.add(
-            line.to,
-            line.to,
-            Decoration.widget({
-              widget: new LineBreakVisualIndicator(),
-              side: -1
-              // Position before the newline
-            })
-          );
-          if (pos < view.state.doc.length) {
-            builder.add(
-              line.to,
-              line.to,
-              Decoration.mark({
-                class: "cm-line-break-after",
-                attributes: { "data-line-break": "true" }
-              })
-            );
-          }
-        } else {
-          builder.add(
-            spacesStartPos,
-            line.to,
-            Decoration.mark({
-              class: "cm-line-break-syntax",
-              attributes: { "data-line-break": "true" }
-            })
-          );
-        }
-      }
-      pos = line.to + 1;
-    }
-  }
-  return builder.finish();
-}
-var LineBreakDecorator = ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = buildLineBreakDecorations(view);
-    }
-    update(update) {
-      const modeStateChanged = update.startState.field(markdownSyntaxStateField, false)?.currentMode !== update.state.field(markdownSyntaxStateField, false)?.currentMode;
-      if (update.docChanged || update.viewportChanged || update.selectionSet || modeStateChanged) {
-        this.decorations = buildLineBreakDecorations(update.view);
-      }
-    }
+var atomicIndentsStyle = CMEditorView.baseTheme({
+  ".cm-atomic-indent": {
+    caretColor: "transparent"
   },
-  {
-    decorations: (v) => v.decorations
+  ".cm-list-indent": {
+    backgroundColor: "rgba(0, 0, 0, 0.03)"
+  },
+  ".cm-blockquote-indent": {
+    backgroundColor: "rgba(0, 0, 0, 0.03)"
   }
-);
+});
+var atomicIndents = [
+  atomicIndentPlugin,
+  atomicRangesFacetProvider,
+  atomicIndentsStyle
+];
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/index.ts
+import { EditorView as EditorView13, ViewPlugin as ViewPlugin2, Decoration as Decoration16 } from "@codemirror/view";
+import { StateEffect as StateEffect2, StateField as StateField2 } from "@codemirror/state";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/decorations.ts
+import { Decoration as Decoration15, WidgetType as WidgetType5 } from "@codemirror/view";
+import { RangeSetBuilder as RangeSetBuilder4 } from "@codemirror/state";
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts
+import { WidgetType as WidgetType4, EditorView as EditorView10 } from "@codemirror/view";
 
 // src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/types.ts
 var VOID_TAGS = /* @__PURE__ */ new Set([
@@ -8278,11 +8821,17 @@ var DANGEROUS_TAGS = /* @__PURE__ */ new Set([
 
 // src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts
 var DEBUG = false;
-var HtmlPreviewWidget = class extends WidgetType {
+var HtmlPreviewWidget = class extends WidgetType4 {
   constructor(content, isMultiline = false) {
     super();
     this.content = content;
     this.isMultiline = isMultiline;
+    if (DEBUG) {
+      console.log("Creating HTML widget:", {
+        content: content.substring(0, 100) + (content.length > 100 ? "..." : ""),
+        isMultiline
+      });
+    }
   }
   eq(other) {
     return this.content === other.content && this.isMultiline === other.isMultiline;
@@ -8292,7 +8841,7 @@ var HtmlPreviewWidget = class extends WidgetType {
    */
   toDOM() {
     try {
-      if (DEBUG) ;
+      if (DEBUG) console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
       const wrapper = document.createElement("div");
       wrapper.className = "cm-html-preview-widget";
       if (this.isMultiline) {
@@ -8462,6 +9011,7 @@ var HtmlPreviewWidget = class extends WidgetType {
         button.addEventListener("click", (e) => e.preventDefault());
       });
     } catch (error) {
+      if (DEBUG) console.error("Error disabling interactive elements:", error);
     }
   }
   /**
@@ -8476,7 +9026,7 @@ var HtmlPreviewWidget = class extends WidgetType {
           for (const key in editorEl) {
             if (key.startsWith("__")) {
               const value = editorEl[key];
-              if (value instanceof EditorView) {
+              if (value instanceof EditorView10) {
                 return value;
               }
             }
@@ -8536,6 +9086,10 @@ var HtmlPreviewWidget = class extends WidgetType {
     return blockElements.includes(tagName.toUpperCase());
   }
 };
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/syntax-highlighter.ts
+import { Decoration as Decoration14 } from "@codemirror/view";
+import { RangeSetBuilder as RangeSetBuilder3 } from "@codemirror/state";
 var HtmlSyntaxHighlighter = class {
   /**
    * Highlight HTML code with appropriate syntax classes
@@ -8543,13 +9097,13 @@ var HtmlSyntaxHighlighter = class {
   static highlight(region) {
     try {
       if (!region.content || region.content.length === 0) {
-        return Decoration.none;
+        return Decoration14.none;
       }
-      const builder = new RangeSetBuilder();
+      const builder = new RangeSetBuilder3();
       builder.add(
         region.from,
         region.to,
-        Decoration.mark({
+        Decoration14.mark({
           class: "cm-html-code-mode cm-disable-markdown-parsing cm-plain-text",
           inclusive: true
         })
@@ -8558,7 +9112,7 @@ var HtmlSyntaxHighlighter = class {
       return builder.finish();
     } catch (error) {
       console.error("Error in HTML syntax highlighter:", error);
-      return Decoration.none;
+      return Decoration14.none;
     }
   }
   /**
@@ -8663,11 +9217,14 @@ var HtmlSyntaxHighlighter = class {
       builder.add(
         token.from,
         token.to,
-        Decoration.mark({ class: token.class })
+        Decoration14.mark({ class: token.class })
       );
     }
   }
 };
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/tag-detector.ts
+import { EditorView as EditorView11 } from "@codemirror/view";
 function detectHtmlRegions(view) {
   try {
     const regions = [];
@@ -8739,7 +9296,8 @@ function parseHtmlHierarchy(text, commentRegions) {
           break;
         }
       }
-      if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) ;
+      if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
+      }
     } else if (isSelfClosingTag) {
       regions.push({
         from: position,
@@ -8800,7 +9358,7 @@ function findHtmlComments(text) {
 function isCursorNearRegion(view, region) {
   const selection = view.state.selection.main;
   const cursor = selection.head;
-  view.state.doc;
+  const doc = view.state.doc;
   if (cursor > region.from && cursor < region.to) {
     return true;
   }
@@ -8810,7 +9368,7 @@ function isCursorNearRegion(view, region) {
   return false;
 }
 function isEditorInPreviewMode(view) {
-  if (!view.state.facet(EditorView.editable)) {
+  if (!view.state.facet(EditorView11.editable)) {
     return true;
   }
   let element = view.dom;
@@ -8827,18 +9385,18 @@ function isEditorInPreviewMode(view) {
 var DEBUG2 = false;
 function buildHtmlDecorations(view) {
   try {
-    if (DEBUG2) ;
+    if (DEBUG2) console.log("Building HTML decorations");
     const regions = detectHtmlRegions(view);
     if (!regions.length) {
-      if (DEBUG2) ;
-      return Decoration.none;
+      if (DEBUG2) console.log("No HTML regions found");
+      return Decoration15.none;
     }
-    if (DEBUG2) ;
+    if (DEBUG2) console.log(`Found ${regions.length} HTML regions:`, regions);
     const inPreviewMode = isEditorInPreviewMode(view);
     return buildSmartDecorations(regions, view, inPreviewMode);
   } catch (error) {
     console.error("Error building HTML decorations:", error);
-    return Decoration.none;
+    return Decoration15.none;
   }
 }
 function buildSmartDecorations(regions, view, inPreviewMode) {
@@ -8883,15 +9441,16 @@ function buildSmartDecorations(regions, view, inPreviewMode) {
       }
     }
   }
+  if (DEBUG2) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
   for (let i = 0; i < regions.length; i++) {
     const region = regions[i];
     try {
       if (editModeRegions.has(i)) {
-        if (DEBUG2) ;
+        if (DEBUG2) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
         allDecorations.push({
           from: region.from,
           to: region.to,
-          decoration: Decoration.mark({
+          decoration: Decoration15.mark({
             class: "cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown",
             inclusiveStart: true,
             inclusiveEnd: true,
@@ -8915,7 +9474,7 @@ function buildSmartDecorations(regions, view, inPreviewMode) {
           allDecorations.push(...syntaxDecorations);
         }
       } else {
-        if (DEBUG2) ;
+        if (DEBUG2) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
         let htmlContent = region.content;
         const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
         if (tagMatch) {
@@ -8944,7 +9503,7 @@ function buildSmartDecorations(regions, view, inPreviewMode) {
           allDecorations.push({
             from: region.from,
             to: region.to,
-            decoration: Decoration.replace({
+            decoration: Decoration15.replace({
               widget: new HtmlPreviewWidget(htmlContent, region.isMultiline)
             })
           });
@@ -8954,7 +9513,7 @@ function buildSmartDecorations(regions, view, inPreviewMode) {
       console.error("Error processing region:", error, region);
     }
   }
-  const builder = new RangeSetBuilder();
+  const builder = new RangeSetBuilder4();
   try {
     const positionMap = /* @__PURE__ */ new Map();
     for (const deco of allDecorations) {
@@ -8987,14 +9546,14 @@ function buildSmartDecorations(regions, view, inPreviewMode) {
         try {
           builder.add(deco.from, deco.to, deco.decoration);
         } catch (e) {
-          if (DEBUG2) ;
+          if (DEBUG2) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
         }
       }
     }
     return builder.finish();
   } catch (error) {
     console.error("Critical error in decoration building:", error);
-    return Decoration.none;
+    return Decoration15.none;
   }
 }
 
@@ -9267,15 +9826,18 @@ var HtmlDecoratorPlugin = class {
         }
       });
     }
+    let cursorMovedToFromHtml = false;
     if (cursorMoved) {
       const currentPosition = update.state.selection.main.head;
       const cursorInHtmlRegion = this.htmlRegions.some(
         (region) => currentPosition >= region.from && currentPosition <= region.to
       );
       if (!cursorInHtmlRegion) {
-        this.htmlRegions.some(
+        cursorMovedToFromHtml = this.htmlRegions.some(
           (region) => currentPosition === region.from || currentPosition === region.to
         );
+      } else {
+        cursorMovedToFromHtml = true;
       }
     }
     if (contentChanged && htmlContentChanged || cursorMoved) {
@@ -9337,9 +9899,9 @@ var HtmlDecoratorPlugin = class {
     if (this.debug) console.log("HtmlDecorator plugin destroyed");
   }
 };
-var setHtmlDecorations = StateEffect.define();
-var htmlDecorationsField = StateField.define({
-  create: () => Decoration.none,
+var setHtmlDecorations = StateEffect2.define();
+var htmlDecorationsField = StateField2.define({
+  create: () => Decoration16.none,
   update: (decorations, tr) => {
     decorations = decorations.map(tr.changes);
     for (const effect of tr.effects) {
@@ -9349,876 +9911,215 @@ var htmlDecorationsField = StateField.define({
     }
     return decorations;
   },
-  provide: (field) => EditorView.decorations.from(field)
+  provide: (field) => EditorView13.decorations.from(field)
 });
 function htmlDecorator() {
   return [
     htmlDecorationsField,
-    ViewPlugin.define((view) => new HtmlDecoratorPlugin(view))
+    ViewPlugin2.define((view) => new HtmlDecoratorPlugin(view))
   ];
 }
-var VerticalBarWidget = class extends WidgetType {
-  toDOM() {
-    const bar = document.createElement("span");
-    bar.className = "cm-blockquote-bar";
-    return bar;
-  }
-  ignoreEvent() {
-    return true;
-  }
-};
-var BlockquoteBarWidget = class extends WidgetType {
-  constructor(level) {
-    super();
-    this.level = level;
-  }
-  toDOM() {
-    const span = document.createElement("span");
-    for (let i = 0; i < this.level; i++) {
-      const bar = document.createElement("span");
-      bar.className = "cm-blockquote-bar";
-      span.appendChild(bar);
-    }
-    return span;
-  }
-  ignoreEvent() {
-    return true;
-  }
-};
-var BlockquoteDecorator = class {
-  process(context) {
-    const { docText, textSliceFrom, decorations, currentMode, cursorPositions, view } = context;
-    if (!decorations) return;
-    const lines = docText.split("\n");
-    if (currentMode === "preview") {
-      let charPos = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineText = lines[i];
-        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
-        if (match && lineText.length > 0) {
-          const markerStr = String(match[2]);
-          const barCount = (markerStr.match(/>/g) || []).length;
-          const lineStartInDoc = charPos;
-          const markerStart = lineStartInDoc + match[1].length;
-          decorations.push({
-            from: markerStart,
-            to: markerStart + markerStr.length,
-            decoration: Decoration.replace({ widget: new BlockquoteBarWidget(barCount) })
-          });
-        }
-        charPos += lineText.length + 1;
-      }
-    } else {
-      let charPos = 0;
-      for (let i = 0; i < lines.length; i++) {
-        const lineText = lines[i];
-        const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)$/);
-        if (match && lineText.length > 0) {
-          const markerStr = String(match[2]);
-          const level = (markerStr.match(/>/g) || []).length;
-          const lineStartInDoc = charPos;
-          const lineEndInDoc = charPos + lineText.length;
-          const isActive = cursorPositions.some((pos) => pos >= lineStartInDoc && pos <= lineEndInDoc);
-          if (!isActive && level > 0) {
-            const markerStart = lineStartInDoc + match[1].length;
-            for (let k = 0; k < markerStr.length; k++) {
-              if (markerStr[k] === ">") {
-                decorations.push({
-                  from: markerStart + k,
-                  to: markerStart + k + 1,
-                  decoration: Decoration.replace({ widget: new VerticalBarWidget() })
-                });
-              }
-            }
-          }
-        }
-        charPos += lineText.length + 1;
-      }
-    }
-  }
-};
-var markdownSyntaxHider = ViewPlugin.fromClass(
-  class {
-    constructor(view) {
-      this.decorations = this.buildDecorations(view);
-    }
-    update(update) {
-      if (update.docChanged || update.selectionSet) {
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    buildDecorations(view) {
-      const decorationsArray = [];
-      const doc = view.state.doc;
-      const fullText = doc.toString();
-      const cursorPositions = [];
-      for (const range of view.state.selection.ranges) {
-        cursorPositions.push(range.head);
-        if (range.head !== range.anchor) {
-          cursorPositions.push(range.anchor);
-        }
-      }
-      this.findHeadingDecorations(decorationsArray, 0, fullText, cursorPositions);
-      this.findBoldDecorations(decorationsArray, 0, fullText, cursorPositions);
-      this.findItalicDecorations(decorationsArray, 0, fullText, cursorPositions);
-      this.findFormattingDecorations(decorationsArray, 0, fullText, cursorPositions, "~~", "~~", "markdown-strikethrough-active");
-      this.findFormattingDecorations(decorationsArray, 0, fullText, cursorPositions, "==", "==", "markdown-highlight-active");
-      this.findFormattingDecorations(decorationsArray, 0, fullText, cursorPositions, "`", "`", "markdown-code-active");
-      decorationsArray.sort((a, b) => {
-        if (a.from !== b.from) return a.from - b.from;
-        return a.to - b.to;
-      });
-      const builder = new RangeSetBuilder();
-      for (const { from, to, decoration } of decorationsArray) {
-        if (from < to) {
-          builder.add(from, to, decoration);
-        }
-      }
-      return builder.finish();
-    }
-    // Find heading decorations (# Heading)
-    findHeadingDecorations(decorations, start, text, cursorPositions) {
-      const headingRegex = /^(#{1,6})\s(.*)$/gm;
-      let match;
-      while ((match = headingRegex.exec(text)) !== null) {
-        const matchStart = match.index;
-        if (matchStart > 0 && text.charAt(matchStart - 1) === "\\") {
-          continue;
-        }
-        const lineStart = start + matchStart;
-        const hashMarks = match[1];
-        const hashCount = hashMarks.length;
-        const hashStart = lineStart;
-        const hashEnd = hashStart + hashCount;
-        const spaceEnd = hashEnd + 1;
-        const lineEnd = lineStart + match[0].length;
-        let isCursorNearHash = false;
-        for (const cursor of cursorPositions) {
-          if (cursor >= hashStart - 1 && cursor <= spaceEnd + 1) {
-            isCursorNearHash = true;
-            break;
-          }
-        }
-        decorations.push({
-          from: spaceEnd,
-          to: lineEnd,
-          decoration: Decoration.mark({ class: `markdown-heading-${hashCount}` })
-        });
-        if (isCursorNearHash) {
-          decorations.push({
-            from: hashStart,
-            to: hashEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-          decorations.push({
-            from: hashEnd,
-            to: spaceEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-        } else {
-          decorations.push({
-            from: hashStart,
-            to: hashEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-          decorations.push({
-            from: hashEnd,
-            to: spaceEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-        }
-      }
-    }
-    // Find bold text formatting (**bold** or __bold__)
-    findBoldDecorations(decorations, start, text, cursorPositions) {
-      const boldPattern = /\*\*(.*?)\*\*/g;
-      const escapeChar = "\\";
-      let match;
-      while ((match = boldPattern.exec(text)) !== null) {
-        const matchStart = match.index;
-        if (matchStart > 0 && text.charAt(matchStart - 1) === escapeChar) {
-          continue;
-        }
-        const fullMatch = match[0];
-        match[1];
-        const fullStart = start + matchStart;
-        const fullEnd = fullStart + fullMatch.length;
-        const openStart = fullStart;
-        const openEnd = fullStart + 2;
-        const contentStart = openEnd;
-        const contentEnd = fullEnd - 2;
-        const closeStart = contentEnd;
-        const closeEnd = fullEnd;
-        let isCursorNearBold = false;
-        for (const cursor of cursorPositions) {
-          if (cursor >= openStart - 1 && cursor <= closeEnd + 1) {
-            isCursorNearBold = true;
-            break;
-          }
-        }
-        decorations.push({
-          from: contentStart,
-          to: contentEnd,
-          decoration: Decoration.mark({ class: "markdown-bold-active" })
-        });
-        if (isCursorNearBold) {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-        } else {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-        }
-      }
-      const boldUnderscorePattern = /__(.*?)__/g;
-      while ((match = boldUnderscorePattern.exec(text)) !== null) {
-        const matchStart = match.index;
-        if (matchStart > 0 && text.charAt(matchStart - 1) === escapeChar) {
-          continue;
-        }
-        const fullMatch = match[0];
-        match[1];
-        const fullStart = start + matchStart;
-        const fullEnd = fullStart + fullMatch.length;
-        const openStart = fullStart;
-        const openEnd = fullStart + 2;
-        const contentStart = openEnd;
-        const contentEnd = fullEnd - 2;
-        const closeStart = contentEnd;
-        const closeEnd = fullEnd;
-        let isCursorNearBold = false;
-        for (const cursor of cursorPositions) {
-          if (cursor >= openStart - 1 && cursor <= closeEnd + 1) {
-            isCursorNearBold = true;
-            break;
-          }
-        }
-        decorations.push({
-          from: contentStart,
-          to: contentEnd,
-          decoration: Decoration.mark({ class: "markdown-bold-active" })
-        });
-        if (isCursorNearBold) {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-        } else {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-        }
-      }
-    }
-    // Find italic text formatting (*italic* or _italic_)
-    findItalicDecorations(decorations, start, text, cursorPositions) {
-      const italicRegex = /(?<!\*)\*(?!\*)([^\*]+)\*(?!\*)/g;
-      const escapeChar = "\\";
-      const processedPositions = /* @__PURE__ */ new Set();
-      let match;
-      while ((match = italicRegex.exec(text)) !== null) {
-        const matchStart = match.index;
-        if (matchStart > 0 && text.charAt(matchStart - 1) === escapeChar) {
-          continue;
-        }
-        if (processedPositions.has(matchStart)) {
-          continue;
-        }
-        processedPositions.add(matchStart);
-        const fullMatch = match[0];
-        match[1];
-        const fullStart = start + matchStart;
-        const fullEnd = fullStart + fullMatch.length;
-        const openStart = fullStart;
-        const openEnd = fullStart + 1;
-        const contentStart = openEnd;
-        const contentEnd = fullEnd - 1;
-        const closeStart = contentEnd;
-        const closeEnd = fullEnd;
-        let isCursorNearItalic = false;
-        for (const cursor of cursorPositions) {
-          if (cursor >= openStart - 1 && cursor <= closeEnd + 1) {
-            isCursorNearItalic = true;
-            break;
-          }
-        }
-        decorations.push({
-          from: contentStart,
-          to: contentEnd,
-          decoration: Decoration.mark({ class: "markdown-italic-active" })
-        });
-        if (isCursorNearItalic) {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-        } else {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-        }
-      }
-      const italicUnderscoreRegex = /(?<!_)_(?!_)([^_]+)_(?!_)/g;
-      while ((match = italicUnderscoreRegex.exec(text)) !== null) {
-        const matchStart = match.index;
-        if (matchStart > 0 && text.charAt(matchStart - 1) === escapeChar) {
-          continue;
-        }
-        const fullMatch = match[0];
-        match[1];
-        const fullStart = start + matchStart;
-        const fullEnd = fullStart + fullMatch.length;
-        const openStart = fullStart;
-        const openEnd = fullStart + 1;
-        const contentStart = openEnd;
-        const contentEnd = fullEnd - 1;
-        const closeStart = contentEnd;
-        const closeEnd = fullEnd;
-        let isCursorNearItalic = false;
-        for (const cursor of cursorPositions) {
-          if (cursor >= openStart - 1 && cursor <= closeEnd + 1) {
-            isCursorNearItalic = true;
-            break;
-          }
-        }
-        decorations.push({
-          from: contentStart,
-          to: contentEnd,
-          decoration: Decoration.mark({ class: "markdown-italic-active" })
-        });
-        if (isCursorNearItalic) {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-active" })
-          });
-        } else {
-          decorations.push({
-            from: openStart,
-            to: openEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-          decorations.push({
-            from: closeStart,
-            to: closeEnd,
-            decoration: Decoration.mark({ class: "markdown-syntax-dim" })
-          });
-        }
-      }
-    }
-    // Generic method for other formatting types (strikethrough, highlight, code)
-    findFormattingDecorations(decorations, start, text, cursorPositions, openMarker, closeMarker, styleClass) {
-      const escapeChar = "\\";
-      const markerLength = openMarker.length;
-      const openRegexString = this.escapeRegExp(openMarker);
-      const closeRegexString = this.escapeRegExp(closeMarker);
-      const pattern = new RegExp(openRegexString + "([\\s\\S]*?)" + closeRegexString, "g");
-      let match;
-      while ((match = pattern.exec(text)) !== null) {
-        const matchStartIndex = match.index;
-        if (matchStartIndex > 0 && text.charAt(matchStartIndex - 1) === escapeChar) {
-          let backslashCount = 0;
-          let currentPos = matchStartIndex - 1;
-          while (currentPos >= 0 && text.charAt(currentPos) === escapeChar) {
-            backslashCount++;
-            currentPos--;
-          }
-          if (backslashCount % 2 !== 0) {
-            continue;
-          }
-        }
-        const fullMatchedText = match[0];
-        const contentText = match[1];
-        const absoluteMatchStart = start + matchStartIndex;
-        const absoluteMatchEnd = absoluteMatchStart + fullMatchedText.length;
-        const openMarkerStart = absoluteMatchStart;
-        const openMarkerEnd = absoluteMatchStart + markerLength;
-        const contentBodyStart = openMarkerEnd;
-        const contentBodyEnd = absoluteMatchEnd - markerLength;
-        const closeMarkerStart = contentBodyEnd;
-        const closeMarkerEnd = absoluteMatchEnd;
-        let isCursorClose = false;
-        for (const cursorPos of cursorPositions) {
-          if (cursorPos >= openMarkerStart - 1 && cursorPos <= closeMarkerEnd + 1) {
-            isCursorClose = true;
-            break;
-          }
-        }
-        if (contentText && contentText.length > 0) {
-          decorations.push({
-            from: contentBodyStart,
-            to: contentBodyEnd,
-            decoration: Decoration.mark({ class: styleClass })
-          });
-        }
-        const markerVisibilityClass = isCursorClose ? "markdown-syntax-active" : "markdown-syntax-dim";
-        decorations.push({
-          from: openMarkerStart,
-          to: openMarkerEnd,
-          decoration: Decoration.mark({ class: markerVisibilityClass })
-        });
-        decorations.push({
-          from: closeMarkerStart,
-          to: closeMarkerEnd,
-          decoration: Decoration.mark({ class: markerVisibilityClass })
-        });
-      }
-    }
-    // Helper function to escape special regex characters
-    escapeRegExp(string) {
-      return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    }
-  },
-  {
-    decorations: (v) => v.decorations
-  }
-);
 
-// src/app/obsidian-editor/utils/formatting/linkAndListFormatting.ts
-var isListItem = (lineText) => {
-  return /^\s*([-*+]|\d+\.)\s/.test(lineText);
-};
-var INDENT_UNIT = "    ";
-var isBlockquote = (lineText) => {
-  return /^\s*>/.test(lineText);
-};
+// src/app/obsidian-editor/extensions/MarkdownPasteHandler.ts
+import { EditorView as EditorView14 } from "@codemirror/view";
+import { Prec as Prec2 } from "@codemirror/state";
+import { marked } from "marked";
+function createMarkdownPasteHandler() {
+  return Prec2.highest(EditorView14.domEventHandlers({
+    paste(event, view) {
+      console.log("[MarkdownPasteHandler] Paste event triggered.");
+      const clipboardData = event.clipboardData || window.clipboardData;
+      if (!clipboardData) {
+        console.log("[MarkdownPasteHandler] No clipboard data found.");
+        return false;
+      }
+      let pastedText = clipboardData.getData("text/plain");
+      console.log("[MarkdownPasteHandler] Original pastedText:", JSON.stringify(pastedText));
+      if (!pastedText) {
+        console.log("[MarkdownPasteHandler] No plain text in clipboard.");
+        return false;
+      }
+      let textToConvert = pastedText.replace(/__([\s\S]+?)__/g, "**$1**");
+      console.log("[MarkdownPasteHandler] After __ -> ** conversion:", JSON.stringify(textToConvert));
+      const htmlOutput = marked.parseInline(textToConvert, { gfm: true });
+      console.log("[MarkdownPasteHandler] Inline HTML output from marked:", JSON.stringify(htmlOutput));
+      let convertedText = htmlOutput;
+      convertedText = convertedText.replace(/\\<em>/g, "<em>");
+      convertedText = convertedText.replace(/\\<\/em>/g, "</em>");
+      convertedText = convertedText.replace(/\\<strong>/g, "<strong>");
+      convertedText = convertedText.replace(/\\<\/strong>/g, "</strong>");
+      convertedText = convertedText.replace(/<em><strong>([\s\S]+?)<\/strong><\/em>/g, "_**$1**_");
+      convertedText = convertedText.replace(/<strong><em>([\s\S]+?)<\/em><\/strong>/g, "**_$1_**");
+      convertedText = convertedText.replace(/<strong>([\s\S]+?)<\/strong>/g, "**$1**");
+      convertedText = convertedText.replace(/<em>([\s\S]+?)<\/em>/g, "_$1_");
+      const tempElement = document.createElement("textarea");
+      tempElement.innerHTML = convertedText;
+      convertedText = tempElement.value.trim();
+      console.log("[MarkdownPasteHandler] Final convertedText after HTML to Markdown style:", JSON.stringify(convertedText));
+      if (convertedText !== pastedText) {
+        console.log("[MarkdownPasteHandler] Text was modified. Dispatching transaction.");
+        view.dispatch(view.state.replaceSelection(convertedText));
+        return true;
+      }
+      console.log("[MarkdownPasteHandler] Text was not modified by conversion. Allowing default paste.");
+      return false;
+    }
+  }));
+}
+var markdownPasteHandler = createMarkdownPasteHandler();
 
-// src/app/obsidian-editor/extensions/AtomicIndents.ts
-var AtomicIndentPluginValue = class {
-  /**
-   * Creates a new instance of the atomic indent plugin
-   * @param view - The CodeMirror editor view
-   */
-  constructor(view) {
-    this.atomicRanges = this.buildAtomicRanges(view);
-  }
-  /**
-   * Updates the atomic ranges when the document or viewport changes
-   * @param update - ViewUpdate
-   */
-  update(update) {
-    if (update.docChanged || update.viewportChanged) {
-      this.atomicRanges = this.buildAtomicRanges(update.view);
-    }
-  }
-  /**
-   * Builds the set of atomic ranges based on the current document content
-   * @param view - The CodeMirror editor view
-   * @returns A RangeSet containing all atomic indent ranges
-   */
-  buildAtomicRanges(view) {
-    const allDecorations = [];
-    for (const { from, to } of view.visibleRanges) {
-      let pos = from;
-      while (pos <= to) {
-        const line = view.state.doc.lineAt(pos);
-        const lineText = line.text;
-        this.processSpacesIndentation(lineText, line.from, allDecorations);
-        if (isListItem(lineText)) {
-          this.processListIndentation(lineText, line.from, allDecorations);
-        }
-        if (isBlockquote(lineText)) {
-          this.processBlockquoteIndentation(lineText, line.from, allDecorations);
-        }
-        pos = line.to + 1;
-      }
-    }
-    allDecorations.sort((a, b) => a.from - b.from);
-    const builder = new RangeSetBuilder();
-    for (const { from, to, decoration } of allDecorations) {
-      if (from < to) {
-        try {
-          builder.add(from, to, decoration);
-        } catch (error) {
-          console.warn("Failed to add atomic decoration:", from, to, error);
-        }
-      }
-    }
-    return builder.finish();
-  }
-  /**
-   * Process standard space indentation in text
-   */
-  processSpacesIndentation(lineText, lineStart, decorations) {
-    let searchPos = 0;
-    while (searchPos + 4 <= lineText.length) {
-      if (lineText.substring(searchPos, searchPos + 4) === INDENT_UNIT) {
-        decorations.push({
-          from: lineStart + searchPos,
-          to: lineStart + searchPos + 4,
-          decoration: Decoration.mark({
-            class: "cm-atomic-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-        searchPos += 4;
-      } else {
-        searchPos++;
-      }
-    }
-  }
-  /**
-   * Process list indentation
-   */
-  processListIndentation(lineText, lineStart, decorations) {
-    const leadingMatch = lineText.match(/^(\s+)/);
-    if (leadingMatch && leadingMatch[1]) {
-      const spaces2 = leadingMatch[1];
-      for (let i = 0; i < Math.floor(spaces2.length / 4) * 4; i += 4) {
-        decorations.push({
-          from: lineStart + i,
-          to: lineStart + i + 4,
-          decoration: Decoration.mark({
-            class: "cm-atomic-indent cm-list-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-      }
-    }
-    const markerMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s+/);
-    if (markerMatch) {
-      const afterMarker = lineText.substring(markerMatch[0].length);
-      const afterMarkerIndent = afterMarker.match(/^(\s+)/);
-      if (afterMarkerIndent && afterMarkerIndent[1]) {
-        const indentStart = lineStart + markerMatch[0].length;
-        const spaces2 = afterMarkerIndent[1];
-        for (let i = 0; i < Math.floor(spaces2.length / 4) * 4; i += 4) {
-          decorations.push({
-            from: indentStart + i,
-            to: indentStart + i + 4,
-            decoration: Decoration.mark({
-              class: "cm-atomic-indent cm-list-indent",
-              inclusive: true,
-              atomic: true
-            })
-          });
-        }
-      }
-    }
-  }
-  /**
-   * Process blockquote indentation
-   */
-  processBlockquoteIndentation(lineText, lineStart, decorations) {
-    const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
-    if (!match) return;
-    const leadingSpaces = match[1] || "";
-    const blockquoteMarkers = match[2];
-    const content = match[3];
-    if (leadingSpaces.length > 0) {
-      for (let i = 0; i < Math.floor(leadingSpaces.length / 4) * 4; i += 4) {
-        decorations.push({
-          from: lineStart + i,
-          to: lineStart + i + 4,
-          decoration: Decoration.mark({
-            class: "cm-atomic-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-      }
-      const remainingSpaces = leadingSpaces.length % 4;
-      if (remainingSpaces > 0) {
-        decorations.push({
-          from: lineStart + leadingSpaces.length - remainingSpaces,
-          to: lineStart + leadingSpaces.length,
-          decoration: Decoration.mark({
-            class: "cm-atomic-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-      }
-    }
-    let markerStart = lineStart + leadingSpaces.length;
-    const markerMatches = blockquoteMarkers.match(/(>\s*)/g);
-    if (markerMatches) {
-      markerMatches.forEach((marker) => {
-        decorations.push({
-          from: markerStart,
-          to: markerStart + marker.length,
-          decoration: Decoration.mark({
-            class: "cm-atomic-indent cm-blockquote-indent",
-            inclusive: true,
-            atomic: true
-          })
-        });
-        markerStart += marker.length;
-      });
-    }
-    if (content) {
-      const contentSpaces = content.match(/^(\s+)/);
-      if (contentSpaces && contentSpaces[1]) {
-        const spaces2 = contentSpaces[1];
-        const contentStart = lineStart + leadingSpaces.length + blockquoteMarkers.length;
-        for (let i = 0; i < Math.floor(spaces2.length / 4) * 4; i += 4) {
-          decorations.push({
-            from: contentStart + i,
-            to: contentStart + i + 4,
-            decoration: Decoration.mark({
-              class: "cm-atomic-indent",
-              inclusive: true,
-              atomic: true
-            })
-          });
-        }
-        const remainingSpaces = spaces2.length % 4;
-        if (remainingSpaces > 0) {
-          decorations.push({
-            from: contentStart + spaces2.length - remainingSpaces,
-            to: contentStart + spaces2.length,
-            decoration: Decoration.mark({
-              class: "cm-atomic-indent",
-              inclusive: true,
-              atomic: true
-            })
-          });
-        }
-      }
-    }
-  }
-};
-var atomicIndentPlugin = ViewPlugin.fromClass(AtomicIndentPluginValue);
-var atomicRangesFacetProvider = EditorView.atomicRanges.of((view) => {
-  const pluginValue = view.plugin(atomicIndentPlugin);
-  if (pluginValue) {
-    return pluginValue.atomicRanges || RangeSet.empty;
-  }
-  return RangeSet.empty;
-});
-var atomicIndentsStyle = EditorView.baseTheme({
-  ".cm-atomic-indent": {
-    caretColor: "transparent"
-  },
-  ".cm-list-indent": {
-    backgroundColor: "rgba(0, 0, 0, 0.03)"
-  },
-  ".cm-blockquote-indent": {
-    backgroundColor: "rgba(0, 0, 0, 0.03)"
-  }
-});
-var atomicIndents = [
-  atomicIndentPlugin,
-  atomicRangesFacetProvider,
-  atomicIndentsStyle
-];
-
-// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
-var syntaxRules = [
-  new HeadingDecorator(),
-  new BoldDecorator(),
-  new ItalicDecorator(),
-  new StrikethroughDecorator(),
-  new CodeDecorator(),
-  new HighlightDecorator(),
-  new OldBoldDecorator(),
-  new OldItalicDecorator(),
-  new ListDecorator(),
-  new BlockquoteDecorator(),
-  new FencedCodeBlockDecorator()
-  // HorizontalRuleDecorator is now a ViewPlugin and managed separately
-];
-var setMarkdownSyntaxMode2 = StateEffect.define();
-function buildLegacyDecorations(state, currentMode, view) {
-  const builder = new RangeSetBuilder();
-  const allDecorations = [];
-  const cursorPositions = [];
-  for (const range of state.selection.ranges) {
-    cursorPositions.push(range.head);
-  }
-  const rangesToProcess = [{ from: 0, to: state.doc.length }];
-  const htmlRegions = findHtmlRegions(state);
-  for (const { from, to } of rangesToProcess) {
-    const docTextSlice = state.doc.sliceString(from, to);
-    const context = {
-      builder,
-      docText: docTextSlice,
-      textSliceFrom: from,
-      cursorPositions,
-      state,
-      view,
-      decorations: allDecorations,
-      currentMode,
-      htmlEditRegions: htmlRegions
-      // Pass HTML regions to avoid processing markdown inside them
-    };
-    for (const rule of syntaxRules) {
+// src/app/obsidian-editor/extensions/lezer-safety-plugin.ts
+import { EditorView as EditorView15 } from "@codemirror/view";
+function createLezerSafetyPlugin() {
+  return EditorView15.updateListener.of((update) => {
+    if (!update.view.state.field(EditorView15.decorations)) {
+      console.log("Applying Lezer safety patches");
       try {
-        if (typeof rule.process === "function") {
-          rule.process(context);
-        } else {
-          console.warn(`Rule ${rule.constructor.name} does not have a process method.`);
+        const view = update.view;
+        if (view && view.plugin && view.dispatch) {
+          const plugins = view.state.facet(EditorView15.plugins);
+          if (plugins && Array.isArray(plugins)) {
+            plugins.forEach((plugin) => {
+              if (plugin && plugin.extension && plugin.extension.parser) {
+                const parser5 = plugin.extension.parser;
+                const originalHasChild = parser5.hasChild;
+                if (typeof originalHasChild === "function") {
+                  parser5.hasChild = function safeHasChild(type, node, predicate) {
+                    if (!node || !node.children) {
+                      console.warn("SafeHasChild: node or node.children is undefined");
+                      return false;
+                    }
+                    try {
+                      return originalHasChild(type, node, predicate);
+                    } catch (e) {
+                      console.warn("SafeHasChild: caught error", e);
+                      return false;
+                    }
+                  };
+                  console.log("Successfully patched parser.hasChild");
+                }
+              }
+            });
+          }
         }
       } catch (error) {
-        console.error("Error processing legacy rule:", rule.constructor.name, error);
-      }
-    }
-  }
-  for (const region of htmlRegions) {
-    allDecorations.push({
-      from: region.from,
-      to: region.to,
-      decoration: Decoration.mark({
-        class: "cm-plain-text cm-html-content cm-disable-markdown-parsing cm-no-list-rendering",
-        attributes: { "data-html-content": "true", "data-no-markdown": "true" }
-      })
-    });
-  }
-  const groupedDecorations = /* @__PURE__ */ new Map();
-  for (const item of allDecorations) {
-    if (!item.decoration.spec.class?.includes("cm-html-content") && isInsideHtml(item.from, item.to, htmlRegions)) {
-      continue;
-    }
-    if (!groupedDecorations.has(item.from)) {
-      groupedDecorations.set(item.from, []);
-    }
-    if (item.decoration) {
-      groupedDecorations.get(item.from).push(item);
-    } else {
-      console.warn("Encountered an item with undefined decoration during legacy build:", item);
-    }
-  }
-  const sortedFromPositions = [...groupedDecorations.keys()].sort((a, b) => a - b);
-  for (const fromPos of sortedFromPositions) {
-    const group = groupedDecorations.get(fromPos);
-    group.sort((a, b) => a.to - b.to);
-    for (const item of group) {
-      builder.add(item.from, item.to, item.decoration);
-    }
-  }
-  return builder.finish();
-}
-var markdownSyntaxStateField = StateField.define({
-  /**
-   * Creates the initial state for the field
-   * @param state - The editor state
-   * @returns The initial field value
-   */
-  create(state) {
-    const initialMode = "live";
-    return {
-      decorations: buildLegacyDecorations(state, initialMode, void 0),
-      currentMode: initialMode
-    };
-  },
-  /**
-   * Updates the field value based on transactions
-   * @param value - The current field value
-   * @param tr - The transaction to apply
-   * @returns The updated field value
-   */
-  update(value, tr) {
-    let newMode = value.currentMode;
-    for (const effect of tr.effects) {
-      if (effect.is(setMarkdownSyntaxMode2)) {
-        newMode = effect.value;
-      }
-    }
-    let modeChangedByEffect = false;
-    for (const effect of tr.effects) {
-      if (effect.is(setMarkdownSyntaxMode2)) {
-        if (newMode !== effect.value) {
-          newMode = effect.value;
-          modeChangedByEffect = true;
-        }
-      }
-    }
-    if (tr.docChanged || tr.selection && !tr.startState.selection.eq(tr.selection) || modeChangedByEffect) {
-      return {
-        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
-        currentMode: newMode
-      };
-    }
-    if (value.currentMode !== newMode) {
-      return {
-        decorations: buildLegacyDecorations(tr.state, newMode, void 0),
-        currentMode: newMode
-      };
-    }
-    return value;
-  },
-  /**
-   * Provides the decorations to the editor view
-   */
-  provide: (f) => EditorView.decorations.from(f, (value) => value.decorations)
-});
-var markdownCompartment = new Compartment();
-function createMarkdownSyntaxPlugin(options = {}) {
-  const { highlightHTML = true } = options;
-  const markdownConfig = {
-    codeLanguages: languages
-  };
-  return [
-    markdownCompartment.of(markdown(markdownConfig)),
-    markdownSyntaxStateField,
-    markdownSyntaxHider,
-    LineBreakDecorator,
-    HorizontalRuleDecorator,
-    htmlDecorator(),
-    atomicIndents
-  ];
-}
-function findHtmlRegions(state) {
-  const regions = [];
-  const tree = syntaxTree(state);
-  tree.iterate({
-    enter: (node) => {
-      if (node.name.includes("HtmlTag") || node.name.includes("HtmlBlock") || node.name.includes("OpenTag") || node.name.includes("CloseTag") || node.name.includes("SelfClosingTag") || node.name.includes("Element")) {
-        regions.push({ from: node.from, to: node.to });
+        console.warn("Error applying Lezer safety patches:", error);
       }
     }
   });
-  return regions;
 }
-function isInsideHtml(from, to, htmlRegions) {
+
+// src/app/obsidian-editor/extensions/markdown/no-formatting.ts
+import { EditorView as EditorView16, Decoration as Decoration17, ViewPlugin as ViewPlugin3 } from "@codemirror/view";
+import { syntaxTree as syntaxTree6 } from "@codemirror/language";
+import { RangeSetBuilder as RangeSetBuilder5 } from "@codemirror/state";
+function createNoMarkdownInHtmlExtension() {
+  return ViewPlugin3.fromClass(
+    class {
+      constructor(view) {
+        this.decorations = this.buildDecorations(view);
+      }
+      update(update) {
+        if (update.docChanged || update.viewportChanged || update.selectionSet) {
+          this.decorations = this.buildDecorations(update.view);
+        }
+      }
+      buildDecorations(view) {
+        const builder = new RangeSetBuilder5();
+        const { state } = view;
+        const tree = syntaxTree6(state);
+        const htmlRegions = [];
+        tree.iterate({
+          enter: (node) => {
+            if (node.name.includes("HtmlTag") || node.name.includes("HtmlBlock") || node.name.includes("OpenTag") || node.name.includes("CloseTag") || node.name.includes("SelfClosingTag") || node.name.includes("Element")) {
+              htmlRegions.push({ from: node.from, to: node.to });
+              builder.add(node.from, node.to, Decoration17.mark({
+                class: "cm-html-content",
+                attributes: { "data-html": "true" }
+              }));
+              builder.add(node.from, node.to, Decoration17.mark({
+                class: "cm-plain-text cm-disable-markdown-parsing",
+                attributes: { "data-no-markdown": "true" }
+              }));
+              builder.add(node.from, node.to, Decoration17.mark({
+                class: "cm-html-tag-block cm-no-list-rendering",
+                attributes: { "data-html-tag": "true", "data-no-list": "true" }
+              }));
+            }
+          }
+        });
+        tree.iterate({
+          enter: (node) => {
+            if ((node.name.includes("ListItem") || node.name.includes("BulletList") || node.name.includes("OrderedList") || node.name.includes("ListMark") || node.name.includes("Emph") || node.name.includes("Strong") || node.name.includes("Heading")) && isInHtmlRegion(node.from, node.to, htmlRegions)) {
+              builder.add(node.from, node.to, Decoration17.mark({
+                class: "cm-no-markdown cm-no-list-rendering cm-html-plain-text",
+                attributes: {
+                  "data-force-plain": "true",
+                  "data-no-list": "true",
+                  "data-no-markdown": "true"
+                }
+              }));
+            }
+          }
+        });
+        return builder.finish();
+      }
+    },
+    {
+      decorations: (instance) => instance.decorations,
+      provide: (plugin) => EditorView16.baseTheme({
+        ".cm-html-content": {
+          // Styles for HTML content
+          backgroundColor: "rgba(0, 0, 0, 0.04)",
+          borderRadius: "2px"
+        },
+        // These rules ensure markdown formatting doesn't apply inside HTML
+        ".cm-html-content .cm-formatting": {
+          // Override any markdown formatting inside HTML
+          color: "inherit !important",
+          fontWeight: "inherit !important",
+          fontStyle: "inherit !important",
+          textDecoration: "inherit !important"
+        },
+        ".cm-html-tag-block": {
+          // Additional styling for HTML tags
+          color: "#0550ae !important"
+          // HTML tag color
+        },
+        ".cm-disable-markdown-parsing .cm-heading": {
+          // Prevent headings from being styled inside HTML
+          fontSize: "inherit !important",
+          fontWeight: "inherit !important",
+          color: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-strong": {
+          // Prevent bold from being styled inside HTML
+          fontWeight: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-emphasis": {
+          // Prevent italic from being styled inside HTML
+          fontStyle: "inherit !important"
+        },
+        ".cm-disable-markdown-parsing .cm-list": {
+          // Prevent lists from being styled inside HTML
+          fontWeight: "inherit !important"
+        },
+        ".cm-no-list-rendering .cm-list-bullet": {
+          // Prevent list bullets from appearing
+          color: "inherit !important",
+          fontWeight: "inherit !important"
+        },
+        ".cm-html-plain-text": {
+          // Additional overrides for plain text inside HTML
+          fontWeight: "inherit !important",
+          fontStyle: "inherit !important",
+          fontSize: "inherit !important"
+        }
+      })
+    }
+  );
+}
+function isInHtmlRegion(from, to, htmlRegions) {
   for (const region of htmlRegions) {
     if (from >= region.from && to <= region.to) {
       return true;
@@ -10226,434 +10127,9 @@ function isInsideHtml(from, to, htmlRegions) {
   }
   return false;
 }
-function toggleMark(view, openMark, closeMark, keepSelection = false) {
-  const { state } = view;
-  const selection = state.selection;
-  if (selection.ranges.length === 0) return false;
-  const changes = [];
-  const newSelections = [];
-  for (const range of selection.ranges) {
-    if (range.empty) {
-      changes.push({
-        from: range.from,
-        to: range.from,
-        insert: openMark + closeMark
-      });
-      const newCursor = range.from + openMark.length;
-      newSelections.push(EditorSelection.cursor(newCursor));
-    } else {
-      const selectedText = state.doc.sliceString(range.from, range.to);
-      const hasMarks = selectedText.startsWith(openMark) && selectedText.endsWith(closeMark) && selectedText.length >= openMark.length + closeMark.length;
-      if (hasMarks) {
-        const innerFrom = range.from + openMark.length;
-        const innerTo = range.to - closeMark.length;
-        const innerText = state.doc.sliceString(innerFrom, innerTo);
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: innerText
-        });
-        if (keepSelection) {
-          newSelections.push(EditorSelection.range(range.from, range.from + innerText.length));
-        } else {
-          newSelections.push(EditorSelection.cursor(range.from + innerText.length));
-        }
-      } else {
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: openMark + selectedText + closeMark
-        });
-        if (keepSelection) {
-          const newFrom = range.from + openMark.length;
-          const newTo = newFrom + selectedText.length;
-          newSelections.push(EditorSelection.range(newFrom, newTo));
-        } else {
-          const cursorPos = range.from + openMark.length + selectedText.length + closeMark.length;
-          newSelections.push(EditorSelection.cursor(cursorPos));
-        }
-      }
-    }
-  }
-  view.dispatch({
-    changes,
-    selection: EditorSelection.create(newSelections)
-  });
-  return true;
-}
-
-// src/app/obsidian-editor/extensions/keymaps.ts
-var markdownKeymap2 = keymap.of([
-  // Bold: Ctrl+B
-  {
-    key: "Ctrl-b",
-    run: (view) => {
-      return toggleMark(view, "**", "**");
-    }
-  },
-  // Italic: Ctrl+I
-  {
-    key: "Ctrl-i",
-    run: (view) => {
-      return toggleMark(view, "*", "*");
-    }
-  },
-  // Strikethrough: Ctrl+Shift+S
-  {
-    key: "Ctrl-Shift-s",
-    run: (view) => {
-      return toggleMark(view, "~~", "~~");
-    }
-  },
-  // Code: Ctrl+Shift+C
-  {
-    key: "Ctrl-Shift-c",
-    run: (view) => {
-      return toggleMark(view, "`", "`");
-    }
-  },
-  // Link: Ctrl+K
-  {
-    key: "Ctrl-k",
-    run: (view) => {
-      const selection = view.state.selection;
-      if (selection.ranges.length === 1 && selection.main.empty) {
-        const transaction = view.state.update({
-          changes: {
-            from: selection.main.from,
-            to: selection.main.from,
-            insert: "[]()"
-          },
-          selection: EditorSelection.cursor(selection.main.from + 1)
-        });
-        view.dispatch(transaction);
-        return true;
-      } else {
-        return toggleMark(view, "[", "]()", true);
-      }
-    }
-  }
-]);
-var editorKeymap = keymap.of([
-  // Save: Ctrl+S
-  {
-    key: "Ctrl-s",
-    run: (view) => {
-      const event = new CustomEvent("editor-save", {
-        bubbles: true,
-        detail: { content: view.state.doc.toString() }
-      });
-      view.dom.dispatchEvent(event);
-      return true;
-    },
-    preventDefault: true
-  }
-]);
-var combinedKeymap = [
-  markdownKeymap2,
-  editorKeymap
-];
-var keymaps_default = combinedKeymap;
-function createNoMarkdownInHtmlExtension() {
-  return ViewPlugin.fromClass(class {
-    constructor(view) {
-      this.decorations = this.buildDecorations(view);
-    }
-    update(update) {
-      if (update.docChanged || update.viewportChanged) {
-        this.decorations = this.buildDecorations(update.view);
-      }
-    }
-    buildDecorations(view) {
-      const builder = new RangeSetBuilder();
-      for (const { from, to } of view.visibleRanges) {
-        const tree = syntaxTree(view.state);
-        tree.iterate({
-          from,
-          to,
-          enter: (node) => {
-            if (node.name.includes("HtmlBlock") || node.type.name.includes("HtmlTag") || node.type.name.includes("Element")) {
-              builder.add(
-                node.from,
-                node.to,
-                Decoration.mark({
-                  class: "cm-no-markdown-formatting",
-                  attributes: { "data-no-markdown": "true" }
-                })
-              );
-            }
-          }
-        });
-      }
-      return builder.finish();
-    }
-  }, {
-    decorations: (v) => v.decorations
-  });
-}
-
-// src/app/obsidian-editor/extensions/index.ts
-function createAllExtensions() {
-  return [
-    createMarkdownSyntaxPlugin(),
-    keymaps_default,
-    createNoMarkdownInHtmlExtension(),
-    // Add the no-markdown-in-html extension
-    atomicIndents,
-    // Make indentation atomic (tab movement)
-    markdownSyntaxHider,
-    // Hide markdown syntax when not in focus
-    LineBreakDecorator,
-    // Handle markdown line breaks
-    htmlDecorator()
-    // Render HTML in markdown
-  ];
-}
-function toggleBold(selection, doc) {
-  const changes = [];
-  const newSelections = [];
-  for (const range of selection.ranges) {
-    if (range.empty) {
-      const from = range.from;
-      changes.push({ from, to: from, insert: "**Bold text**" });
-      newSelections.push(EditorSelection.range(from + 2, from + 10));
-      continue;
-    }
-    const text = doc.slice(range.from, range.to);
-    const isBold = text.startsWith("**") && text.endsWith("**");
-    if (isBold) {
-      const innerText = text.slice(2, -2);
-      changes.push({ from: range.from, to: range.to, insert: innerText });
-      newSelections.push(EditorSelection.range(range.from, range.from + innerText.length));
-    } else {
-      changes.push({ from: range.from, to: range.to, insert: `**${text}**` });
-      newSelections.push(EditorSelection.range(range.from, range.to + 4));
-    }
-  }
-  return {
-    changes,
-    selection: EditorSelection.create(newSelections)
-  };
-}
-function toggleItalic(selection, doc) {
-  const changes = [];
-  const newSelections = [];
-  for (const range of selection.ranges) {
-    if (range.empty) {
-      const from = range.from;
-      changes.push({ from, to: from, insert: "*Italic text*" });
-      newSelections.push(EditorSelection.range(from + 1, from + 12));
-      continue;
-    }
-    const text = doc.slice(range.from, range.to);
-    const isItalic = text.startsWith("*") && text.endsWith("*") && !text.startsWith("**");
-    if (isItalic) {
-      const innerText = text.slice(1, -1);
-      changes.push({ from: range.from, to: range.to, insert: innerText });
-      newSelections.push(EditorSelection.range(range.from, range.from + innerText.length));
-    } else {
-      changes.push({ from: range.from, to: range.to, insert: `*${text}*` });
-      newSelections.push(EditorSelection.range(range.from, range.to + 2));
-    }
-  }
-  return {
-    changes,
-    selection: EditorSelection.create(newSelections)
-  };
-}
-function toggleHeading(selection, doc, level) {
-  level = Math.max(1, Math.min(6, level));
-  const changes = [];
-  const newSelections = [];
-  const prefix = "#".repeat(level) + " ";
-  for (const range of selection.ranges) {
-    const line = getLineAt(doc, range.from);
-    const hasHeading = line.text.trimStart().startsWith(prefix);
-    if (hasHeading) {
-      const headingStart = line.from + line.text.indexOf(prefix);
-      changes.push({ from: headingStart, to: headingStart + prefix.length, insert: "" });
-      newSelections.push(EditorSelection.range(range.from - prefix.length, range.to - prefix.length));
-    } else {
-      const existingHeadingMatch = line.text.trimStart().match(/^(#{1,6})\s/);
-      if (existingHeadingMatch) {
-        const existingPrefix = existingHeadingMatch[0];
-        const headingStart = line.from + line.text.indexOf(existingPrefix);
-        changes.push({ from: headingStart, to: headingStart + existingPrefix.length, insert: prefix });
-        const diff = prefix.length - existingPrefix.length;
-        newSelections.push(EditorSelection.range(range.from + diff, range.to + diff));
-      } else {
-        changes.push({ from: line.from, to: line.from, insert: prefix });
-        newSelections.push(EditorSelection.range(range.from + prefix.length, range.to + prefix.length));
-      }
-    }
-  }
-  return {
-    changes,
-    selection: EditorSelection.create(newSelections)
-  };
-}
-function getLineAt(doc, pos) {
-  let lineStart = pos;
-  let lineEnd = pos;
-  while (lineStart > 0 && doc[lineStart - 1] !== "\n") {
-    lineStart--;
-  }
-  while (lineEnd < doc.length && doc[lineEnd] !== "\n") {
-    lineEnd++;
-  }
-  return {
-    from: lineStart,
-    to: lineEnd,
-    text: doc.slice(lineStart, lineEnd)
-  };
-}
-function createLink(selection, doc) {
-  const changes = [];
-  let newRanges = [];
-  for (const range of selection.ranges) {
-    if (range.empty) {
-      const template = "[link text](url)";
-      changes.push({
-        from: range.from,
-        to: range.to,
-        insert: template
-      });
-      newRanges.push({
-        anchor: range.from + 1,
-        head: range.from + 10
-      });
-    } else {
-      const selectedText = doc.slice(range.from, range.to);
-      changes.push({
-        from: range.from,
-        to: range.to,
-        insert: `[${selectedText}](url)`
-      });
-      newRanges.push({
-        anchor: range.from + selectedText.length + 3,
-        head: range.from + selectedText.length + 3
-      });
-    }
-  }
-  return {
-    changes,
-    selection: newRanges.length > 0 ? EditorSelection.create(
-      newRanges.map((range) => EditorSelection.range(range.anchor, range.head))
-    ) : void 0
-  };
-}
-function toggleCode(selection, doc) {
-  const changes = [];
-  const newRanges = [];
-  for (const range of selection.ranges) {
-    if (range.empty) {
-      changes.push({
-        from: range.from,
-        to: range.to,
-        insert: "`code`"
-      });
-      newRanges.push({
-        anchor: range.from + 1,
-        head: range.from + 5
-      });
-    } else {
-      const selectedText = doc.slice(range.from, range.to);
-      if (selectedText.includes("\n")) {
-        if (selectedText.startsWith("```") && selectedText.endsWith("```")) {
-          changes.push({
-            from: range.from,
-            to: range.to,
-            insert: selectedText.slice(3, -3).trim()
-          });
-        } else {
-          changes.push({
-            from: range.from,
-            to: range.to,
-            insert: `\`\`\`
-${selectedText}
-\`\`\``
-          });
-        }
-      } else {
-        if (selectedText.startsWith("`") && selectedText.endsWith("`")) {
-          changes.push({
-            from: range.from,
-            to: range.to,
-            insert: selectedText.slice(1, -1)
-          });
-        } else {
-          changes.push({
-            from: range.from,
-            to: range.to,
-            insert: `\`${selectedText}\``
-          });
-        }
-      }
-    }
-  }
-  return {
-    changes,
-    selection: newRanges.length > 0 ? EditorSelection.create(
-      newRanges.map((range) => EditorSelection.range(range.anchor, range.head))
-    ) : void 0
-  };
-}
 
 // src/app/obsidian-editor/utils/formatting/index.ts
-function applyMarkdownFormat(text, format) {
-  switch (format) {
-    case "bold":
-      return `**${text}**`;
-    case "italic":
-      return `*${text}*`;
-    case "code":
-      return `\`${text}\``;
-    case "link":
-      return `[${text}](url)`;
-    case "strikethrough":
-      return `~~${text}~~`;
-    case "heading":
-      return `# ${text}`;
-    default:
-      return text;
-  }
-}
-function hasMarkdownFormat(text, format) {
-  switch (format) {
-    case "bold":
-      return /^\*\*.*\*\*$/.test(text);
-    case "italic":
-      return /^\*.*\*$/.test(text);
-    case "code":
-      return /^`.*`$/.test(text);
-    case "link":
-      return /^\[.*\]\(.*\)$/.test(text);
-    case "strikethrough":
-      return /^~~.*~~$/.test(text);
-    case "heading":
-      return /^#+ .*$/.test(text);
-    default:
-      return false;
-  }
-}
-function removeMarkdownFormat(text, format) {
-  switch (format) {
-    case "bold":
-      return text.replace(/^\*\*(.*)\*\*$/, "$1");
-    case "italic":
-      return text.replace(/^\*(.*)\*$/, "$1");
-    case "code":
-      return text.replace(/^`(.*)`$/, "$1");
-    case "link":
-      return text.replace(/^\[(.*)\]\(.*\)$/, "$1");
-    case "strikethrough":
-      return text.replace(/^~~(.*)~~$/, "$1");
-    case "heading":
-      return text.replace(/^#+ (.*)$/, "$1");
-    default:
-      return text;
-  }
-}
+import { EditorSelection as EditorSelection5 } from "@codemirror/state";
 function insertBold(view) {
   const { state, dispatch } = view;
   const changes = [];
@@ -10665,7 +10141,7 @@ function insertBold(view) {
         to: range.from,
         insert: "****"
       });
-      selections.push(EditorSelection.cursor(range.from + 2));
+      selections.push(EditorSelection5.cursor(range.from + 2));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `**${selectedText}**`;
@@ -10674,12 +10150,12 @@ function insertBold(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(EditorSelection5.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function insertItalic(view) {
@@ -10693,7 +10169,7 @@ function insertItalic(view) {
         to: range.from,
         insert: "**"
       });
-      selections.push(EditorSelection.cursor(range.from + 1));
+      selections.push(EditorSelection5.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `*${selectedText}*`;
@@ -10702,12 +10178,12 @@ function insertItalic(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(EditorSelection5.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function insertCode(view) {
@@ -10721,7 +10197,7 @@ function insertCode(view) {
         to: range.from,
         insert: "``"
       });
-      selections.push(EditorSelection.cursor(range.from + 1));
+      selections.push(EditorSelection5.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `\`${selectedText}\``;
@@ -10730,12 +10206,12 @@ function insertCode(view) {
         to: range.to,
         insert: newText
       });
-      selections.push(EditorSelection.range(range.from, range.from + newText.length));
+      selections.push(EditorSelection5.range(range.from, range.from + newText.length));
     }
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function insertHeading(view, level = 1) {
@@ -10763,11 +10239,11 @@ function insertHeading(view, level = 1) {
     }
     const contentOffset = range.from - line.from;
     const newPos = line.from + prefix.length + contentOffset;
-    selections.push(EditorSelection.cursor(newPos));
+    selections.push(EditorSelection5.cursor(newPos));
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function insertLink(view) {
@@ -10781,7 +10257,7 @@ function insertLink(view) {
         to: range.from,
         insert: "[](url)"
       });
-      selections.push(EditorSelection.cursor(range.from + 1));
+      selections.push(EditorSelection5.cursor(range.from + 1));
     } else {
       const selectedText = state.doc.sliceString(range.from, range.to);
       const newText = `[${selectedText}](url)`;
@@ -10791,12 +10267,12 @@ function insertLink(view) {
         insert: newText
       });
       const urlPos = range.from + selectedText.length + 3;
-      selections.push(EditorSelection.cursor(urlPos));
+      selections.push(EditorSelection5.cursor(urlPos));
     }
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function indentText(view) {
@@ -10821,11 +10297,11 @@ function indentText(view) {
     }
     const newFrom = range.from + indentSize;
     const newTo = range.to + (endLine.number - startLine.number + 1) * indentSize;
-    selections.push(EditorSelection.range(newFrom, newTo));
+    selections.push(EditorSelection5.range(newFrom, newTo));
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function unindentText(view) {
@@ -10867,11 +10343,11 @@ function unindentText(view) {
         newTo -= spacesToRemove;
       }
     }
-    selections.push(EditorSelection.range(newFrom, Math.max(newFrom, newTo)));
+    selections.push(EditorSelection5.range(newFrom, Math.max(newFrom, newTo)));
   }
   dispatch({
     changes,
-    selection: EditorSelection.create(selections)
+    selection: EditorSelection5.create(selections)
   });
 }
 function handleBackspaceIndent(view) {
@@ -10895,7 +10371,7 @@ function handleBackspaceIndent(view) {
           to: pos,
           insert: ""
         });
-        selections.push(EditorSelection.cursor(pos - spacesToRemove));
+        selections.push(EditorSelection5.cursor(pos - spacesToRemove));
         handled = true;
       }
     }
@@ -10903,7 +10379,7 @@ function handleBackspaceIndent(view) {
   if (handled) {
     dispatch({
       changes,
-      selection: EditorSelection.create(selections)
+      selection: EditorSelection5.create(selections)
     });
     return true;
   }
@@ -10940,23 +10416,23 @@ function handleEnterListBlockquote(view) {
 // src/app/obsidian-editor/utils/editorExtensions.ts
 var createCustomHighlightStyle = () => {
   try {
-    if (typeof tags !== "object" || tags === null) {
+    if (typeof tags7 !== "object" || tags7 === null) {
       console.warn("Lezer highlight tags not available, using empty highlight style");
       return [];
     }
     const validStyles = [];
-    if (tags.heading1) validStyles.push({ tag: [tags.heading1], fontSize: "1.6em", fontWeight: "bold" });
-    if (tags.heading2) validStyles.push({ tag: [tags.heading2], fontSize: "1.4em", fontWeight: "bold" });
-    if (tags.heading3) validStyles.push({ tag: [tags.heading3], fontSize: "1.2em", fontWeight: "bold" });
-    if (tags.heading4) validStyles.push({ tag: [tags.heading4], fontSize: "1.1em", fontWeight: "bold" });
-    if (tags.heading5) validStyles.push({ tag: [tags.heading5], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (tags.heading6) validStyles.push({ tag: [tags.heading6], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
-    if (tags.strong) validStyles.push({ tag: [tags.strong], fontWeight: "bold" });
-    if (tags.emphasis) validStyles.push({ tag: [tags.emphasis], fontStyle: "italic" });
-    if (tags.link) validStyles.push({ tag: [tags.link], color: "#2563eb", textDecoration: "underline" });
-    if (tags.monospace) validStyles.push({ tag: [tags.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
+    if (tags7.heading1) validStyles.push({ tag: [tags7.heading1], fontSize: "1.6em", fontWeight: "bold" });
+    if (tags7.heading2) validStyles.push({ tag: [tags7.heading2], fontSize: "1.4em", fontWeight: "bold" });
+    if (tags7.heading3) validStyles.push({ tag: [tags7.heading3], fontSize: "1.2em", fontWeight: "bold" });
+    if (tags7.heading4) validStyles.push({ tag: [tags7.heading4], fontSize: "1.1em", fontWeight: "bold" });
+    if (tags7.heading5) validStyles.push({ tag: [tags7.heading5], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags7.heading6) validStyles.push({ tag: [tags7.heading6], fontSize: "1.1em", fontWeight: "bold", fontStyle: "italic" });
+    if (tags7.strong) validStyles.push({ tag: [tags7.strong], fontWeight: "bold" });
+    if (tags7.emphasis) validStyles.push({ tag: [tags7.emphasis], fontStyle: "italic" });
+    if (tags7.link) validStyles.push({ tag: [tags7.link], color: "#2563eb", textDecoration: "underline" });
+    if (tags7.monospace) validStyles.push({ tag: [tags7.monospace], fontFamily: "monospace", fontSize: "0.9em", color: "#10b981" });
     if (validStyles.length > 0) {
-      return HighlightStyle.define(validStyles);
+      return HighlightStyle5.define(validStyles);
     } else {
       console.warn("No valid lezer highlight tags found, using empty highlight style");
       return [];
@@ -10966,8 +10442,16 @@ var createCustomHighlightStyle = () => {
     return [];
   }
 };
+var createCustomEnterKeymap = () => {
+  return Prec3.highest(keymap2.of([
+    {
+      key: "Enter",
+      run: (view) => handleEnterListBlockquote(view)
+    }
+  ]));
+};
 var createMarkdownKeymaps = (onSaveRef) => {
-  return keymap.of([
+  return keymap2.of([
     {
       key: "Backspace",
       run: (view) => {
@@ -10979,59 +10463,10 @@ var createMarkdownKeymaps = (onSaveRef) => {
     {
       key: "Tab",
       run: (view) => {
-        const selection = view.state.selection.main;
-        const firstLine = view.state.doc.lineAt(selection.from);
-        const lastLine = view.state.doc.lineAt(selection.to);
-        console.log("Tab pressed - processing indentation");
-        if (firstLine.number !== lastLine.number) {
-          console.log("Multi-line selection detected");
-          indentText(view);
-          return true;
-        }
-        const line = firstLine;
-        const isListLine = isListItem(line.text);
-        const isBlockquoteLine = isBlockquote(line.text);
-        if (isListLine) {
-          console.log("List line detected - applying 4-space indent");
-          view.dispatch({
-            changes: {
-              from: line.from,
-              to: line.from,
-              insert: INDENT_UNIT
-            },
-            userEvent: "input.indent"
-          });
-          return true;
-        }
-        if (isBlockquoteLine) {
-          console.log("Blockquote line detected - applying > marker");
-          const match = line.text.match(/^(\s*)((?:>\s*)+)(.*)/);
-          if (match) {
-            const leadingSpaces = match[1] || "";
-            view.dispatch({
-              changes: {
-                from: line.from + leadingSpaces.length,
-                to: line.from + leadingSpaces.length,
-                insert: "> "
-              },
-              userEvent: "input.indent"
-            });
-            return true;
-          }
-        }
-        console.log("Regular indent - applying 4 spaces");
-        view.dispatch({
-          changes: {
-            from: selection.from,
-            to: selection.from,
-            insert: INDENT_UNIT
-          },
-          userEvent: "input.indent"
-        });
+        indentText(view);
         return true;
       },
       shift: (view) => {
-        console.log("Shift+Tab pressed - unindenting");
         unindentText(view);
         return true;
       }
@@ -11095,7 +10530,7 @@ var createMarkdownKeymaps = (onSaveRef) => {
   ]);
 };
 var createEditorStyling = () => {
-  return EditorView.theme({
+  return EditorView17.theme({
     "&": {
       height: "100%"
     },
@@ -11108,7 +10543,7 @@ var createEditorStyling = () => {
   });
 };
 var createEditorExtensions = (options) => {
-  const { editableCompartment, themeExtension} = options;
+  const { editableCompartment, themeExtension, isDark } = options;
   const onSaveRef = {
     current: options.onSave || (() => {
     })
@@ -11116,15 +10551,26 @@ var createEditorExtensions = (options) => {
   const safeExtensions = [
     themeExtension,
     history(),
-    // Get all extensions from the central extension registry
-    ...createAllExtensions(),
-    // Add safety and highlighting extensions
-    Prec.highest(createLezerSafetyPlugin()),
+    atomicIndents,
+    createCustomEnterKeymap(),
+    // Add our Lezer safety plugin with highest precedence to run first
+    Prec3.highest(createLezerSafetyPlugin()),
+    markdown({
+      base: markdownLanguage,
+      codeLanguages: languages2,
+      addKeymap: false
+    }),
+    // Add the extension to prevent markdown in HTML with high precedence
+    Prec3.high(createNoMarkdownInHtmlExtension()),
+    createMarkdownSyntaxPlugin(),
+    htmlDecorator(),
+    // Add HTML decorator extension for HTML rendering
+    markdownPasteHandler,
     highlightActiveLine(),
     highlightActiveLineGutter(),
-    EditorView.lineWrapping,
+    EditorView17.lineWrapping,
     createMarkdownKeymaps(onSaveRef),
-    editableCompartment.of(EditorView.editable.of(true)),
+    editableCompartment.of(EditorView17.editable.of(true)),
     // Start as editable
     createEditorStyling()
   ];
@@ -11138,10 +10584,13 @@ var createEditorExtensions = (options) => {
       safeExtensions.push(syntaxHighlighting(highlightStyle));
     }
   } catch (error) {
-    console.warn("Failed to create syntax highlighting:", error);
+    console.error("Error applying syntax highlighting:", error);
   }
   return safeExtensions;
 };
+
+// src/app/obsidian-editor/components/EditorCore.tsx
+import { jsx as jsx3, jsxs } from "react/jsx-runtime";
 var EditorCore = ({
   initialValue,
   readOnly,
@@ -11153,17 +10602,17 @@ var EditorCore = ({
   const editorRef = useRef(null);
   const editorViewRef = useRef(null);
   const { theme, mounted } = useTheme();
-  const [initializationError, setInitializationError] = useState(null);
+  const [initializationError, setInitializationError] = useState2(null);
   const onChangeRef = useRef(onChange);
   const onSaveRef = useRef(onSave);
-  const editableCompartment = useRef(new Compartment()).current;
-  const themeCompartment = useRef(new Compartment()).current;
+  const editableCompartment = useRef(new Compartment2()).current;
+  const themeCompartment = useRef(new Compartment2()).current;
   const editorThemeName = getCurrentEditorTheme();
-  useEffect(() => {
+  useEffect2(() => {
     onChangeRef.current = onChange;
     onSaveRef.current = onSave;
   }, [onChange, onSave]);
-  useEffect(() => {
+  useEffect2(() => {
     const handleWheel = (e) => {
       e.stopPropagation();
     };
@@ -11183,7 +10632,7 @@ var EditorCore = ({
       return content;
     }
   };
-  useEffect(() => {
+  useEffect2(() => {
     if (!mounted || !editorRef.current) return;
     if (editorViewRef.current) {
       editorViewRef.current.destroy();
@@ -11198,7 +10647,7 @@ var EditorCore = ({
       };
       window.addEventListener("error", errorHandler);
       const themeExtension = getTheme(editorThemeName, theme === "dark" ? "dark" : "light");
-      const changeListener = EditorView.updateListener.of((update) => {
+      const changeListener = EditorView18.updateListener.of((update) => {
         if (update.docChanged && onChangeRef.current) {
           if (update.transactions.some((tr) => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
             const doc = update.state.doc;
@@ -11206,7 +10655,7 @@ var EditorCore = ({
           }
         }
       });
-      const errorHandlingExtension = EditorView.domEventHandlers({
+      const errorHandlingExtension = EditorView18.domEventHandlers({
         error: (event, view2) => {
           console.warn("DOM error event in editor:", event);
           return false;
@@ -11223,8 +10672,8 @@ var EditorCore = ({
         changeListener,
         errorHandlingExtension
       ];
-      const view = new EditorView({
-        state: EditorState.create({
+      const view = new EditorView18({
+        state: EditorState3.create({
           doc: safeInitialValue,
           extensions
         }),
@@ -11243,7 +10692,7 @@ var EditorCore = ({
       setInitializationError(error instanceof Error ? error : new Error(String(error)));
     }
   }, [mounted]);
-  useEffect(() => {
+  useEffect2(() => {
     if (editorViewRef.current && themeCompartment && mounted) {
       try {
         const themeExtension = getTheme(editorThemeName, theme === "dark" ? "dark" : "light");
@@ -11260,7 +10709,7 @@ var EditorCore = ({
       }
     }
   }, [theme, themeCompartment, mounted, editorThemeName]);
-  useEffect(() => {
+  useEffect2(() => {
     if (editorViewRef.current && mounted) {
       try {
         editorViewRef.current.dispatch({
@@ -11270,28 +10719,14 @@ var EditorCore = ({
         });
         const isEditable = mode === "live" && !readOnly;
         editorViewRef.current.dispatch({
-          effects: editableCompartment.reconfigure(EditorView.editable.of(isEditable))
+          effects: editableCompartment.reconfigure(EditorView18.editable.of(isEditable))
         });
-        const editorElement = editorViewRef.current.dom;
-        if (editorElement) {
-          editorElement.setAttribute("data-markdown-mode", mode);
-          if (typeof document !== "undefined") {
-            document.documentElement.setAttribute("data-markdown-mode", mode);
-            if (mode === "preview") {
-              document.documentElement.classList.add("markdown-preview-mode");
-              document.documentElement.classList.remove("markdown-live-mode");
-            } else {
-              document.documentElement.classList.add("markdown-live-mode");
-              document.documentElement.classList.remove("markdown-preview-mode");
-            }
-          }
-        }
       } catch (error) {
         console.error("Error updating editor mode:", error);
       }
     }
   }, [mode, readOnly, editableCompartment, mounted]);
-  useEffect(() => {
+  useEffect2(() => {
     if (editorViewRef.current && mounted) {
       try {
         const currentContent = editorViewRef.current.state.doc.toString();
@@ -11316,7 +10751,7 @@ var EditorCore = ({
         "Error initializing editor: ",
         initializationError.message
       ] }),
-      /* @__PURE__ */ jsx(
+      /* @__PURE__ */ jsx3(
         "textarea",
         {
           defaultValue: initialValue,
@@ -11327,59 +10762,209 @@ var EditorCore = ({
       )
     ] });
   }
-  return /* @__PURE__ */ jsx("div", { ref: editorRef, className: "obsidian-editor-core" });
+  return /* @__PURE__ */ jsx3("div", { ref: editorRef, className: "obsidian-editor-core" });
 };
 var EditorCore_default = EditorCore;
+
+// src/app/obsidian-editor/utils/formatting/markdownFormatting.ts
+import { EditorSelection as EditorSelection6 } from "@codemirror/state";
+function toggleBold(selection, doc) {
+  const changes = [];
+  let newSelection;
+  for (const range of selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: "**bold text**"
+      });
+      const cursorPos = range.from + 2;
+      newSelection = EditorSelection6.cursor(cursorPos);
+    } else {
+      const selectedText = doc.slice(range.from, range.to);
+      if (selectedText.startsWith("**") && selectedText.endsWith("**")) {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: selectedText.slice(2, -2)
+        });
+      } else {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: `**${selectedText}**`
+        });
+      }
+    }
+  }
+  return { changes, selection: newSelection };
+}
+function toggleItalic(selection, doc) {
+  const changes = [];
+  let newSelection;
+  for (const range of selection.ranges) {
+    if (range.empty) {
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: "*italic text*"
+      });
+      const cursorPos = range.from + 1;
+      newSelection = EditorSelection6.cursor(cursorPos);
+    } else {
+      const selectedText = doc.slice(range.from, range.to);
+      if (selectedText.startsWith("*") && selectedText.endsWith("*") && !(selectedText.startsWith("**") && selectedText.endsWith("**"))) {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: selectedText.slice(1, -1)
+        });
+      } else {
+        changes.push({
+          from: range.from,
+          to: range.to,
+          insert: `*${selectedText}*`
+        });
+      }
+    }
+  }
+  return { changes, selection: newSelection };
+}
+function toggleHeading(selection, doc, level) {
+  const changes = [];
+  if (level < 1 || level > 6) {
+    console.error("Invalid heading level. Must be between 1 and 6.");
+    return { changes: [] };
+  }
+  const headingMarker = "#".repeat(level) + " ";
+  for (const range of selection.ranges) {
+    let lineStart = range.from;
+    while (lineStart > 0 && doc.charAt(lineStart - 1) !== "\n") {
+      lineStart--;
+    }
+    const lineEndSearch = doc.indexOf("\n", lineStart);
+    const lineEnd = lineEndSearch === -1 ? doc.length : lineEndSearch;
+    const line = doc.slice(lineStart, lineEnd);
+    const headingRegex = /^(#{1,6})\s/;
+    const match = line.match(headingRegex);
+    if (match && match[1].length === level) {
+      changes.push({
+        from: lineStart,
+        to: lineStart + match[0].length,
+        insert: ""
+      });
+    } else if (match) {
+      changes.push({
+        from: lineStart,
+        to: lineStart + match[0].length,
+        insert: headingMarker
+      });
+    } else {
+      changes.push({
+        from: lineStart,
+        to: lineStart,
+        insert: headingMarker
+      });
+    }
+  }
+  return { changes };
+}
+
+// src/app/obsidian-editor/components/ThemeSwitcher.tsx
+import { useState as useState3, useEffect as useEffect3 } from "react";
+import { jsx as jsx4, jsxs as jsxs2 } from "react/jsx-runtime";
 var ThemeSwitcher = ({ onThemeChange }) => {
-  const [themeName, setThemeName] = useState("default");
-  useEffect(() => {
-    setThemeName(getCurrentEditorTheme());
+  const [themeName, setThemeName] = useState3("obsidian");
+  useEffect3(() => {
+    const currentTheme = getCurrentEditorTheme();
+    setThemeName(currentTheme);
   }, []);
   const handleThemeChange = (e) => {
-    const newTheme = e.target.value;
-    setThemeName(newTheme);
+    const selectedTheme = e.target.value;
+    console.log(`Theme changed to: ${selectedTheme}`);
+    setThemeName(selectedTheme);
+    setEditorTheme(selectedTheme);
+    if (selectedTheme === "vanilla") {
+      const editorElements = document.querySelectorAll(".cm-editor");
+      const isDark = document.documentElement.classList.contains("dark");
+      editorElements.forEach((editor) => {
+        if (isDark) {
+          editor.style.backgroundColor = "#2a2536";
+          editor.style.border = "4px solid #c4b3e0";
+          const content = editor.querySelector(".cm-content");
+          if (content) {
+            content.style.backgroundColor = "#2a2536";
+          }
+          const gutters = editor.querySelector(".cm-gutters");
+          if (gutters) {
+            gutters.style.backgroundColor = "#332d3e";
+            gutters.style.borderRight = "1px solid #4a4252";
+          }
+        } else {
+          editor.style.backgroundColor = "#f5f0ff";
+          editor.style.border = "4px solid #625772";
+          const content = editor.querySelector(".cm-content");
+          if (content) {
+            content.style.backgroundColor = "#f5f0ff";
+          }
+          const gutters = editor.querySelector(".cm-gutters");
+          if (gutters) {
+            gutters.style.backgroundColor = "#ede6f8";
+            gutters.style.borderRight = "1px solid #d8c9f0";
+          }
+        }
+      });
+    }
     if (onThemeChange) {
-      onThemeChange(newTheme);
+      setTimeout(() => {
+        onThemeChange(selectedTheme);
+      }, 0);
     }
   };
-  return /* @__PURE__ */ jsxs("div", { className: "theme-switcher", children: [
-    /* @__PURE__ */ jsxs(
+  return /* @__PURE__ */ jsxs2("div", { className: "obsidian-theme-switcher", children: [
+    /* @__PURE__ */ jsx4("label", { htmlFor: "theme-select", children: "Theme:" }),
+    /* @__PURE__ */ jsxs2(
       "select",
       {
+        id: "theme-select",
         value: themeName,
         onChange: handleThemeChange,
         className: "theme-select",
-        "aria-label": "Select editor theme",
         children: [
-          /* @__PURE__ */ jsx("option", { value: "default", children: "Default" }),
-          /* @__PURE__ */ jsx("option", { value: "vanilla", children: "Vanilla" })
+          /* @__PURE__ */ jsx4("option", { value: "obsidian", children: "Obsidian" }),
+          /* @__PURE__ */ jsx4("option", { value: "vanilla", children: "Vanilla" })
         ]
       }
     ),
-    /* @__PURE__ */ jsx("style", { children: `
-        .theme-switcher {
-          position: relative;
+    /* @__PURE__ */ jsx4("style", { jsx: true, children: `
+        .obsidian-theme-switcher {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
         }
         
         .theme-select {
           padding: 4px 8px;
           border-radius: 4px;
           border: 1px solid var(--hr-color, #dcddde);
-          background: var(--background-primary, #ffffff);
+          background-color: var(--background-primary, #ffffff);
           color: var(--text-normal, #2e3338);
           cursor: pointer;
-          font-size: 14px;
         }
         
         .dark .theme-select {
-          background: var(--background-primary, #2b2b2b);
+          background-color: var(--background-primary, #2b2b2b);
           color: var(--text-normal, #dcddde);
           border-color: var(--hr-color, #444444);
         }
-        ` })
+      ` })
   ] });
 };
 var ThemeSwitcher_default = ThemeSwitcher;
+
+// src/app/obsidian-editor/components/EditorToolbar.tsx
+import { jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
 var EditorToolbar = ({
   editorView,
   mode,
@@ -11399,10 +10984,10 @@ var EditorToolbar = ({
       editorView.focus();
     }
   };
-  return /* @__PURE__ */ jsxs("div", { className: "obsidian-editor-toolbar", children: [
-    /* @__PURE__ */ jsxs("div", { className: "toolbar-left", children: [
-      /* @__PURE__ */ jsxs("div", { className: "mode-toggle", children: [
-        /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsxs3("div", { className: "obsidian-editor-toolbar", children: [
+    /* @__PURE__ */ jsxs3("div", { className: "toolbar-left", children: [
+      /* @__PURE__ */ jsxs3("div", { className: "mode-toggle", children: [
+        /* @__PURE__ */ jsx5(
           "button",
           {
             className: `mode-button ${mode === "live" ? "active" : ""}`,
@@ -11413,7 +10998,7 @@ var EditorToolbar = ({
             children: "Edit"
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             className: `mode-button ${mode === "preview" ? "active" : ""}`,
@@ -11425,28 +11010,28 @@ var EditorToolbar = ({
           }
         )
       ] }),
-      mode === "live" && /* @__PURE__ */ jsxs("div", { className: "format-buttons", children: [
-        /* @__PURE__ */ jsx(
+      mode === "live" && /* @__PURE__ */ jsxs3("div", { className: "format-buttons", children: [
+        /* @__PURE__ */ jsx5(
           "button",
           {
             onClick: () => applyFormatting(toggleBold),
             className: "format-button",
             "aria-label": "Bold",
             title: "Bold (Ctrl+B)",
-            children: /* @__PURE__ */ jsx("strong", { children: "B" })
+            children: /* @__PURE__ */ jsx5("strong", { children: "B" })
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             onClick: () => applyFormatting(toggleItalic),
             className: "format-button",
             "aria-label": "Italic",
             title: "Italic (Ctrl+I)",
-            children: /* @__PURE__ */ jsx("em", { children: "I" })
+            children: /* @__PURE__ */ jsx5("em", { children: "I" })
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
@@ -11456,7 +11041,7 @@ var EditorToolbar = ({
             children: "H1"
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
@@ -11466,7 +11051,7 @@ var EditorToolbar = ({
             children: "H2"
           }
         ),
-        /* @__PURE__ */ jsx(
+        /* @__PURE__ */ jsx5(
           "button",
           {
             onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
@@ -11478,8 +11063,8 @@ var EditorToolbar = ({
         )
       ] })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "toolbar-right", children: /* @__PURE__ */ jsx(ThemeSwitcher_default, { onThemeChange }) }),
-    /* @__PURE__ */ jsx("style", { children: `
+    /* @__PURE__ */ jsx5("div", { className: "toolbar-right", children: /* @__PURE__ */ jsx5(ThemeSwitcher_default, { onThemeChange }) }),
+    /* @__PURE__ */ jsx5("style", { jsx: true, children: `
         .obsidian-editor-toolbar {
           display: flex;
           justify-content: space-between;
@@ -11553,18 +11138,50 @@ var EditorToolbar = ({
         .dark .format-button:hover {
           background: var(--interactive-hover, #4a4a4a);
         }
-        ` })
+      ` })
   ] });
 };
 var EditorToolbar_default = EditorToolbar;
+
+// src/app/obsidian-editor/CodeMirrorEditor.tsx
+import { Fragment, jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
+if (typeof document !== "undefined") {
+  const loadThemeCSS2 = () => {
+    if (!document.querySelector('link[data-theme-css="vanilla-light"]')) {
+      const lightCSS = document.createElement("link");
+      lightCSS.rel = "stylesheet";
+      lightCSS.href = "/css/vanilla-light.css";
+      lightCSS.setAttribute("data-theme-css", "vanilla-light");
+      document.head.appendChild(lightCSS);
+    }
+    if (!document.querySelector('link[data-theme-css="vanilla-dark"]')) {
+      const darkCSS = document.createElement("link");
+      darkCSS.rel = "stylesheet";
+      darkCSS.href = "/css/vanilla-dark.css";
+      darkCSS.setAttribute("data-theme-css", "vanilla-dark");
+      document.head.appendChild(darkCSS);
+    }
+    const theme = getCurrentEditorTheme();
+    const mode = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", `${theme}-${mode}`);
+    if (!document.querySelector('link[data-theme-css="obsidian"]')) {
+      const obsidianCSS = document.createElement("link");
+      obsidianCSS.rel = "stylesheet";
+      obsidianCSS.href = "/css/obsidian.css";
+      obsidianCSS.setAttribute("data-theme-css", "obsidian");
+      document.head.appendChild(obsidianCSS);
+    }
+  };
+  loadThemeCSS2();
+}
 var CodeMirrorEditor = ({
   initialValue = "",
   readOnly = false,
   onChange,
   onSave
 }) => {
-  const [editorView, setEditorView] = useState(null);
-  const [currentMode, setCurrentMode] = useState("live");
+  const [editorView, setEditorView] = useState4(null);
+  const [currentMode, setCurrentMode] = useState4("live");
   const { mounted } = useTheme();
   const handleEditorViewCreated = (view) => {
     setEditorView(view);
@@ -11575,8 +11192,8 @@ var CodeMirrorEditor = ({
   const handleThemeChange = (themeName) => {
     setEditorTheme(themeName);
   };
-  return /* @__PURE__ */ jsx("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ jsxs(Fragment, { children: [
-    /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsx6("div", { className: "obsidian-editor-container", children: mounted && /* @__PURE__ */ jsxs4(Fragment, { children: [
+    /* @__PURE__ */ jsx6(
       EditorToolbar_default,
       {
         editorView,
@@ -11585,7 +11202,7 @@ var CodeMirrorEditor = ({
         onThemeChange: handleThemeChange
       }
     ),
-    /* @__PURE__ */ jsx("div", { className: "obsidian-editor-content", children: /* @__PURE__ */ jsx(
+    /* @__PURE__ */ jsx6("div", { className: "obsidian-editor-content", children: /* @__PURE__ */ jsx6(
       EditorCore_default,
       {
         initialValue,
@@ -11599,49 +11216,130 @@ var CodeMirrorEditor = ({
   ] }) });
 };
 var CodeMirrorEditor_default = CodeMirrorEditor;
-function Editor(props) {
-  return /* @__PURE__ */ jsx(CodeMirrorEditor_default, { ...props });
-}
+
+// src/components/ThemeToggle.tsx
+import { Moon, Sun } from "lucide-react";
+import { jsx as jsx7 } from "react/jsx-runtime";
 function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
-  return /* @__PURE__ */ jsxs(
+  const { theme, toggleTheme, mounted } = useTheme();
+  if (!mounted) {
+    return /* @__PURE__ */ jsx7(
+      "button",
+      {
+        className: "p-2 rounded-full transition-colors",
+        "aria-label": "Theme toggle",
+        "aria-hidden": "true",
+        children: /* @__PURE__ */ jsx7("div", { className: "w-5 h-5" })
+      }
+    );
+  }
+  return /* @__PURE__ */ jsx7(
     "button",
     {
       onClick: toggleTheme,
-      className: "theme-toggle-button",
-      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} theme`,
-      children: [
-        theme === "light" ? "\u{1F319}" : "\u2600\uFE0F",
-        /* @__PURE__ */ jsx("style", { children: `
-        .theme-toggle-button {
-          padding: 8px 12px;
-          border-radius: 4px;
-          background: var(--background-secondary, #f5f5f5);
-          border: 1px solid var(--border-color, #e2e2e2);
-          cursor: pointer;
-          font-size: 16px;
-          line-height: 1;
-          transition: background-color 0.2s ease;
-        }
-        
-        .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #e9e9e9);
-        }
-        
-        .dark .theme-toggle-button {
-          background: var(--background-secondary, #2d333b);
-          border-color: var(--border-color, #444c56);
-        }
-        
-        .dark .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #444c56);
-        }
-        ` })
-      ]
+      className: "p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors",
+      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} mode`,
+      children: theme === "light" ? /* @__PURE__ */ jsx7(Moon, { className: "w-5 h-5" }) : /* @__PURE__ */ jsx7(Sun, { className: "w-5 h-5 text-yellow-300" })
     }
   );
 }
 
-export { CodeMirrorEditor_default as CodeMirrorEditor, Editor, EditorCore_default as EditorCore, EditorToolbar_default as EditorToolbar, ThemeProvider, ThemeSwitcher_default as ThemeSwitcher, ThemeToggle, applyMarkdownFormat, createLink, handleBackspaceIndent, handleEnterListBlockquote, hasMarkdownFormat, indentText, insertBold, insertCode, insertHeading, insertItalic, insertLink, removeMarkdownFormat, toggleBold, toggleCode, toggleHeading, toggleItalic, unindentText, useTheme };
-//# sourceMappingURL=index.mjs.map
-//# sourceMappingURL=index.mjs.map
+// src/app/obsidian-editor/utils/filesystem.ts
+import { EditorView as EditorView19 } from "@codemirror/view";
+var FileSystemError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "FileSystemError";
+  }
+};
+var createFileSystem = (options = {}) => {
+  const { basePath = "", onError } = options;
+  const handleError = (error) => {
+    if (onError) {
+      onError(error);
+    } else {
+      console.error("FileSystem Error:", error);
+    }
+    throw error;
+  };
+  return {
+    async readFile(path) {
+      try {
+        const response = await fetch(`${basePath}/${encodeURIComponent(path)}`);
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to read file: ${path}`);
+        }
+        return await response.text();
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async writeFile(path, content) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "text/plain"
+          },
+          body: content
+        });
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to write file: ${path}`);
+        }
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async deleteFile(path) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`, {
+          method: "DELETE"
+        });
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to delete file: ${path}`);
+        }
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+    async listFiles(path) {
+      try {
+        const response = await fetch(`${basePath}?path=${encodeURIComponent(path)}`);
+        if (!response.ok) {
+          throw new FileSystemError(`Failed to list files in: ${path}`);
+        }
+        return await response.json();
+      } catch (error) {
+        return handleError(error);
+      }
+    }
+  };
+};
+var createFileSystemExtension = (fileSystem) => {
+  return EditorView19.domEventHandlers({
+    keydown: (event, view) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        return true;
+      }
+      return false;
+    }
+  });
+};
+
+// src/index.ts
+if (typeof window !== "undefined") {
+  try {
+    applyHighlightStyleFix();
+  } catch (e) {
+    console.warn("Failed to apply highlight style fix:", e);
+  }
+}
+export {
+  CodeMirrorEditor_default as CodeMirrorEditor,
+  ThemeProvider,
+  ThemeToggle,
+  createFileSystem,
+  createFileSystemExtension,
+  useTheme
+};

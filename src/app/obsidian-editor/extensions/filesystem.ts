@@ -34,8 +34,8 @@ export interface MarkdownFileSystem {
  * @param {EditorState} state - The editor state
  * @returns {Array<{level: number, title: string, pos: number}>} List of headings
  */
-export function extractHeadings(state: EditorState): Array<{level: number, title: string, pos: number}> {
-  const headings: Array<{level: number, title: string, pos: number}> = [];
+export function extractHeadings(state: EditorState) {
+  const headings = [];
   const tree = syntaxTree(state);
   
   // Walk through the syntax tree to find heading nodes
@@ -87,7 +87,7 @@ export function createMarkdownFileSystem(options: {
     lastModified: new Date()
   }];
   
-  let currentFile: MarkdownFile | null = files[0];
+  let currentFile = files[0];
   
   return {
     files,
@@ -125,7 +125,7 @@ export function createMarkdownFileSystem(options: {
         files.splice(index, 1);
         
         // Update current file if deleted
-        if (currentFile && currentFile.path === path) {
+        if (currentFile.path === path) {
           currentFile = files.length > 0 ? files[0] : null;
         }
         

@@ -24,8 +24,6 @@ import { markdown } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { Compartment } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { markdownSyntaxHider } from '../MarkdownSyntaxHider';
-import { atomicIndents } from '../AtomicIndents';
 
 /**
  * Represents a decoration item with its position and decoration object
@@ -250,7 +248,7 @@ export const markdownCompartment = new Compartment();
 /**
  * Current markdown syntax mode
  */
-let currentMode: 'visible' | 'hidden' = 'hidden';
+let currentMode: 'visible' | 'hidden' = 'visible';
 
 /**
  * Create the markdown syntax extension
@@ -266,17 +264,32 @@ export function createMarkdownSyntaxPlugin(options: {
   
   // Configure the markdown extension
   const markdownConfig = {
+    // Add markdown extensions
+    extensions: [
+      // GitHub Flavored Markdown: tables, strikethrough, etc.
+      {
+        name: 'table',
+        enable: true
+      },
+      {
+        name: 'strikethrough',
+        enable: true
+      },
+      {
+        name: 'taggedTemplate',
+        enable: true
+      },
+      {
+        name: 'tasklist',
+        enable: true
+      }
+    ],
     codeLanguages: languages
   };
   
   return [
     markdownCompartment.of(markdown(markdownConfig)),
     markdownSyntaxStateField,
-    markdownSyntaxHider,
-    LineBreakDecorator,
-    HorizontalRuleDecorator,
-    htmlDecorator(),
-    atomicIndents,
   ];
 }
 

@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
 import { HighlightStyle } from '@codemirror/language';
-import { tags, Tag } from '@lezer/highlight';
+import { tags } from '@lezer/highlight';
 import { createLightThemeFromCssVars, createDarkThemeFromCssVars, createHighlightStyleFromCssVars } from './themeVariables';
 import { vanillaLightTheme, vanillaDarkTheme, vanillaHighlightStyle } from './vanilla';
 
@@ -15,7 +15,7 @@ HighlightStyle.define = function(specs) {
     // Create a safer version of the style function by wrapping it
     // We use Object.defineProperty to avoid issues with readonly properties
     Object.defineProperty(style, 'style', {
-      value: function(tags: readonly Tag[]) {
+      value: function(tags) {
         // Handle undefined or non-iterable tags
         if (!tags) return "";
         try {

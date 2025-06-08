@@ -1,49 +1,42 @@
 'use client';
 
-import React from 'react';
 import { useTheme } from '../contexts/ThemeContext';
+import { Moon, Sun } from 'lucide-react';
 
 /**
- * A simple toggle button for switching between light and dark themes
+ * A button component that allows the user to toggle between light and dark themes.
+ * It uses the `useTheme` hook to access the current theme and the toggle function.
+ * This component is SSR-friendly and won't cause hydration mismatches.
+ *
+ * @returns {JSX.Element} The theme toggle button.
  */
 export function ThemeToggle() {
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, mounted } = useTheme();
+  
+  // Render a placeholder with the same dimensions during SSR to prevent layout shifts
+  if (!mounted) {
+    return (
+      <button
+        className="p-2 rounded-full transition-colors"
+        aria-label="Theme toggle"
+        aria-hidden="true"
+      >
+        <div className="w-5 h-5" />
+      </button>
+    );
+  }
   
   return (
     <button
       onClick={toggleTheme}
-      className="theme-toggle-button"
-      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} theme`}
+      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+      aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
-      {theme === 'light' ? '🌙' : '☀️'}
-      
-      <style>
-        {`
-        .theme-toggle-button {
-          padding: 8px 12px;
-          border-radius: 4px;
-          background: var(--background-secondary, #f5f5f5);
-          border: 1px solid var(--border-color, #e2e2e2);
-          cursor: pointer;
-          font-size: 16px;
-          line-height: 1;
-          transition: background-color 0.2s ease;
-        }
-        
-        .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #e9e9e9);
-        }
-        
-        .dark .theme-toggle-button {
-          background: var(--background-secondary, #2d333b);
-          border-color: var(--border-color, #444c56);
-        }
-        
-        .dark .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #444c56);
-        }
-        `}
-      </style>
+      {theme === 'light' ? (
+        <Moon className="w-5 h-5" />
+      ) : (
+        <Sun className="w-5 h-5 text-yellow-300" />
+      )}
     </button>
   );
 }

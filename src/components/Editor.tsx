@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import CodeMirrorEditor, { CodeMirrorEditorProps } from '../app/obsidian-editor/CodeMirrorEditor';
+import { CodeMirrorEditor } from 'obsidian-js';
+import type { CodeMirrorEditorProps } from 'obsidian-js';
 
 export function Editor(props: CodeMirrorEditorProps) {
   return <CodeMirrorEditor {...props} />;
