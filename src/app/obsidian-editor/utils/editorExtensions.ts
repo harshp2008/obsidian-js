@@ -105,6 +105,130 @@ export const createCustomEnterKeymap = (): Extension => {
   ]));
 };
 
+const handleTabKey = (view: EditorView): boolean => {
+  const { state } = view;
+  const selection = state.selection.main;
+  
+  // Get the current line
+  const line = state.doc.lineAt(selection.from);
+  const lineText = line.text;
+  
+  // Handle indentation based on the context
+  
+  // Blockquote indentation
+  if (isBlockquote(lineText)) {
+    const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
+    if (match) {
+      const leadingSpaces = match[1] || '';
+      const blockquoteMarkers = match[2];
+      const content = match[3];
+      
+      // Insert a new blockquote marker
+      view.dispatch({
+        changes: {
+          from: line.from + leadingSpaces.length,
+          to: line.from + leadingSpaces.length,
+          insert: '> '
+        },
+        selection: { anchor: selection.from + 2 }, // Move cursor after inserted content
+        userEvent: 'indent'
+      });
+      console.log('Blockquote indented: added > marker');
+      return true;
+    }
+  }
+  
+  // List indentation
+  if (isListItem(lineText)) {
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from,
+        insert: INDENT_UNIT
+      },
+      selection: { anchor: selection.from + 4 }, // Move cursor after inserted content
+      userEvent: 'indent'
+    });
+    console.log('List indented: added 4 spaces');
+    return true;
+  }
+  
+  // Default indentation for regular text (always at line start)
+  const cursorOffset = selection.from - line.from; // Calculate cursor position in line
+  
+  view.dispatch({
+    changes: {
+      from: line.from,
+      to: line.from,
+      insert: INDENT_UNIT
+    },
+    // Move cursor by 4 or keep at same relative position
+    selection: { anchor: line.from + 4 + cursorOffset },
+    userEvent: 'input'
+  });
+  
+  return true;
+};
+
+/**
+ * Handles the Shift+Tab key to unindent the current line
+ * @param view - The CodeMirror editor view
+ * @returns Whether the key was handled
+ */
+const handleShiftTabKey = (view: EditorView): boolean => {
+  const { state } = view;
+  const selection = state.selection.main;
+  
+  // Get the current line
+  const line = state.doc.lineAt(selection.from);
+  const originalCursorOffset = selection.from - line.from;
+  
+  // Try to unindent a list or blockquote
+  if (isListItem(line.text) || isBlockquote(line.text)) {
+    if (unindentListOrBlockquote(view, { from: line.from, to: line.to, text: line.text })) {
+      return true;
+    }
+  }
+  
+  // Handle default unindentation for other text
+  // Look for INDENT_UNIT at the start of the line and remove it
+  if (line.text.startsWith(INDENT_UNIT)) {
+    const spacesToRemove = INDENT_UNIT.length;
+    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
+    
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from + spacesToRemove,
+        insert: ''
+      },
+      selection: { anchor: line.from + newCursorOffset },
+      userEvent: 'delete.dedent'
+    });
+    return true;
+  }
+  
+  // Check for other spaces at the start of the line
+  const leadingSpaces = line.text.match(/^(\s+)/);
+  if (leadingSpaces && leadingSpaces[0]) {
+    const spacesToRemove = leadingSpaces[0].length;
+    const newCursorOffset = Math.max(0, originalCursorOffset - spacesToRemove);
+    
+    view.dispatch({
+      changes: {
+        from: line.from,
+        to: line.from + spacesToRemove,
+        insert: ''
+      },
+      selection: { anchor: line.from + newCursorOffset },
+      userEvent: 'delete.dedent'
+    });
+    return true;
+  }
+  
+  return false;
+};
+
 /**
  * Creates custom keymaps for markdown editing
  * @param onSaveRef - Reference to the onSave function
@@ -123,104 +247,10 @@ export const createMarkdownKeymaps = (onSaveRef: React.MutableRefObject<(() => v
     {
       key: 'Tab',
       run: (view) => {
-        const { state } = view;
-        const selection = state.selection.main;
-        
-        // Get the current line
-        const line = state.doc.lineAt(selection.from);
-        const lineText = line.text;
-        
-        // Handle indentation based on the context
-        
-        // Blockquote indentation
-        if (isBlockquote(lineText)) {
-          const match = lineText.match(/^(\s*)((?:>\s*)+)(.*)/);
-          if (match) {
-            const leadingSpaces = match[1] || '';
-            const blockquoteMarkers = match[2];
-            const content = match[3];
-            
-            // Insert a new blockquote marker
-            view.dispatch({
-              changes: {
-                from: line.from + leadingSpaces.length,
-                to: line.from + leadingSpaces.length,
-                insert: '> '
-              },
-              userEvent: 'indent'
-            });
-            console.log('Blockquote indented: added > marker');
-            return true;
-          }
-        }
-        
-        // List indentation
-        if (isListItem(lineText)) {
-          view.dispatch({
-            changes: {
-              from: line.from,
-              to: line.from,
-              insert: INDENT_UNIT
-            },
-            userEvent: 'indent'
-          });
-          console.log('List indented: added 4 spaces');
-          return true;
-        }
-        
-        // Default indentation for other text
-        view.dispatch({
-          changes: {
-            from: selection.from,
-            to: selection.to,
-            insert: INDENT_UNIT
-          },
-          userEvent: 'input'
-        });
-        return true;
+        return handleTabKey(view);
       },
       shift: (view) => {
-        console.log("Shift+Tab pressed - unindenting");
-        const { state } = view;
-        const selection = state.selection.main;
-        
-        // Get the current line
-        const line = state.doc.lineAt(selection.from);
-        
-        // Try to unindent a list or blockquote
-        if (unindentListOrBlockquote(view, { from: line.from, to: line.to, text: line.text })) {
-          return true;
-        }
-        
-        // Handle default unindentation for other text
-        // Look for INDENT_UNIT at the start of the line and remove it
-        if (line.text.startsWith(INDENT_UNIT)) {
-          view.dispatch({
-            changes: {
-              from: line.from,
-              to: line.from + INDENT_UNIT.length,
-              insert: ''
-            },
-            userEvent: 'delete.dedent'
-          });
-          return true;
-        }
-        
-        // Check for other spaces at the start of the line
-        const leadingSpaces = line.text.match(/^(\s+)/);
-        if (leadingSpaces && leadingSpaces[0]) {
-          view.dispatch({
-            changes: {
-              from: line.from,
-              to: line.from + leadingSpaces[0].length,
-              insert: ''
-            },
-            userEvent: 'delete.dedent'
-          });
-          return true;
-        }
-        
-        return false;
+        return handleShiftTabKey(view);
       }
     },
     {
