@@ -34,6 +34,20 @@ html.light {
   font-size: 16px;
   color: var(--cm-text-normal);
   background-color: var(--cm-background-primary);
+  white-space: pre-wrap;
+}
+.cm-content .cm-line {
+  min-height: 1.6em;
+}
+[data-markdown-mode=preview] .cm-content .cm-line:empty::before {
+  content: " ";
+  display: inline-block;
+}
+[data-markdown-mode=preview] .cm-content .cm-line + .cm-line {
+  margin-top: 0.5em;
+}
+[data-markdown-mode=preview] .cm-content .cm-line:empty + .cm-line {
+  margin-top: 1em;
 }
 .cm-rendered-hr {
   border: none;
@@ -620,12 +634,27 @@ html[data-markdown-mode=preview] .markdown-syntax-dim,
   background-color: #444;
 }
 .cm-line-break-syntax {
-  background-color: rgba(0, 0, 0, 0.04);
-  border-radius: 3px;
-  padding: 0 1px;
+  background-color: rgba(66, 133, 244, 0.1);
+  border-radius: 1px;
 }
 .dark .cm-line-break-syntax {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: rgba(138, 180, 248, 0.2);
+}
+.cm-line-break-indicator {
+  display: inline-block;
+  color: #8a8a8a;
+  font-size: 0.85em;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+[data-markdown-mode=preview] .cm-content .cm-line {
+  white-space: pre-wrap !important;
+}
+[data-markdown-mode=preview] .cm-content .cm-line:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+[data-line-break=true] + .cm-line {
+  margin-top: 0.8em !important;
 }
 .cm-html-tag-syntax {
   color: var(--html-tag-color) !important;
@@ -1401,5 +1430,130 @@ html[data-markdown-mode=preview] .markdown-syntax-dim,
 }
 .cm-editor[data-markdown-mode=preview] .cm-content .cm-line .cm-formatting {
   display: none !important;
+}
+.cm-blockquote-indent,
+.cm-blockquote-bar {
+  color: #6d6d6d;
+  display: inline-block;
+  width: 3px;
+  background-color: #e0e0e0;
+  margin-right: 5px;
+  vertical-align: middle;
+  height: 1.2em;
+  border-radius: 2px;
+}
+.dark .cm-blockquote-indent,
+.dark .cm-blockquote-bar {
+  background-color: #444;
+  color: #aaa;
+}
+.cm-atomic-indent {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 2px;
+  cursor: default !important;
+  caret-color: transparent;
+  transition: background-color 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  z-index: 10;
+  pointer-events: none;
+  min-width: 16px !important;
+  display: inline-block !important;
+}
+.dark .cm-atomic-indent {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.cm-list-indent {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  z-index: 11;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  width: 16px;
+  margin-right: 0 !important;
+  box-sizing: content-box;
+  display: inline-block !important;
+}
+.dark .cm-list-indent {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+.cm-blockquote-indent {
+  background-color: rgba(224, 224, 224, 0.8);
+  border-radius: 2px;
+  z-index: 12 !important;
+  border-left: 2px solid rgba(0, 0, 0, 0.15);
+  color: #6b7280 !important;
+  font-weight: bold;
+  min-width: 16px !important;
+  cursor: default !important;
+  box-sizing: content-box;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  display: inline-block !important;
+}
+.dark .cm-blockquote-indent {
+  background-color: rgba(100, 100, 100, 0.3);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  color: #9ca3af !important;
+}
+.cm-atomic-indent:hover,
+.cm-list-indent:hover,
+.cm-blockquote-indent:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+.dark .cm-atomic-indent:hover,
+.dark .cm-list-indent:hover,
+.dark .cm-blockquote-indent:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+.cm-line:has(.cm-blockquote-indent) {
+  border-left: 3px solid #e0e0e0;
+  padding-left: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
+  position: relative;
+}
+.dark .cm-line:has(.cm-blockquote-indent) {
+  border-left: 3px solid #444;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+.cm-line:has(.cm-list-indent) {
+  padding-left: 4px;
+}
+.markdown-live-mode .cm-atomic-indent,
+.markdown-preview-mode .cm-atomic-indent,
+[data-markdown-mode=preview] .cm-atomic-indent,
+[data-markdown-mode=preview] .cm-list-indent,
+[data-markdown-mode=preview] .cm-blockquote-indent {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.cm-blockquote-indent.markdown-syntax-dim,
+.cm-list-indent.markdown-syntax-dim {
+  opacity: 1 !important;
+  display: inline-block !important;
+  visibility: visible !important;
+}
+.cm-blockquote-indent .cm-space,
+.cm-blockquote-indent .cm-tab,
+.cm-list-indent .cm-space,
+.cm-list-indent .cm-tab {
+  display: inline-block !important;
+  min-width: 4px !important;
+  background-color: rgba(128, 128, 128, 0.1);
+  border-radius: 2px;
+  margin: 0;
+  padding: 0;
+}
+.cm-whitespace-debug {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  border: 1px dotted #ccc;
+  display: inline-block !important;
+  min-width: 4px !important;
 }
 /*# sourceMappingURL=client.css.map */

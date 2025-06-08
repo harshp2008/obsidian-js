@@ -12,7 +12,7 @@ export const NBSP = '\u00A0';
 /**
  * Standard indentation unit (4 spaces)
  */
-export const INDENT_UNIT = NBSP.repeat(4);
+export const INDENT_UNIT = '    '; // Exactly 4 spaces
 
 /**
  * Helper function to check if a line is a blockquote
@@ -20,6 +20,7 @@ export const INDENT_UNIT = NBSP.repeat(4);
  * @returns Whether the line contains a blockquote marker
  */
 export const isBlockquote = (lineText: string): boolean => {
+  // Look for '>' character with optional leading spaces
   return /^\s*>/.test(lineText);
 };
 
@@ -32,28 +33,61 @@ export const isBlockquote = (lineText: string): boolean => {
 const indentListOrBlockquote = (editorView: EditorView, line: {from: number, to: number, text: string}): boolean => {
   // For list items, we prepend 4 spaces to increase indentation level
   if (isListItem(line.text)) {
+    // Add indentation at the start of the line - ensure it's exactly 4 spaces
     editorView.dispatch({
       changes: {
         from: line.from,
         to: line.from,
-        insert: '    ' // Four regular spaces for lists
-      }
+        insert: INDENT_UNIT // Exactly four spaces for lists
+      },
+      userEvent: 'indent'
     });
+    
+    console.log('List indent applied: 4 spaces added');
     return true;
   }
   
   // For blockquotes, we add another '> ' marker to increase depth
   if (isBlockquote(line.text)) {
-    // Find position after the existing blockquote marker(s)
-    const existingMarker = line.text.match(/^(\s*(?:>\s*)+)/)?.[1] || '';
-    editorView.dispatch({
-      changes: {
-        from: line.from + existingMarker.length,
-        to: line.from + existingMarker.length,
-        insert: '> '
+    // Create a proper blockquote marker
+    const blockquotePrefix = '> ';
+    
+    // Find the leading spaces and blockquote markers
+    const blockquoteMatch = line.text.match(/^(\s*)((?:>\s*)+)(.*)/);
+    if (blockquoteMatch) {
+      const leadingSpaces = blockquoteMatch[1] || '';
+
+      // Add the marker at the beginning of the existing blockquote markers
+      editorView.dispatch({
+        changes: {
+          from: line.from + leadingSpaces.length,
+          to: line.from + leadingSpaces.length,
+          insert: blockquotePrefix
+        },
+        userEvent: 'indent'
+      });
+      
+      console.log('Blockquote indent applied: > marker added');
+      return true;
+    } else {
+      // If the regex didn't match but isBlockquote returned true, use simpler approach
+      const simpleMatch = line.text.match(/^(\s*)>(.*)/);
+      if (simpleMatch) {
+        const leadingSpaces = simpleMatch[1] || '';
+        
+        editorView.dispatch({
+          changes: {
+            from: line.from + leadingSpaces.length, 
+            to: line.from + leadingSpaces.length,
+            insert: blockquotePrefix
+          },
+          userEvent: 'indent'
+        });
+        
+        console.log('Simple blockquote indent applied');
+        return true;
       }
-    });
-    return true;
+    }
   }
   
   return false;
@@ -65,44 +99,92 @@ const indentListOrBlockquote = (editorView: EditorView, line: {from: number, to:
  * @param line - The line object
  * @returns Whether an unindentation was performed
  */
-const unindentListOrBlockquote = (editorView: EditorView, line: {from: number, to: number, text: string}): boolean => {
-  // For list items with leading spaces, remove 4 spaces
-  if (isListItem(line.text) && /^\s{1,4}/.test(line.text)) {
+export const unindentListOrBlockquote = (editorView: EditorView, line: {from: number, to: number, text: string}): boolean => {
+  // For list items with leading spaces, remove exactly 4 spaces
+  if (isListItem(line.text)) {
     const match = line.text.match(/^(\s*)/);
     if (!match) return false;
     
-    const spacesToRemove = Math.min(4, match[1].length);
-    if (spacesToRemove > 0) {
+    // Always try to remove exactly 4 spaces for consistency
+    const leadingSpaces = match[1];
+    
+    // If we have at least 4 spaces, remove exactly 4
+    if (leadingSpaces.length >= 4) {
       editorView.dispatch({
         changes: {
           from: line.from,
-          to: line.from + spacesToRemove,
+          to: line.from + 4, // Always remove exactly 4 spaces
           insert: ''
-        }
+        },
+        userEvent: 'unindent'
       });
+      console.log(`List unindent applied: 4 spaces removed`);
+      return true;
+    }
+    // If we have less than 4 spaces, remove all of them
+    else if (leadingSpaces.length > 0) {
+      editorView.dispatch({
+        changes: {
+          from: line.from,
+          to: line.from + leadingSpaces.length,
+          insert: ''
+        },
+        userEvent: 'unindent'
+      });
+      console.log(`List unindent applied: ${leadingSpaces.length} spaces removed`);
       return true;
     }
   }
   
   // For blockquotes, remove one level of '> ' markers
   if (isBlockquote(line.text)) {
-    // Find if there's more than one level of blockquote
-    const match = line.text.match(/^(\s*)(?:>\s*){2,}/);
-    if (match) {
-      // Find the position of the last '> ' to remove
-      const leadingSpaces = match[1] || '';
-      const firstMarkerPos = line.from + leadingSpaces.length;
-      const secondMarkerStart = firstMarkerPos + 2; // '> ' is 2 chars
+    // Find the blockquote structure
+    const blockquoteMatch = line.text.match(/^(\s*)((?:>\s*)+)(.*)/);
+    if (blockquoteMatch) {
+      const leadingSpaces = blockquoteMatch[1] || '';
+      const blockquoteMarkers = blockquoteMatch[2];
       
-      // Remove one '> ' marker
-      editorView.dispatch({
-        changes: {
-          from: firstMarkerPos,
-          to: secondMarkerStart,
-          insert: ''
-        }
-      });
-      return true;
+      // Find position of first '>' marker
+      const firstMarkerPos = line.from + leadingSpaces.length;
+      
+      // Find the last '> ' sequence to remove
+      const markerMatches = blockquoteMarkers.match(/(>\s*)/g);
+      if (markerMatches && markerMatches.length > 0) {
+        // Remove the first '> ' marker (which is the leftmost one)
+        const markerToRemove = markerMatches[0];
+        editorView.dispatch({
+          changes: {
+            from: firstMarkerPos,
+            to: firstMarkerPos + markerToRemove.length,
+            insert: ''
+          },
+          userEvent: 'unindent'
+        });
+        console.log('Blockquote unindent applied: > marker removed');
+        return true;
+      }
+    } else {
+      // Simpler case - just one level of blockquote
+      const match = line.text.match(/^(\s*)>/);
+      if (match) {
+        const leadingSpaces = match[1] || '';
+        const removePos = line.from + leadingSpaces.length;
+        
+        // Remove just the '>' character and one space after it if it exists
+        const hasSpaceAfter = line.text.charAt(leadingSpaces.length + 1) === ' ';
+        const removeLength = hasSpaceAfter ? 2 : 1; // '> ' or just '>'
+        
+        editorView.dispatch({
+          changes: {
+            from: removePos,
+            to: removePos + removeLength,
+            insert: ''
+          },
+          userEvent: 'unindent'
+        });
+        console.log('Simple blockquote unindent applied');
+        return true;
+      }
     }
   }
   

@@ -25,6 +25,7 @@ import { languages } from '@codemirror/language-data';
 import { Compartment } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { markdownSyntaxHider } from '../MarkdownSyntaxHider';
+import { atomicIndents } from '../AtomicIndents';
 
 /**
  * Represents a decoration item with its position and decoration object
@@ -272,6 +273,10 @@ export function createMarkdownSyntaxPlugin(options: {
     markdownCompartment.of(markdown(markdownConfig)),
     markdownSyntaxStateField,
     markdownSyntaxHider,
+    LineBreakDecorator,
+    HorizontalRuleDecorator,
+    htmlDecorator(),
+    atomicIndents,
   ];
 }
 

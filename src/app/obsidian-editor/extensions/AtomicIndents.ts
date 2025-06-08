@@ -4,17 +4,22 @@ import { ViewPlugin, ViewUpdate, Decoration, EditorView as CMEditorView } from '
 import { RangeSet, RangeSetBuilder } from '@codemirror/state';
 import { Extension } from '@codemirror/state';
 import { isListItem } from '../utils/formatting/linkAndListFormatting';
-import { isBlockquote } from '../utils/formatting/indentationUtils';
+import { isBlockquote, INDENT_UNIT } from '../utils/formatting/indentationUtils';
+import {
+  DecorationSet,
+  WidgetType,
+} from '@codemirror/view';
+import { syntaxTree } from '@codemirror/language';
+import { SyntaxNode } from '@lezer/common';
 
 /**
- * Non-breaking space character used for indentation
+ * Type definition for atomic decoration
  */
-const NBSP = '\u00A0'; // Non-breaking space
-
-/**
- * Standard indentation unit (4 spaces)
- */
-const INDENT_UNIT = NBSP.repeat(4);
+interface AtomicDecoration {
+  from: number;
+  to: number;
+  decoration: Decoration;
+}
 
 /**
  * Plugin class that handles atomic indentation in the editor.
@@ -35,7 +40,7 @@ class AtomicIndentPluginValue {
 
   /**
    * Updates the atomic ranges when the document or viewport changes
-   * @param update - The view update object
+   * @param update - ViewUpdate
    */
   update(update: ViewUpdate) {
     if (update.docChanged || update.viewportChanged) {
@@ -49,7 +54,8 @@ class AtomicIndentPluginValue {
    * @returns A RangeSet containing all atomic indent ranges
    */
   buildAtomicRanges(view: CMEditorView): RangeSet<Decoration> {
-    const builder = new RangeSetBuilder<Decoration>();
+    // Process each line and collect all decorations
+    const allDecorations: AtomicDecoration[] = [];
     
     for (const { from, to } of view.visibleRanges) {
       let pos = from;
@@ -57,69 +63,191 @@ class AtomicIndentPluginValue {
         const line = view.state.doc.lineAt(pos);
         const lineText = line.text;
         
-        // Handle non-breaking space indents
-        let searchPosInLine = 0;
-        while ((searchPosInLine = lineText.indexOf(INDENT_UNIT, searchPosInLine)) !== -1) {
-          const matchStart = line.from + searchPosInLine;
-          const matchEnd = matchStart + INDENT_UNIT.length;
-          if (matchStart < to && matchEnd > from) {
-            builder.add(matchStart, matchEnd, Decoration.mark({
-              class: "cm-atomic-indent"
-            })); 
-          }
-          searchPosInLine = searchPosInLine + INDENT_UNIT.length;
-          if (searchPosInLine >= line.length) break;
-        }
+        // Process regular indentation (only at the beginning of lines)
+        this.processSpacesIndentation(lineText, line.from, allDecorations);
         
-        // Handle list item indentation with regular spaces
+        // Process list indentation
         if (isListItem(lineText)) {
-          // Find leading spaces in list items
-          const leadingSpacesMatch = lineText.match(/^(\s+)/);
-          if (leadingSpacesMatch && leadingSpacesMatch[1]) {
-            const spaces = leadingSpacesMatch[1];
-            // Make groups of 4 spaces atomic
-            for (let i = 0; i < spaces.length; i += 4) {
-              const chunkSize = Math.min(4, spaces.length - i);
-              if (chunkSize === 4) {
-                builder.add(
-                  line.from + i, 
-                  line.from + i + 4, 
-                  Decoration.mark({ 
-                    class: "cm-atomic-indent cm-list-indent" 
-                  })
-                );
-              }
-            }
-          }
+          this.processListIndentation(lineText, line.from, allDecorations);
         }
         
-        // Handle blockquote indentation
+        // Process blockquote indentation
         if (isBlockquote(lineText)) {
-          // Make each "> " marker atomic
-          const blockquoteMatches = lineText.matchAll(/>\s*/g);
-          let offset = 0;
-          for (const match of blockquoteMatches) {
-            if (match.index !== undefined) {
-              const matchPos = line.from + match.index;
-              const matchLen = match[0].length;
-              builder.add(
-                matchPos,
-                matchPos + matchLen,
-                Decoration.mark({ 
-                  class: "cm-atomic-indent cm-blockquote-indent" 
-                })
-              );
-              offset += matchLen;
-            }
-          }
+          this.processBlockquoteIndentation(lineText, line.from, allDecorations);
         }
         
         pos = line.to + 1;
       }
     }
     
-    const result = builder.finish();
-    return result;
+    // Sort the decorations by from position
+    allDecorations.sort((a, b) => a.from - b.from);
+    
+    // Create the range set
+    const builder = new RangeSetBuilder<Decoration>();
+    for (const { from, to, decoration } of allDecorations) {
+      if (from < to) {  // Ensure valid range
+        try {
+          builder.add(from, to, decoration);
+        } catch (error) {
+          console.warn("Failed to add atomic decoration:", from, to, error);
+        }
+      }
+    }
+    
+    return builder.finish();
+  }
+  
+  /**
+   * Process standard space indentation in text
+   * IMPORTANT: Only process spaces at the beginning of the line
+   */
+  private processSpacesIndentation(lineText: string, lineStart: number, decorations: AtomicDecoration[]) {
+    // Only handle indentation at the beginning of lines
+    const leadingSpacesMatch = lineText.match(/^(\s+)/);
+    if (!leadingSpacesMatch) return;
+    
+    const leadingSpaces = leadingSpacesMatch[1];
+    let pos = 0;
+    
+    // Process leading spaces in chunks of 4
+    while (pos + 4 <= leadingSpaces.length) {
+      decorations.push({
+        from: lineStart + pos,
+        to: lineStart + pos + 4,
+        decoration: Decoration.mark({
+          class: "cm-atomic-indent",
+          inclusive: true,
+          atomic: true
+        })
+      });
+      pos += 4;
+    }
+    
+    // Handle remaining spaces if any
+    const remainingSpaces = leadingSpaces.length % 4;
+    if (remainingSpaces > 0) {
+      decorations.push({
+        from: lineStart + pos,
+        to: lineStart + pos + remainingSpaces,
+        decoration: Decoration.mark({
+          class: "cm-atomic-indent",
+          inclusive: true,
+          atomic: true
+        })
+      });
+    }
+  }
+  
+  /**
+   * Process list indentation
+   */
+  private processListIndentation(lineText: string, lineStart: number, decorations: AtomicDecoration[]) {
+    // Handle leading spaces in lists
+    const leadingMatch = lineText.match(/^(\s+)/);
+    if (leadingMatch && leadingMatch[1]) {
+      const spaces = leadingMatch[1];
+      for (let i = 0; i < Math.floor(spaces.length / 4) * 4; i += 4) {
+        decorations.push({
+          from: lineStart + i,
+          to: lineStart + i + 4,
+          decoration: Decoration.mark({
+            class: "cm-atomic-indent cm-list-indent",
+            inclusive: true,
+            atomic: true
+          })
+        });
+      }
+    }
+    
+    // Handle indentation after list markers
+    const markerMatch = lineText.match(/^(\s*)([-*+]|\d+\.)\s+/);
+    if (markerMatch) {
+      const afterMarker = lineText.substring(markerMatch[0].length);
+      const afterMarkerIndent = afterMarker.match(/^(\s+)/);
+      
+      if (afterMarkerIndent && afterMarkerIndent[1]) {
+        const indentStart = lineStart + markerMatch[0].length;
+        const spaces = afterMarkerIndent[1];
+        
+        for (let i = 0; i < Math.floor(spaces.length / 4) * 4; i += 4) {
+          decorations.push({
+            from: indentStart + i,
+            to: indentStart + i + 4,
+            decoration: Decoration.mark({
+              class: "cm-atomic-indent cm-list-indent",
+              inclusive: true,
+              atomic: true
+            })
+          });
+        }
+      }
+    }
+  }
+  
+  /**
+   * Process blockquote indentation
+   */
+  private processBlockquoteIndentation(lineText: string, lineStart: number, decorations: AtomicDecoration[]) {
+    // Match blockquote structure: (leading spaces)(blockquote markers)(content)
+    const match = lineText.match(/^(\s*)((?:>)(?:\s*)(?:>?\s*)*)(.*)/);
+    if (!match) return;
+    
+    const leadingSpaces = match[1] || '';
+    const blockquoteSection = match[2]; 
+    const content = match[3];
+    
+    // Process leading spaces
+    if (leadingSpaces.length > 0) {
+      // Handle leading spaces in chunks of 4
+      for (let i = 0; i < Math.floor(leadingSpaces.length / 4) * 4; i += 4) {
+        decorations.push({
+          from: lineStart + i,
+          to: lineStart + i + 4,
+          decoration: Decoration.mark({
+            class: "cm-atomic-indent",
+            inclusive: true,
+            atomic: true
+          })
+        });
+      }
+      
+      // Handle remaining spaces if any
+      const remainingSpaces = leadingSpaces.length % 4;
+      if (remainingSpaces > 0) {
+        decorations.push({
+          from: lineStart + leadingSpaces.length - remainingSpaces,
+          to: lineStart + leadingSpaces.length,
+          decoration: Decoration.mark({
+            class: "cm-atomic-indent",
+            inclusive: true,
+            atomic: true
+          })
+        });
+      }
+    }
+    
+    // Process blockquote markers (make only the '>' character atomic, not spaces)
+    let pos = lineStart + leadingSpaces.length;
+    let inMarker = false;
+    
+    for (let i = 0; i < blockquoteSection.length; i++) {
+      const char = blockquoteSection[i];
+      if (char === '>') {
+        // Make the '>' character atomic
+        decorations.push({
+          from: pos,
+          to: pos + 1,
+          decoration: Decoration.mark({
+            class: "cm-atomic-indent cm-blockquote-indent",
+            inclusive: true,
+            atomic: true
+          })
+        });
+      }
+      // Spaces are intentionally left non-atomic for navigation
+      pos++;
+    }
   }
 }
 
@@ -155,12 +283,12 @@ const atomicIndentsStyle = CMEditorView.baseTheme({
 });
 
 /**
- * Extension that provides atomic indentation behavior
- * This makes groups of non-breaking spaces behave as a single unit
- * for cursor movement and selection
+ * Combined extension for atomic indents
  */
-export const atomicIndents: Extension = [
+export const atomicIndents = [
   atomicIndentPlugin,
   atomicRangesFacetProvider,
   atomicIndentsStyle
 ];
+
+export default atomicIndents;

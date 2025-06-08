@@ -50,6 +50,28 @@ html.light {
   font-size: 16px;
   color: var(--cm-text-normal);
   background-color: var(--cm-background-primary);
+  white-space: pre-wrap;
+}
+
+/* Empty lines need minimum height to be visible in both modes */
+.cm-content .cm-line {
+  min-height: 1.6em; /* Match the line height */
+}
+
+/* In preview mode, ensure lines are styled like paragraphs */
+[data-markdown-mode="preview"] .cm-content .cm-line:empty::before {
+  content: " ";
+  display: inline-block;
+}
+
+/* Additional paragraph spacing in preview mode */
+[data-markdown-mode="preview"] .cm-content .cm-line + .cm-line {
+  margin-top: 0.5em;
+}
+
+/* Double empty line should create paragraph break */
+[data-markdown-mode="preview"] .cm-content .cm-line:empty + .cm-line {
+  margin-top: 1em;
 }
 
 /* Horizontal Rule Widget Styling */
@@ -763,27 +785,34 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* Line Break Syntax Indicator (Live Mode) */
 .cm-line-break-syntax {
-  background-color: rgba(
-    0,
-    0,
-    0,
-    0.04
-  ); /* Very subtle background for the two spaces */
-  border-radius: 3px;
-  padding: 0 1px; /* Minimal padding to make it less intrusive */
-  /* You could also use a faint border or a different text color */
-  /* border: 1px dotted rgba(0,0,0,0.1); */
+  background-color: rgba(66, 133, 244, 0.1);
+  border-radius: 1px;
 }
 
-/* Dark mode for line break syntax */
 .dark .cm-line-break-syntax {
-  background-color: rgba(
-    255,
-    255,
-    255,
-    0.06
-  ); /* Subtle background for dark mode */
-  /* border: 1px dotted rgba(255,255,255,0.1); */
+  background-color: rgba(138, 180, 248, 0.2);
+}
+
+.cm-line-break-indicator {
+  display: inline-block;
+  color: #8a8a8a;
+  font-size: 0.85em;
+  padding: 0 4px;
+  vertical-align: middle;
+}
+
+/* Force line breaks to be visible in preview mode */
+[data-markdown-mode="preview"] .cm-content .cm-line {
+  white-space: pre-wrap !important;
+}
+
+/* Create visual line breaks at the end of paragraphs */
+[data-markdown-mode="preview"] .cm-content .cm-line:not(:last-child) {
+  margin-bottom: 0.5em;
+}
+
+[data-line-break="true"] + .cm-line {
+  margin-top: 0.8em !important;
 }
 
 /* HTML Tag Syntax (Live Mode) */
@@ -1619,4 +1648,152 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 .cm-editor[data-markdown-mode="preview"] .cm-content .cm-line .cm-formatting {
   display: none !important;
+}
+
+/* Blockquote styling */
+.cm-blockquote-indent,
+.cm-blockquote-bar {
+  color: #6d6d6d;
+  display: inline-block;
+  width: 3px;
+  background-color: #e0e0e0;
+  margin-right: 5px;
+  vertical-align: middle;
+  height: 1.2em;
+  border-radius: 2px;
+}
+
+.dark .cm-blockquote-indent,
+.dark .cm-blockquote-bar {
+  background-color: #444;
+  color: #aaa;
+}
+
+/* Atomic indentation styling */
+.cm-atomic-indent,
+.cm-atomicIndent {
+  caret-color: transparent;
+}
+
+/* Better visualization for atomic indents */
+.cm-blockquote-indent,
+.cm-list-indent {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
+/* Make blockquote spaces navigable but visually distinct */
+.cm-blockquote .cm-content {
+  caret-color: auto !important;
+}
+
+/* List indent specific styling - make it clearly visible */
+.cm-list-indent {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 2px;
+  z-index: 11; /* Higher than standard atomic indents */
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  width: 16px; /* Fixed width for visibility */
+  margin-right: 0 !important; /* No margin */
+  box-sizing: content-box;
+  display: inline-block !important;
+}
+
+.dark .cm-list-indent {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Blockquote indent specific styling - make it clearly visible */
+.cm-blockquote-indent {
+  background-color: rgba(224, 224, 224, 0.8);
+  border-radius: 2px;
+  z-index: 12 !important; /* Highest priority */
+  border-left: 2px solid rgba(0, 0, 0, 0.15);
+  color: #6b7280 !important; /* Ensure the > character is visible */
+  font-weight: bold;
+  min-width: 16px !important; /* Ensure visible width */
+  cursor: default !important;
+  box-sizing: content-box;
+  margin-right: 0 !important;
+  padding: 0 !important;
+  display: inline-block !important;
+}
+
+.dark .cm-blockquote-indent {
+  background-color: rgba(100, 100, 100, 0.3);
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
+  color: #9ca3af !important;
+}
+
+/* Enhance visibility on hover */
+.cm-atomic-indent:hover,
+.cm-list-indent:hover,
+.cm-blockquote-indent:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.dark .cm-atomic-indent:hover,
+.dark .cm-list-indent:hover,
+.dark .cm-blockquote-indent:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Blockquote styling for entire blockquote lines */
+.cm-line:has(.cm-blockquote-indent) {
+  border-left: 3px solid #e0e0e0;
+  padding-left: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
+  position: relative; /* For absolute positioning within the line */
+}
+
+.dark .cm-line:has(.cm-blockquote-indent) {
+  border-left: 3px solid #444;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Enhanced styling for list items */
+.cm-line:has(.cm-list-indent) {
+  padding-left: 4px;
+}
+
+/* Make sure indentation works in both modes */
+.markdown-live-mode .cm-atomic-indent,
+.markdown-preview-mode .cm-atomic-indent,
+[data-markdown-mode="preview"] .cm-atomic-indent,
+[data-markdown-mode="preview"] .cm-list-indent,
+[data-markdown-mode="preview"] .cm-blockquote-indent {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Force blockquote and list markers to be visible even when other syntax is hidden */
+.cm-blockquote-indent.markdown-syntax-dim,
+.cm-list-indent.markdown-syntax-dim {
+  opacity: 1 !important;
+  display: inline-block !important;
+  visibility: visible !important;
+}
+
+/* Explicit styling for white spaces in blockquotes and indented content */
+.cm-blockquote-indent .cm-space,
+.cm-blockquote-indent .cm-tab,
+.cm-list-indent .cm-space,
+.cm-list-indent .cm-tab {
+  display: inline-block !important;
+  min-width: 4px !important;
+  background-color: rgba(128, 128, 128, 0.1);
+  border-radius: 2px;
+  margin: 0;
+  padding: 0;
+}
+
+/* Add debug highlighting for spaces */
+.cm-whitespace-debug {
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  border: 1px dotted #ccc;
+  display: inline-block !important;
+  min-width: 4px !important;
 }

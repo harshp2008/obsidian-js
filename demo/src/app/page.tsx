@@ -6,27 +6,7 @@ import CodeMirrorEditor from '../../../src/app/obsidian-editor/CodeMirrorEditor'
 import { ThemeToggle } from '../../../src/components/ThemeToggle';
 import debounce from 'lodash/debounce';
 
-// Define the default content directly
-const defaultContent = `# Obsidian-JS Demo
-
-This is a **markdown** editor with *formatting* support!
-
-## Features
-
-- Syntax highlighting
-- Live preview
-- Theme switching
-
-### Code Example
-
-\`\`\`javascript
-function hello() {
-  console.log("Hello world!");
-}
-\`\`\`
-
-Try it out!
-`;
+import defaultContent from './defaultText [main].md';
 
 /**
  * Demo page for the CodeMirror-based Markdown editor.
