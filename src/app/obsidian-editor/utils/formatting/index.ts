@@ -508,4 +508,9 @@ export function handleEnterListBlockquote(view: EditorView): boolean {
   }
   
   return false;
-} 
+}
+
+/**
+ * Markdown formatting utilities for the editor
+ */
+export * from './markdownFormatting'; 

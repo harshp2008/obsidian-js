@@ -3,6 +3,15 @@
 import React from 'react';
 
 /**
+ * Interface for a blockquote tree node
+ */
+interface BlockquoteNode {
+  level: number;
+  content: string;
+  children: BlockquoteNode[];
+}
+
+/**
  * Converts markdown text to HTML for preview
  */
 export const convertMarkdownToHtml = (markdown: string): string => {
@@ -33,9 +42,9 @@ export const convertMarkdownToHtml = (markdown: string): string => {
   let listType = '';
   
   // Helper: Parse lines into a tree of nested blockquotes
-  function parseBlockquoteTree(lines: string[]): any[] {
-    const root = [];
-    let stack = [{ level: 0, children: root }];
+  function parseBlockquoteTree(lines: string[]): BlockquoteNode[] {
+    const root: BlockquoteNode[] = [];
+    let stack = [{ level: 0, children: root, content: '' }];
 
     for (let line of lines) {
       const match = line.match(/^(>+)(\s?)(.*)$/);
@@ -46,7 +55,7 @@ export const convertMarkdownToHtml = (markdown: string): string => {
         while (stack.length > 1 && stack[stack.length - 1].level >= level) {
           stack.pop();
         }
-        const node = { level, content, children: [] };
+        const node: BlockquoteNode = { level, content, children: [] };
         stack[stack.length - 1].children.push(node);
         stack.push(node);
       } else {
@@ -58,7 +67,7 @@ export const convertMarkdownToHtml = (markdown: string): string => {
   }
 
   // Helper: Render the blockquote tree as HTML
-  function renderBlockquoteTree(nodes: any[]): string {
+  function renderBlockquoteTree(nodes: BlockquoteNode[]): string {
     return nodes.map(node => {
       if (node.level > 0) {
         return `<blockquote>${renderBlockquoteTree(node.children.length ? node.children : [{...node, level: 0}])}</blockquote>`;

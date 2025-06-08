@@ -1,7 +1,6 @@
 import { Extension } from '@codemirror/state';
 import { createMarkdownSyntaxPlugin } from './markdown-syntax';
-import { createCodeMirrorKeymaps } from './keymaps';
-import { createMarkdownFileSystem } from './filesystem';
+import combinedKeymap from './keymaps';
 import { createNoMarkdownInHtmlExtension } from './markdown/no-formatting';
 
 /**
@@ -11,8 +10,7 @@ import { createNoMarkdownInHtmlExtension } from './markdown/no-formatting';
 export function createAllExtensions(): Extension[] {
   return [
     createMarkdownSyntaxPlugin(),
-    createCodeMirrorKeymaps(),
-    createMarkdownFileSystem(),
+    combinedKeymap,
     createNoMarkdownInHtmlExtension() // Add the no-markdown-in-html extension
   ];
 } 

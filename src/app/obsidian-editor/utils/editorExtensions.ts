@@ -11,13 +11,15 @@ import { defaultKeymap, historyKeymap, history } from '@codemirror/commands';
 
 // Import custom extensions
 import { atomicIndents } from '../extensions/AtomicIndents';
-import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax/index';
+import { createMarkdownSyntaxPlugin } from '../extensions/markdown-syntax';
 import { htmlDecorator } from '../extensions/markdown-syntax/html-decorator';
-import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler.ts';
+import { markdownPasteHandler } from '../extensions/MarkdownPasteHandler';
 // Import our Lezer safety plugin
 import { createLezerSafetyPlugin } from '../extensions/lezer-safety-plugin';
 // Import the no markdown in HTML extension
 import { createNoMarkdownInHtmlExtension } from '../extensions/markdown/no-formatting';
+// Import markdown syntax hider
+import { markdownSyntaxHider } from '../extensions/MarkdownSyntaxHider';
 
 // Import formatting functions from our new modular structure
 import { 
@@ -219,14 +221,12 @@ export const createEditorExtensions = (options: EditorExtensionOptions): Extensi
     createCustomEnterKeymap(),
     // Add our Lezer safety plugin with highest precedence to run first
     Prec.highest(createLezerSafetyPlugin()),
-    markdown({
-      base: markdownLanguage,
-      codeLanguages: languages,
-      addKeymap: false,
-    }),
+    // Use our custom markdown plugin instead of the basic markdown extension
+    createMarkdownSyntaxPlugin(),
+    // Add the markdown syntax hider for hiding syntax
+    markdownSyntaxHider,
     // Add the extension to prevent markdown in HTML with high precedence
     Prec.high(createNoMarkdownInHtmlExtension()),
-    createMarkdownSyntaxPlugin(),
     htmlDecorator(), // Add HTML decorator extension for HTML rendering
     markdownPasteHandler,
     highlightActiveLine(),

@@ -21,7 +21,7 @@ function createMarkdownPasteHandler() {
     paste(event: ClipboardEvent, view: EditorView): boolean {
       console.log('[MarkdownPasteHandler] Paste event triggered.'); 
   
-      const clipboardData = event.clipboardData || window.clipboardData;
+      const clipboardData = event.clipboardData;
       if (!clipboardData) {
         console.log('[MarkdownPasteHandler] No clipboard data found.'); 
         return false;
@@ -40,7 +40,7 @@ function createMarkdownPasteHandler() {
       console.log('[MarkdownPasteHandler] After __ -> ** conversion:', JSON.stringify(textToConvert));
   
       // 2. Convert Markdown to inline HTML using marked.parseInline()
-      const htmlOutput = marked.parseInline(textToConvert, { gfm: true }); // `breaks` option is not typically used with parseInline
+      const htmlOutput = marked.parseInline(textToConvert, { gfm: true }) as string; // Add type assertion
       console.log('[MarkdownPasteHandler] Inline HTML output from marked:', JSON.stringify(htmlOutput));
   
       // 3. Convert specific HTML tags back to desired Markdown style

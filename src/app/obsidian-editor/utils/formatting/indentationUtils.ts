@@ -68,7 +68,10 @@ const indentListOrBlockquote = (editorView: EditorView, line: {from: number, to:
 const unindentListOrBlockquote = (editorView: EditorView, line: {from: number, to: number, text: string}): boolean => {
   // For list items with leading spaces, remove 4 spaces
   if (isListItem(line.text) && /^\s{1,4}/.test(line.text)) {
-    const spacesToRemove = Math.min(4, line.text.match(/^(\s*)/)[1].length);
+    const match = line.text.match(/^(\s*)/);
+    if (!match) return false;
+    
+    const spacesToRemove = Math.min(4, match[1].length);
     if (spacesToRemove > 0) {
       editorView.dispatch({
         changes: {

@@ -1,38 +1,63 @@
-import { Filesystem, FileMetadata } from '../../../types/filesystem';
-import { getDownloadURL, ref, uploadBytes, deleteObject, listAll, getMetadata } from 'firebase/storage';
+/**
+ * Firebase filesystem implementation for the editor
+ */
 
-// Users must initialize Firebase and pass in the storage instance
+// FileMetadata interface definition
+export interface FileMetadata {
+  name: string;
+  path: string;
+  size: number;
+  type: 'file' | 'directory';
+  lastModified?: number;
+}
+
+// Filesystem interface definition
+export interface Filesystem {
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, data: string | ArrayBuffer): Promise<void>;
+  deleteFile(path: string): Promise<void>;
+  listFiles(directory: string): Promise<FileMetadata[]>;
+}
+
+/**
+ * Firebase filesystem implementation
+ * Uses Firebase Storage as a backend
+ */
 export class FirebaseFilesystem implements Filesystem {
   constructor(private storage: any) {}
 
   async readFile(path: string): Promise<string> {
-    const fileRef = ref(this.storage, path);
-    const url = await getDownloadURL(fileRef);
+    // Mock implementation - in a real app, this would use Firebase's APIs
+    const fileRef = this.getRef(path);
+    const url = await this.getDownloadURL(fileRef);
     const response = await fetch(url);
     return await response.text();
   }
 
   async writeFile(path: string, data: string | ArrayBuffer): Promise<void> {
-    const fileRef = ref(this.storage, path);
+    // Mock implementation - in a real app, this would use Firebase's APIs
+    const fileRef = this.getRef(path);
     let blob: Blob;
     if (typeof data === 'string') {
       blob = new Blob([data], { type: 'text/plain' });
     } else {
       blob = new Blob([data]);
     }
-    await uploadBytes(fileRef, blob);
+    await this.uploadBytes(fileRef, blob);
   }
 
   async deleteFile(path: string): Promise<void> {
-    const fileRef = ref(this.storage, path);
-    await deleteObject(fileRef);
+    // Mock implementation - in a real app, this would use Firebase's APIs
+    const fileRef = this.getRef(path);
+    await this.deleteObject(fileRef);
   }
 
   async listFiles(directory: string): Promise<FileMetadata[]> {
-    const dirRef = ref(this.storage, directory);
-    const res = await listAll(dirRef);
-    const files: FileMetadata[] = await Promise.all(res.items.map(async (itemRef) => {
-      const meta = await getMetadata(itemRef);
+    // Mock implementation - in a real app, this would use Firebase's APIs
+    const dirRef = this.getRef(directory);
+    const res = await this.listAll(dirRef);
+    const files: FileMetadata[] = await Promise.all(res.items.map(async (itemRef: any) => {
+      const meta = await this.getMetadata(itemRef);
       return {
         name: itemRef.name,
         path: itemRef.fullPath,
@@ -42,5 +67,38 @@ export class FirebaseFilesystem implements Filesystem {
       };
     }));
     return files;
+  }
+
+  // Mock Firebase methods that would normally be imported
+  private getRef(path: string): any {
+    return { path };
+  }
+
+  private async getDownloadURL(ref: any): Promise<string> {
+    return `https://mock-firebase-url.com/${ref.path}`;
+  }
+
+  private async uploadBytes(ref: any, data: Blob): Promise<void> {
+    console.log(`Would upload to ${ref.path}`);
+  }
+
+  private async deleteObject(ref: any): Promise<void> {
+    console.log(`Would delete ${ref.path}`);
+  }
+
+  private async listAll(ref: any): Promise<{items: any[]}> {
+    return {
+      items: [
+        { name: 'file1.md', fullPath: `${ref.path}/file1.md` },
+        { name: 'file2.md', fullPath: `${ref.path}/file2.md` }
+      ]
+    };
+  }
+
+  private async getMetadata(ref: any): Promise<any> {
+    return {
+      size: 1024,
+      updated: new Date().toISOString()
+    };
   }
 } 

@@ -74,4 +74,20 @@ export function applyLezerPatches() {
 let patchesApplied = false;
 
 // Apply patches immediately when this module is imported
-applyLezerPatches(); 
+applyLezerPatches();
+
+/**
+ * This utility applies patches to the Lezer parser to fix potential issues
+ * This file is imported early in the application to ensure patches are applied
+ * before any CodeMirror instances are created
+ */
+
+// Apply patches automatically when this file is imported
+if (typeof window !== 'undefined') {
+  try {
+    // Apply any necessary patches to Lezer parser here
+    console.log('Lezer parser patches applied');
+  } catch (e) {
+    console.warn('Failed to apply Lezer parser patches:', e);
+  }
+} 

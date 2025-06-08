@@ -20,173 +20,168 @@ interface FormattingResult {
 }
 
 /**
- * Toggles bold formatting for the selected text.
- * If no text is selected, inserts "**" markers and places cursor between them.
+ * Toggle bold formatting for the selected text
  * 
  * @param selection - The current editor selection
- * @param doc - The current document text
- * @returns FormattingResult with changes to apply
+ * @param doc - The document text
+ * @returns Changes to apply to the document
  */
-export function toggleBold(selection: EditorSelection, doc: string): FormattingResult {
-  const changes: TextChange[] = [];
-  let newSelection: EditorSelection | undefined;
+export function toggleBold(selection: EditorSelection, doc: string) {
+  const changes = [];
+  const newSelections = [];
   
-  // Handle each range in the selection
   for (const range of selection.ranges) {
+    // Skip empty selections
     if (range.empty) {
-      // No selection - insert bold markers and place cursor between them
-      changes.push({
-        from: range.from,
-        to: range.to,
-        insert: '**bold text**'
-      });
-      
-      // Position cursor inside the bold markers (after '**')
-      const cursorPos = range.from + 2;
-      newSelection = EditorSelection.cursor(cursorPos);
+      const from = range.from;
+      changes.push({ from, to: from, insert: '**Bold text**' });
+      newSelections.push(EditorSelection.range(from + 2, from + 10));
+      continue;
+    }
+    
+    const text = doc.slice(range.from, range.to);
+    const isBold = text.startsWith('**') && text.endsWith('**');
+    
+    if (isBold) {
+      // Remove bold formatting
+      const innerText = text.slice(2, -2);
+      changes.push({ from: range.from, to: range.to, insert: innerText });
+      newSelections.push(EditorSelection.range(range.from, range.from + innerText.length));
     } else {
-      // Text is selected
-      const selectedText = doc.slice(range.from, range.to);
-      
-      // Check if selection is already bold
-      if (selectedText.startsWith('**') && selectedText.endsWith('**')) {
-        // Remove bold markers
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: selectedText.slice(2, -2)
-        });
-      } else {
-        // Add bold markers
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: `**${selectedText}**`
-        });
-      }
+      // Add bold formatting
+      changes.push({ from: range.from, to: range.to, insert: `**${text}**` });
+      newSelections.push(EditorSelection.range(range.from, range.to + 4));
     }
   }
   
-  return { changes, selection: newSelection };
+  return {
+    changes,
+    selection: EditorSelection.create(newSelections)
+  };
 }
 
 /**
- * Toggles italic formatting for the selected text.
- * If no text is selected, inserts "*" markers and places cursor between them.
+ * Toggle italic formatting for the selected text
  * 
  * @param selection - The current editor selection
- * @param doc - The current document text
- * @returns FormattingResult with changes to apply
+ * @param doc - The document text
+ * @returns Changes to apply to the document
  */
-export function toggleItalic(selection: EditorSelection, doc: string): FormattingResult {
-  const changes: TextChange[] = [];
-  let newSelection: EditorSelection | undefined;
+export function toggleItalic(selection: EditorSelection, doc: string) {
+  const changes = [];
+  const newSelections = [];
   
   for (const range of selection.ranges) {
+    // Skip empty selections
     if (range.empty) {
-      // No selection - insert italic markers and place cursor between them
-      changes.push({
-        from: range.from,
-        to: range.to,
-        insert: '*italic text*'
-      });
-      
-      // Position cursor inside the italic markers (after '*')
-      const cursorPos = range.from + 1;
-      newSelection = EditorSelection.cursor(cursorPos);
+      const from = range.from;
+      changes.push({ from, to: from, insert: '*Italic text*' });
+      newSelections.push(EditorSelection.range(from + 1, from + 12));
+      continue;
+    }
+    
+    const text = doc.slice(range.from, range.to);
+    const isItalic = text.startsWith('*') && text.endsWith('*') && !text.startsWith('**');
+    
+    if (isItalic) {
+      // Remove italic formatting
+      const innerText = text.slice(1, -1);
+      changes.push({ from: range.from, to: range.to, insert: innerText });
+      newSelections.push(EditorSelection.range(range.from, range.from + innerText.length));
     } else {
-      // Text is selected
-      const selectedText = doc.slice(range.from, range.to);
-      
-      // Check if selection is already italic
-      if (selectedText.startsWith('*') && selectedText.endsWith('*') && 
-          !(selectedText.startsWith('**') && selectedText.endsWith('**'))) {
-        // Remove italic markers
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: selectedText.slice(1, -1)
-        });
-      } else {
-        // Add italic markers
-        changes.push({
-          from: range.from,
-          to: range.to,
-          insert: `*${selectedText}*`
-        });
-      }
+      // Add italic formatting
+      changes.push({ from: range.from, to: range.to, insert: `*${text}*` });
+      newSelections.push(EditorSelection.range(range.from, range.to + 2));
     }
   }
   
-  return { changes, selection: newSelection };
+  return {
+    changes,
+    selection: EditorSelection.create(newSelections)
+  };
 }
 
 /**
- * Toggles heading of specified level for the current line.
- * If the line already has a heading of the specified level, removes it.
+ * Toggle heading formatting for the selected text
  * 
  * @param selection - The current editor selection
- * @param doc - The current document text
+ * @param doc - The document text
  * @param level - Heading level (1-6)
- * @returns FormattingResult with changes to apply
+ * @returns Changes to apply to the document
  */
-export function toggleHeading(
-  selection: EditorSelection, 
-  doc: string, 
-  level: number
-): FormattingResult {
-  const changes: TextChange[] = [];
+export function toggleHeading(selection: EditorSelection, doc: string, level: number) {
+  // Ensure level is between 1 and 6
+  level = Math.max(1, Math.min(6, level));
   
-  // Validate heading level
-  if (level < 1 || level > 6) {
-    console.error('Invalid heading level. Must be between 1 and 6.');
-    return { changes: [] };
-  }
-  
-  // Create heading marker based on level
-  const headingMarker = '#'.repeat(level) + ' ';
+  const changes = [];
+  const newSelections = [];
+  const prefix = '#'.repeat(level) + ' ';
   
   for (const range of selection.ranges) {
-    // Find the start of the line containing the selection
-    let lineStart = range.from;
-    while (lineStart > 0 && doc.charAt(lineStart - 1) !== '\n') {
-      lineStart--;
-    }
+    // Get the line containing the selection
+    const line = getLineAt(doc, range.from);
     
-    // Get the current line content
-    const lineEndSearch = doc.indexOf('\n', lineStart);
-    const lineEnd = lineEndSearch === -1 ? doc.length : lineEndSearch;
-    const line = doc.slice(lineStart, lineEnd);
+    // Check if the line already has a heading of this level
+    const hasHeading = line.text.trimStart().startsWith(prefix);
     
-    // Check if line already has a heading 
-    const headingRegex = /^(#{1,6})\s/;
-    const match = line.match(headingRegex);
-    
-    if (match && match[1].length === level) {
-      // Remove heading of the same level
-      changes.push({
-        from: lineStart,
-        to: lineStart + match[0].length,
-        insert: ''
-      });
-    } else if (match) {
-      // Replace existing heading with new level
-      changes.push({
-        from: lineStart,
-        to: lineStart + match[0].length,
-        insert: headingMarker
-      });
+    if (hasHeading) {
+      // Remove heading
+      const headingStart = line.from + line.text.indexOf(prefix);
+      changes.push({ from: headingStart, to: headingStart + prefix.length, insert: '' });
+      newSelections.push(EditorSelection.range(range.from - prefix.length, range.to - prefix.length));
     } else {
-      // Add heading marker to start of line
-      changes.push({
-        from: lineStart,
-        to: lineStart,
-        insert: headingMarker
-      });
+      // Check if the line has a different heading level
+      const existingHeadingMatch = line.text.trimStart().match(/^(#{1,6})\s/);
+      
+      if (existingHeadingMatch) {
+        // Replace existing heading with new heading level
+        const existingPrefix = existingHeadingMatch[0];
+        const headingStart = line.from + line.text.indexOf(existingPrefix);
+        changes.push({ from: headingStart, to: headingStart + existingPrefix.length, insert: prefix });
+        
+        // Adjust selection based on difference in prefix length
+        const diff = prefix.length - existingPrefix.length;
+        newSelections.push(EditorSelection.range(range.from + diff, range.to + diff));
+      } else {
+        // Add heading to the start of the line
+        changes.push({ from: line.from, to: line.from, insert: prefix });
+        newSelections.push(EditorSelection.range(range.from + prefix.length, range.to + prefix.length));
+      }
     }
   }
   
-  return { changes };
+  return {
+    changes,
+    selection: EditorSelection.create(newSelections)
+  };
+}
+
+/**
+ * Get line information at a specific position in the document
+ * 
+ * @param doc - The document text
+ * @param pos - Position in the document
+ * @returns Line information (from, to, text)
+ */
+function getLineAt(doc: string, pos: number) {
+  let lineStart = pos;
+  let lineEnd = pos;
+  
+  // Find the start of the line
+  while (lineStart > 0 && doc[lineStart - 1] !== '\n') {
+    lineStart--;
+  }
+  
+  // Find the end of the line
+  while (lineEnd < doc.length && doc[lineEnd] !== '\n') {
+    lineEnd++;
+  }
+  
+  return {
+    from: lineStart,
+    to: lineEnd,
+    text: doc.slice(lineStart, lineEnd)
+  };
 }
 
 /**
@@ -199,7 +194,7 @@ export function toggleHeading(
  */
 export function createLink(selection: EditorSelection, doc: string): FormattingResult {
   const changes: TextChange[] = [];
-  let newSelection: EditorSelection | undefined;
+  let newRanges: Array<{anchor: number, head: number}> = [];
   
   for (const range of selection.ranges) {
     if (range.empty) {
@@ -212,10 +207,10 @@ export function createLink(selection: EditorSelection, doc: string): FormattingR
       });
       
       // Select the "link text" part for easy replacement
-      newSelection = EditorSelection.range(
-        range.from + 1,
-        range.from + 10
-      );
+      newRanges.push({
+        anchor: range.from + 1,
+        head: range.from + 10
+      });
     } else {
       // Use selected text as link text
       const selectedText = doc.slice(range.from, range.to);
@@ -226,11 +221,21 @@ export function createLink(selection: EditorSelection, doc: string): FormattingR
       });
       
       // Place cursor at the URL position
-      newSelection = EditorSelection.cursor(range.from + selectedText.length + 3);
+      newRanges.push({
+        anchor: range.from + selectedText.length + 3,
+        head: range.from + selectedText.length + 3
+      });
     }
   }
   
-  return { changes, selection: newSelection };
+  return { 
+    changes,
+    selection: newRanges.length > 0 
+      ? EditorSelection.create(
+          newRanges.map(range => EditorSelection.range(range.anchor, range.head))
+        ) 
+      : undefined
+  };
 }
 
 /**
@@ -244,7 +249,7 @@ export function createLink(selection: EditorSelection, doc: string): FormattingR
  */
 export function toggleCode(selection: EditorSelection, doc: string): FormattingResult {
   const changes: TextChange[] = [];
-  let newSelection: EditorSelection | undefined;
+  const newRanges: Array<{anchor: number, head: number}> = [];
   
   for (const range of selection.ranges) {
     if (range.empty) {
@@ -256,10 +261,10 @@ export function toggleCode(selection: EditorSelection, doc: string): FormattingR
       });
       
       // Select the word "code" for easy replacement
-      newSelection = EditorSelection.range(
-        range.from + 1, 
-        range.from + 5
-      );
+      newRanges.push({
+        anchor: range.from + 1,
+        head: range.from + 5
+      });
     } else {
       const selectedText = doc.slice(range.from, range.to);
       
@@ -302,5 +307,12 @@ export function toggleCode(selection: EditorSelection, doc: string): FormattingR
     }
   }
   
-  return { changes, selection: newSelection };
+  return { 
+    changes,
+    selection: newRanges.length > 0 
+      ? EditorSelection.create(
+          newRanges.map(range => EditorSelection.range(range.anchor, range.head))
+        ) 
+      : undefined
+  };
 } 

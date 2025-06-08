@@ -1,23 +1,41 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import CodeMirrorEditor from './obsidian-editor/CodeMirrorEditor';
-import { ThemeToggle } from '../components/ThemeToggle';
+// Import directly from source files
+import CodeMirrorEditor from '../../../src/app/obsidian-editor/CodeMirrorEditor';
+import { ThemeToggle } from '../../../src/components/ThemeToggle';
 import debounce from 'lodash/debounce';
 
-// Load the default content from the markdown file
-import defaultContentString from './defaultText-html.md';
+// Define the default content directly
+const defaultContent = `# Obsidian-JS Demo
 
-const initialContent = defaultContentString;
+This is a **markdown** editor with *formatting* support!
+
+## Features
+
+- Syntax highlighting
+- Live preview
+- Theme switching
+
+### Code Example
+
+\`\`\`javascript
+function hello() {
+  console.log("Hello world!");
+}
+\`\`\`
+
+Try it out!
+`;
 
 /**
- * The main demo page for the CodeMirror-based Markdown editor.
+ * Demo page for the CodeMirror-based Markdown editor.
  * It showcases the editor's functionality, including theme toggling and content handling.
  *
  * @returns {JSX.Element} The CodeMirror demo page component.
  */
 export default function CodeMirrorDemoPage() {
-  const [content, setContent] = useState(initialContent);
+  const [content, setContent] = useState(defaultContent);
   
   /**
    * Debounced content change handler to avoid too frequent state updates
@@ -42,7 +60,7 @@ export default function CodeMirrorDemoPage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       <div className="container mx-auto p-4">
         <header className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">CodeMirror Obsidian-like Markdown Editor</h1>
+          <h1 className="text-2xl font-bold">Obsidian-JS Markdown Editor Demo</h1>
           <ThemeToggle />
         </header>
         <div className="flex flex-col space-y-4">
@@ -60,16 +78,17 @@ export default function CodeMirrorDemoPage() {
           </div>
           
           <div className="mt-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-md">
-            <h2 className="text-lg font-semibold mb-2">How It Works</h2>
+            <h2 className="text-lg font-semibold mb-2">Features</h2>
             <ul className="list-disc pl-5 space-y-2">
-              <li>Markdown syntax is visible and highlighted with different colors</li>
-              <li>The editor is split into two panes: editor and preview</li>
-              <li>Keyboard shortcuts: Ctrl+B (bold), Ctrl+I (italic), Ctrl+S (save)</li>
-              <li>All markdown syntax remains part of the editable content</li>
+              <li>Markdown syntax highlighting with Obsidian-like appearance</li>
+              <li>Syntax modes: visible markdown or wysiwyg preview</li>
+              <li>Keyboard shortcuts for common formatting operations</li>
+              <li>Theme support (light/dark mode)</li>
+              <li>File system integration capabilities</li>
             </ul>
           </div>
         </div>
       </div>
     </div>
   );
-}
+} 

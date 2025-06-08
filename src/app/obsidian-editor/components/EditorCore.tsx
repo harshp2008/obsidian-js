@@ -3,11 +3,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { EditorState, Extension, Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { setMarkdownSyntaxMode } from '../extensions/markdown-syntax/index';
+import { setMarkdownSyntaxMode } from '../extensions/markdown-support';
 import { createEditorExtensions } from '../utils/editorExtensions';
 import { useTheme } from '../../../contexts/ThemeContext';
 import { lightTheme, darkTheme, getCurrentEditorTheme, getTheme } from '../utils/theme';
 import { ThemeMode } from '../../../types/theme';
+import { createMarkdownSyntaxPlugin } from '../extensions/markdown-support';
+import combinedKeymap from '../extensions/keymaps';
 
 /**
  * Props for the EditorCore component.
@@ -221,6 +223,26 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
         editorViewRef.current.dispatch({
           effects: editableCompartment.reconfigure(EditorView.editable.of(isEditable))
         });
+        
+        // Set mode on the editor element for CSS targeting
+        const editorElement = editorViewRef.current.dom;
+        if (editorElement) {
+          editorElement.setAttribute('data-markdown-mode', mode);
+          
+          // Also update root elements with the mode for global styling
+          if (typeof document !== 'undefined') {
+            document.documentElement.setAttribute('data-markdown-mode', mode);
+            
+            // Add class for better CSS targeting
+            if (mode === 'preview') {
+              document.documentElement.classList.add('markdown-preview-mode');
+              document.documentElement.classList.remove('markdown-live-mode');
+            } else {
+              document.documentElement.classList.add('markdown-live-mode');
+              document.documentElement.classList.remove('markdown-preview-mode');
+            }
+          }
+        }
       } catch (error) {
         console.error("Error updating editor mode:", error);
       }
