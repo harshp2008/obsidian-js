@@ -129,7 +129,13 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
           // Only trigger onChange if the change was from user input
           if (update.transactions.some(tr => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
             const doc = update.state.doc;
-            onChangeRef.current(doc.toString());
+            const content = doc.toString();
+            onChangeRef.current(content);
+            
+            // Trigger document:change hooks for plugins
+            import('../extensions/plugin-api').then(({ obsidianPluginAPI }) => {
+              obsidianPluginAPI.triggerHooks('document:change', content);
+            }).catch(console.error);
           }
         }
       });
@@ -166,6 +172,11 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
 
       // Store the view reference
       editorViewRef.current = view;
+      
+      // Make the view available for external initialization of plugins
+      if (typeof window !== 'undefined') {
+        (window as any).__obsidianEditorView = view;
+      }
       
       // Call the callback if provided
       if (onEditorViewCreated) {
