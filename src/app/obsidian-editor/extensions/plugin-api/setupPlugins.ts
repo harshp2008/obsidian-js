@@ -1,16 +1,27 @@
 import { pluginManager } from './PluginManager';
-import { createExamplePlugin } from './ExamplePlugin';
-import { createWordCountPlugin } from './examples/WordCountPlugin';
 
 /**
- * Setup and enable example plugins for demonstration purposes.
- * In a real application, plugins would typically be loaded from
- * user configuration or a plugin marketplace.
+ * This is a compatibility layer for the demo app plugins.
+ * For real applications, you should create your own plugin registry
+ * and initialization similar to what's in the demo/src/plugins directory.
  * 
+ * @deprecated Use your own plugin registry instead
  * @param enableAll Whether to enable all plugins automatically
  */
 export async function setupExamplePlugins(enableAll = false): Promise<void> {
   try {
+    console.warn(
+      'setupExamplePlugins() is deprecated. ' +
+      'In a real application, you should create your own plugin registry ' +
+      'similar to what is in the demo/src/plugins directory.'
+    );
+    
+    // Check if we're in the demo app with the new plugin system
+    if (typeof window !== 'undefined' && (window as any).demoPluginsInitialized) {
+      console.log('Using demo app plugin system');
+      return;
+    }
+
     // Only initialize plugins if not already initialized
     const isInitialized = typeof window !== 'undefined' && (window as any).obsidianJS;
     if (isInitialized) {
@@ -18,55 +29,18 @@ export async function setupExamplePlugins(enableAll = false): Promise<void> {
       return;
     }
     
-    // Check if plugins are already loaded to avoid errors
-    const loadPlugin = async (id: string, createFn: () => any) => {
-      if (!pluginManager.getPlugin(id)) {
-        const plugin = createFn();
-        await pluginManager.loadPlugin(plugin);
-        console.log(`Loaded plugin: ${plugin.manifest.name}`);
-        return plugin;
-      } else {
-        console.log(`Plugin ${id} already loaded, skipping.`);
-        return pluginManager.getPlugin(id);
-      }
-    };
-    
-    // Load the example plugin
-    const examplePlugin = await loadPlugin('example-plugin', createExamplePlugin);
-    
-    // Load the word count plugin
-    const wordCountPlugin = await loadPlugin('word-count', createWordCountPlugin);
-    
-    // Enable plugins if requested
-    if (enableAll) {
-      if (!pluginManager.isPluginEnabled(examplePlugin.manifest.id)) {
-        await pluginManager.enablePlugin(examplePlugin.manifest.id);
-        console.log(`Enabled plugin: ${examplePlugin.manifest.name}`);
-      }
-      
-      if (!pluginManager.isPluginEnabled(wordCountPlugin.manifest.id)) {
-        await pluginManager.enablePlugin(wordCountPlugin.manifest.id);
-        console.log(`Enabled plugin: ${wordCountPlugin.manifest.name}`);
-      }
-    }
-    
-    // Register a custom event to notify when Obsidian-js is ready for plugins
-    if (typeof window !== 'undefined') {
-      const readyEvent = new CustomEvent('obsidian-ready');
-      window.dispatchEvent(readyEvent);
-    }
-    
-    // Make the plugin manager available globally for demo purposes
+    // In a standalone environment, just make the plugin manager available
     if (typeof window !== 'undefined') {
       (window as any).obsidianJS = {
         pluginManager,
-        plugins: {
-          example: examplePlugin,
-          wordCount: wordCountPlugin
-        }
+        plugins: {}
       };
       
-      console.log('Obsidian-js plugin system initialized. Access via window.obsidianJS');
+      // Notify that the basic plugin system is ready
+      const readyEvent = new CustomEvent('obsidian-ready');
+      window.dispatchEvent(readyEvent);
+      
+      console.log('Basic plugin system initialized (no plugins loaded)');
     }
   } catch (error) {
     console.error('Error setting up example plugins:', error);

@@ -126,18 +126,36 @@ class HtmlDecoratorPlugin implements PluginValue {
     
     try {
       if (this.debug) console.log("Updating HTML decorations");
+      
       // Build decorations
-      const decorations = buildHtmlDecorations(this.view);
+      let decorations: DecorationSet;
+      try {
+        decorations = buildHtmlDecorations(this.view);
+      } catch (buildError) {
+        console.error('Error building HTML decorations:', buildError);
+        decorations = Decoration.none;
+      }
       
       // Update our cached HTML regions
-      this.updateHtmlRegions();
+      try {
+        this.updateHtmlRegions();
+      } catch (regionError) {
+        console.error('Error updating HTML regions:', regionError);
+        this.htmlRegions = [];
+      }
       
       // Apply the decorations using the state effect
-      this.view.dispatch({
-        effects: setHtmlDecorations.of(decorations)
-      });
+      if (!this.isDestroyed) { // Double check since async operations may complete after destruction
+        try {
+          this.view.dispatch({
+            effects: setHtmlDecorations.of(decorations)
+          });
+        } catch (dispatchError) {
+          console.error('Error dispatching HTML decorations:', dispatchError);
+        }
+      }
     } catch (error) {
-      console.error('Error updating HTML decorations:', error);
+      console.error('Critical error updating HTML decorations:', error);
     }
   }
   
@@ -188,17 +206,30 @@ export const setHtmlDecorations = StateEffect.define<DecorationSet>();
 export const htmlDecorationsField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update: (decorations, tr) => {
-    // Move decorations if document changes
-    decorations = decorations.map(tr.changes);
-    
-    // Apply any decoration effects
-    for (const effect of tr.effects) {
-      if (effect.is(setHtmlDecorations)) {
-        decorations = effect.value;
+    try {
+      // Move decorations if document changes
+      if (tr.docChanged) {
+        try {
+          decorations = decorations.map(tr.changes);
+        } catch (error) {
+          // If mapping fails (e.g., position out of range), reset decorations
+          console.warn('Error mapping HTML decorations, resetting:', error);
+          return Decoration.none;
+        }
       }
+      
+      // Apply any decoration effects
+      for (const effect of tr.effects) {
+        if (effect.is(setHtmlDecorations)) {
+          decorations = effect.value;
+        }
+      }
+      
+      return decorations;
+    } catch (error) {
+      console.error('Critical error in HTML decoration state field:', error);
+      return Decoration.none;
     }
-    
-    return decorations;
   },
   provide: (field) => EditorView.decorations.from(field),
 });

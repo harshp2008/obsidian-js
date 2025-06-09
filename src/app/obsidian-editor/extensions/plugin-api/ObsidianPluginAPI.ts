@@ -28,6 +28,8 @@ export class ObsidianPluginAPI {
    * @throws Error if extension with this ID is already registered
    */
   public registerExtension(id: string, extension: Extension): void {
+    console.log(`Registering extension with ID: ${id}`);
+    
     if (this.extensions.has(id)) {
       throw new Error(`Extension with ID '${id}' is already registered`);
     }
@@ -35,9 +37,18 @@ export class ObsidianPluginAPI {
     this.extensions.set(id, extension);
     
     if (this.editorView) {
-      this.editorView.dispatch({
-        effects: StateEffect.appendConfig.of(extension)
-      });
+      console.log(`Applying extension ${id} to editor view`);
+      try {
+        this.editorView.dispatch({
+          effects: StateEffect.appendConfig.of(extension)
+        });
+        console.log(`Successfully applied extension ${id}`);
+      } catch (error) {
+        console.error(`Error applying extension ${id}:`, error);
+        throw error;
+      }
+    } else {
+      console.warn(`No editor view available when registering extension ${id}`);
     }
   }
 

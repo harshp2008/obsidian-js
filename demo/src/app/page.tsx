@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 // Import directly from source files
 import CodeMirrorEditor from '../../../src/app/obsidian-editor/CodeMirrorEditor';
 import { ThemeToggle } from '../../../src/components/ThemeToggle';
 import debounce from 'lodash/debounce';
-import { initializePlugins, enablePlugins } from '../utils/pluginInitializer';
+import { initializePlugins, enablePlugins, debugPluginSystem } from '../utils/pluginInitializer';
+import { EditorView } from '@codemirror/view';
 
 import defaultContent from './defaultText [main].md';
 
@@ -18,6 +19,40 @@ import defaultContent from './defaultText [main].md';
 export default function CodeMirrorDemoPage() {
   const [content, setContent] = useState(defaultContent);
   const [pluginsEnabled, setPluginsEnabled] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+  const [pluginsInitialized, setPluginsInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const editorViewRef = useRef<EditorView | null>(null);
+  
+  // Mark component as client-side rendered after mount
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Check if plugins are already initialized
+    if (typeof window !== 'undefined' && window.demoPluginsInitialized) {
+      setPluginsInitialized(true);
+      
+      // Check if any plugins are already enabled
+      if (window.obsidianJS) {
+        const enabledPlugins = window.obsidianJS.pluginManager.getEnabledPlugins();
+        if (enabledPlugins.length > 0) {
+          setPluginsEnabled(true);
+        }
+      }
+    }
+    
+    // Add event listener for plugin ready event
+    const handlePluginReady = () => {
+      console.log('Plugin system ready event received');
+      setPluginsInitialized(true);
+    };
+    
+    window.addEventListener('obsidian-ready', handlePluginReady);
+    
+    return () => {
+      window.removeEventListener('obsidian-ready', handlePluginReady);
+    };
+  }, []);
   
   /**
    * Debounced content change handler to avoid too frequent state updates
@@ -38,27 +73,65 @@ export default function CodeMirrorDemoPage() {
     alert('Content saved to console!');
   };
   
-  // Initialize plugin system when the component mounts
-  useEffect(() => {
-    // Initialize plugins after a short delay to ensure editor is ready
-    const initTimer = setTimeout(async () => {
-      try {
-        await initializePlugins();
-        console.log('Plugin system initialized');
-      } catch (error) {
-        console.error('Failed to initialize plugin system:', error);
-      }
-    }, 1000);
+  /**
+   * Callback to get the editor view instance when it's created
+   */
+  const handleEditorViewReady = useCallback((view: EditorView) => {
+    console.log('Editor view ready:', view);
+    // Store the view in our ref
+    editorViewRef.current = view;
     
-    return () => clearTimeout(initTimer);
-  }, []);
+    // Store it in the window for global access
+    if (typeof window !== 'undefined') {
+      window.__obsidianEditorView = view;
+      
+      // Initialize plugins if not already initialized
+      if (!window.demoPluginsInitialized && !isInitializing) {
+        setIsInitializing(true);
+        
+        initializePlugins(view).then(() => {
+          console.log('Plugins initialized with editor view');
+          setPluginsInitialized(true);
+          setIsInitializing(false);
+          // Debug the plugin system
+          debugPluginSystem();
+        }).catch(error => {
+          console.error('Failed to initialize plugins:', error);
+          setIsInitializing(false);
+        });
+      }
+    }
+  }, [isInitializing]);
   
   // Toggle plugins when the toggle button is clicked
   const togglePlugins = async () => {
     try {
+      console.log('Toggle plugins clicked, current state:', { pluginsEnabled, pluginsInitialized, isInitializing });
+      
+      if (isInitializing) {
+        alert('Plugin system is still initializing. Please wait a moment and try again.');
+        return;
+      }
+      
+      if (!editorViewRef.current) {
+        alert('Editor not fully initialized. Please wait a moment and try again.');
+        return;
+      }
+      
       if (!pluginsEnabled) {
+        console.log('Enabling plugins...');
+        // Make sure plugins are initialized
+        if (!pluginsInitialized) {
+          setIsInitializing(true);
+          await initializePlugins(editorViewRef.current);
+          setPluginsInitialized(true);
+          setIsInitializing(false);
+        }
+        
         // Enable both example plugins
+        console.log('About to call enablePlugins for example-plugin and word-count');
         await enablePlugins(['example-plugin', 'word-count']);
+        console.log('Plugins enabled successfully');
         setPluginsEnabled(true);
       } else {
         // Disable plugins by reloading the page (for demo simplicity)
@@ -66,8 +139,17 @@ export default function CodeMirrorDemoPage() {
       }
     } catch (error) {
       console.error('Error toggling plugins:', error);
+      alert(`Error enabling plugins: ${error.message || 'Unknown error'}`);
     }
   };
+
+  // Button text and style determined by client-side state
+  const buttonText = isClient && pluginsEnabled ? 'Disable Plugins' : 'Enable Plugins';
+  const buttonClass = `px-4 py-2 rounded-md text-sm font-medium ${
+    isClient && pluginsEnabled 
+      ? 'bg-red-600 hover:bg-red-700 text-white' 
+      : 'bg-green-600 hover:bg-green-700 text-white'
+  }`;
   
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900">
@@ -77,13 +159,10 @@ export default function CodeMirrorDemoPage() {
           <div className="flex gap-4 items-center">
             <button 
               onClick={togglePlugins}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${
-                pluginsEnabled 
-                  ? 'bg-red-600 hover:bg-red-700 text-white' 
-                  : 'bg-green-600 hover:bg-green-700 text-white'
-              }`}
+              className={buttonClass}
+              disabled={isInitializing}
             >
-              {pluginsEnabled ? 'Disable Plugins' : 'Enable Plugins'}
+              {isInitializing ? 'Initializing...' : buttonText}
             </button>
             <ThemeToggle />
           </div>
@@ -99,6 +178,7 @@ export default function CodeMirrorDemoPage() {
               readOnly={false}
               onChange={handleContentChange}
               onSave={handleSave}
+              onEditorViewReady={handleEditorViewReady}
             />
           </div>
           

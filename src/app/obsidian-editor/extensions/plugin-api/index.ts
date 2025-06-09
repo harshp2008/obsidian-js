@@ -16,4 +16,7 @@ export { setupExamplePlugins } from './setupPlugins';
 
 // Types
 export type { Extension } from '@codemirror/state';
-export type { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet } from '@codemirror/view'; 
+export type { EditorView, ViewPlugin, ViewUpdate, Decoration, DecorationSet } from '@codemirror/view';
+
+// Export HTML decorator to use the fixed version
+export { htmlDecorator } from '../markdown-syntax/html-decorator'; 

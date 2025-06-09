@@ -11,6 +11,9 @@ export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
     const { state } = view;
     const doc = state.doc;
     
+    // Get document length to validate positions
+    const docLength = doc.length;
+    
     // Get the entire document text for proper tag matching
     const fullText = doc.toString();
     
@@ -20,10 +23,16 @@ export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
     // Parse HTML using a more robust stack-based approach
     const parsedRegions = parseHtmlHierarchy(fullText, commentRegions);
     
-    // Convert parsed regions to our HtmlRegion format
+    // Convert parsed regions to our HtmlRegion format while validating positions
     for (const region of parsedRegions) {
       try {
         const { from, to, tagName, content, isMultiline, isSelfClosing, openTagEnd, closeTagStart } = region;
+        
+        // Validate positions are within document bounds
+        if (from < 0 || to > docLength || from > to) {
+          console.warn(`Skipping invalid HTML region: ${from}-${to}, doc length: ${docLength}`);
+          continue;
+        }
         
         regions.push({
           from,
@@ -54,127 +63,148 @@ export function detectHtmlRegions(view: EditorView): HtmlRegion[] {
  * Parse HTML using a stack-based approach to handle nested tags properly
  */
 function parseHtmlHierarchy(text: string, commentRegions: Array<{from: number, to: number}>): HtmlRegion[] {
-  const regions: HtmlRegion[] = [];
-  
-  // Stack to keep track of open tags
-  interface TagStackItem {
-    tagName: string;
-    startIndex: number;
-    openTagEnd: number;
-    content: string;
-  }
-  
-  const tagStack: TagStackItem[] = [];
-  
-  // Regex to find opening and closing tags
-  const tagRegex = /<\/?\s*([a-zA-Z][a-zA-Z0-9\-_:]*)((?:\s+[a-zA-Z][a-zA-Z0-9\-_:]*(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*)\s*(\/?)>/g;
-  let match: RegExpExecArray | null;
-  
-  while ((match = tagRegex.exec(text)) !== null) {
-    const [fullMatch, tagName, attributes, selfClosing] = match;
-    const position = match.index;
-    const matchEnd = position + fullMatch.length;
-    const lowerTagName = tagName.toLowerCase();
+  try {
+    const regions: HtmlRegion[] = [];
     
-    // Skip if this match is inside a comment
-    if (isPositionInRanges(position, commentRegions)) {
-      continue;
+    // Guard against empty text
+    if (!text || text.length === 0) {
+      return regions;
     }
     
-    const isClosingTag = fullMatch.startsWith('</');
-    const isSelfClosingTag = selfClosing === '/' || VOID_TAGS.has(lowerTagName);
+    // Stack to keep track of open tags
+    interface TagStackItem {
+      tagName: string;
+      startIndex: number;
+      openTagEnd: number;
+      content: string;
+    }
     
-    if (isClosingTag) {
-      // This is a closing tag, try to match it with the corresponding opening tag
-      let foundMatchingTag = false;
-      
-      // Look for matching opening tag, starting from the most recent
-      for (let i = tagStack.length - 1; i >= 0; i--) {
-        const openTag = tagStack[i];
+    const tagStack: TagStackItem[] = [];
+    
+    // Regex to find opening and closing tags
+    const tagRegex = /<\/?\s*([a-zA-Z][a-zA-Z0-9\-_:]*)((?:\s+[a-zA-Z][a-zA-Z0-9\-_:]*(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*)\s*(\/?)>/g;
+    let match: RegExpExecArray | null;
+    
+    while ((match = tagRegex.exec(text)) !== null) {
+      try {
+        const [fullMatch, tagName, attributes, selfClosing] = match;
+        const position = match.index;
+        const matchEnd = position + fullMatch.length;
         
-        if (openTag.tagName.toLowerCase() === lowerTagName) {
-          // We found a matching opening tag!
-          const from = openTag.startIndex;
-          const to = matchEnd;
-          const content = text.substring(from, to);
-          const isMultiline = content.includes('\n');
-          
-          regions.push({
-            from,
-            to,
-            tagName: lowerTagName,
-            content,
-            isMultiline,
-            isSelfClosing: false,
-            openTagEnd: openTag.openTagEnd,
-            closeTagStart: position
-          });
-          
-          // Remove this tag and all nested unclosed tags from the stack
-          // (This handles cases where tags were not properly nested)
-          tagStack.splice(i);
-          
-          foundMatchingTag = true;
-          break;
+        // Validate positions are within string bounds
+        if (position < 0 || matchEnd > text.length) {
+          console.warn(`Skipping HTML tag with invalid positions: ${position}-${matchEnd}, text length: ${text.length}`);
+          continue;
         }
+        
+        const lowerTagName = tagName.toLowerCase();
+        
+        // Skip if this match is inside a comment
+        if (isPositionInRanges(position, commentRegions)) {
+          continue;
+        }
+        
+        const isClosingTag = fullMatch.startsWith('</');
+        const isSelfClosingTag = selfClosing === '/' || VOID_TAGS.has(lowerTagName);
+        
+        if (isClosingTag) {
+          // This is a closing tag, try to match it with the corresponding opening tag
+          let foundMatchingTag = false;
+          
+          // Look for matching opening tag, starting from the most recent
+          for (let i = tagStack.length - 1; i >= 0; i--) {
+            const openTag = tagStack[i];
+            
+            if (openTag.tagName.toLowerCase() === lowerTagName) {
+              // We found a matching opening tag!
+              const from = openTag.startIndex;
+              const to = matchEnd;
+              const content = text.substring(from, to);
+              const isMultiline = content.includes('\n');
+              
+              regions.push({
+                from,
+                to,
+                tagName: lowerTagName,
+                content,
+                isMultiline,
+                isSelfClosing: false,
+                openTagEnd: openTag.openTagEnd,
+                closeTagStart: position
+              });
+              
+              // Remove this tag and all nested unclosed tags from the stack
+              // (This handles cases where tags were not properly nested)
+              tagStack.splice(i);
+              
+              foundMatchingTag = true;
+              break;
+            }
+          }
+          
+          // If we didn't find a matching opening tag, this closing tag is orphaned
+          if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
+            // Orphaned closing tag, no need to log
+          }
+        } else if (isSelfClosingTag) {
+          // This is a self-closing tag, add it directly to regions
+          regions.push({
+            from: position,
+            to: matchEnd,
+            tagName: lowerTagName,
+            content: fullMatch,
+            isMultiline: false,
+            isSelfClosing: true,
+            openTagEnd: matchEnd,
+            closeTagStart: matchEnd
+          });
+        } else {
+          // This is an opening tag, push to stack
+          tagStack.push({
+            tagName: lowerTagName,
+            startIndex: position,
+            openTagEnd: matchEnd,
+            content: fullMatch
+          });
+        }
+      } catch (matchError) {
+        console.error("Error processing HTML tag:", matchError);
       }
-      
-      // If we didn't find a matching opening tag, this closing tag is orphaned
-      if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
-        // Orphaned closing tag, no need to log
-      }
-    } else if (isSelfClosingTag) {
-      // This is a self-closing tag, add it directly to regions
-      regions.push({
-        from: position,
-        to: matchEnd,
-        tagName: lowerTagName,
-        content: fullMatch,
-        isMultiline: false,
-        isSelfClosing: true,
-        openTagEnd: matchEnd,
-        closeTagStart: matchEnd
-      });
-    } else {
-      // This is an opening tag, push to stack
-      tagStack.push({
-        tagName: lowerTagName,
-        startIndex: position,
-        openTagEnd: matchEnd,
-        content: fullMatch
-      });
     }
-  }
-  
-  // Handle void elements that don't require closing tags
-  const voidTagRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>/g;
-  voidTagRegex.lastIndex = 0; // Reset regex
-  
-  while ((match = voidTagRegex.exec(text)) !== null) {
-    const [fullTag, tagName, attributes] = match;
-    const lowerTagName = tagName.toLowerCase();
-    const position = match.index;
-    const tagEnd = position + fullTag.length;
     
-    // Only process if it's a void element and not already captured
-    if (VOID_TAGS.has(lowerTagName) && 
-        !regions.some(r => r.from === position) && 
-        !isPositionInRanges(position, commentRegions)) {
+    // Handle void elements that don't require closing tags
+    const voidTagRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>/g;
+    voidTagRegex.lastIndex = 0; // Reset regex
+    
+    while ((match = voidTagRegex.exec(text)) !== null) {
+      const [fullTag, tagName, attributes] = match;
+      const lowerTagName = tagName.toLowerCase();
+      const position = match.index;
+      const tagEnd = position + fullTag.length;
       
-      regions.push({
-        from: position,
-        to: tagEnd,
-        tagName: lowerTagName,
-        isMultiline: false,
-        content: fullTag,
-        openTagEnd: tagEnd,
-        closeTagStart: tagEnd,
-        isSelfClosing: true
-      });
+      // Only process if it's a void element and not already captured
+      if (VOID_TAGS.has(lowerTagName) && 
+          !regions.some(r => r.from === position) && 
+          !isPositionInRanges(position, commentRegions)) {
+        
+        regions.push({
+          from: position,
+          to: tagEnd,
+          tagName: lowerTagName,
+          isMultiline: false,
+          content: fullTag,
+          openTagEnd: tagEnd,
+          closeTagStart: tagEnd,
+          isSelfClosing: true
+        });
+      }
     }
+    
+    return regions;
+  } catch (error) {
+    console.error("Error parsing HTML hierarchy:", error);
+    return [];
   }
-  
-  return regions;
 }
 
 /**

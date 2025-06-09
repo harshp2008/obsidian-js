@@ -70,13 +70,35 @@ export abstract class Plugin {
    * Called when the plugin is activated
    */
   public async enable(): Promise<void> {
-    if (this._enabled) return;
+    if (this._enabled) {
+      console.log(`Plugin ${this.manifest.id} is already enabled, skipping`);
+      return;
+    }
     
     try {
+      console.log(`Enabling plugin ${this.manifest.id}...`);
+      
+      // Check if we have a valid view
+      if (!this.view) {
+        console.error(`Plugin ${this.manifest.id} has no editor view set. Plugin may not work correctly.`);
+      } else {
+        console.log(`Plugin ${this.manifest.id} has valid editor view:`, this.view);
+      }
+      
+      // Call the plugin's onEnable method
+      console.log(`Calling onEnable for plugin ${this.manifest.id}...`);
       await this.onEnable();
+      console.log(`Successfully called onEnable for plugin ${this.manifest.id}`);
+      
+      // Check if any extensions were registered
+      console.log(`Plugin ${this.manifest.id} registered extensions: ${this.registeredExtensionIds.length}`);
+      console.log(`Plugin ${this.manifest.id} registered commands: ${this.registeredCommandIds.length}`);
+      
       this._enabled = true;
-    } catch (error) {
+      console.log(`Plugin ${this.manifest.id} is now enabled`);
+    } catch (error: any) {
       console.error(`Error enabling plugin ${this.manifest.id}:`, error);
+      console.error(`Stack trace:`, error.stack);
       throw error;
     }
   }

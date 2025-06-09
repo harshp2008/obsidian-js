@@ -80,224 +80,241 @@ function createHtmlPreview(html: string): HTMLElement {
  * Build smart decorations that handle both edit mode and preview mode
  */
 function buildSmartDecorations(regions: HtmlRegion[], view: EditorView, inPreviewMode: boolean): DecorationSet {
-  // Create a collection for all decorations before sorting
-  const allDecorations: DecorationItem[] = [];
-  
-  // Get cursor ranges
-  const cursorRanges = view.state.selection.ranges;
-  
-  // First, determine which regions should be in edit mode based on cursor proximity
-  // and build a set of their IDs
-  const editModeRegions = new Set<number>();
-  
-  // First pass: Find regions directly containing the cursor
-  for (let i = 0; i < regions.length; i++) {
-    const region = regions[i];
-    for (const range of cursorRanges) {
-      if (isCursorNearRegion(view, region)) {
-        editModeRegions.add(i);
-        break;
-      }
-    }
-  }
-  
-  // Second pass: Find all regions nested within edit mode regions
-  // and also all parent regions containing edit mode regions
-  let madeChange = true;
-  while (madeChange) {
-    madeChange = false;
+  try {
+    // Create a collection for all decorations before sorting
+    const allDecorations: DecorationItem[] = [];
     
-    // Check for nesting relationships
-    for (let i = 0; i < regions.length; i++) {
-      const region = regions[i];
+    // Get cursor ranges
+    const cursorRanges = view.state.selection.ranges;
+    
+    // Get document length to avoid out-of-bounds issues
+    const docLength = view.state.doc.length;
+    
+    // First, determine which regions should be in edit mode based on cursor proximity
+    // and build a set of their IDs
+    const editModeRegions = new Set<number>();
+    
+    // Validate all regions are within document bounds
+    const validRegions = regions.filter(region => {
+      if (region.from < 0 || region.to > docLength || region.from > region.to) {
+        console.warn(`Invalid HTML region detected: ${region.from}-${region.to}, doc length: ${docLength}`);
+        return false;
+      }
+      return true;
+    });
+    
+    // First pass: Find regions directly containing the cursor
+    for (let i = 0; i < validRegions.length; i++) {
+      const region = validRegions[i];
+      for (const range of cursorRanges) {
+        if (isCursorNearRegion(view, region)) {
+          editModeRegions.add(i);
+          break;
+        }
+      }
+    }
+    
+    // Second pass: Find all regions nested within edit mode regions
+    // and also all parent regions containing edit mode regions
+    let madeChange = true;
+    while (madeChange) {
+      madeChange = false;
       
-      // If this region is already in edit mode, check for nested regions
-      if (editModeRegions.has(i)) {
-        // Find any regions completely contained within this one
-        for (let j = 0; j < regions.length; j++) {
-          if (i !== j && !editModeRegions.has(j)) {
-            const nestedRegion = regions[j];
-            if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
-              editModeRegions.add(j);
-              madeChange = true;
+      // Check for nesting relationships
+      for (let i = 0; i < validRegions.length; i++) {
+        const region = validRegions[i];
+        
+        // If this region is already in edit mode, check for nested regions
+        if (editModeRegions.has(i)) {
+          // Find any regions completely contained within this one
+          for (let j = 0; j < validRegions.length; j++) {
+            if (i !== j && !editModeRegions.has(j)) {
+              const nestedRegion = validRegions[j];
+              if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
+                editModeRegions.add(j);
+                madeChange = true;
+              }
             }
           }
-        }
-      } else {
-        // Check if this region contains any edit mode regions
-        for (let j = 0; j < regions.length; j++) {
-          if (editModeRegions.has(j)) {
-            const editModeRegion = regions[j];
-            if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
-              editModeRegions.add(i);
-              madeChange = true;
-              break;
+        } else {
+          // Check if this region contains any edit mode regions
+          for (let j = 0; j < validRegions.length; j++) {
+            if (editModeRegions.has(j)) {
+              const editModeRegion = validRegions[j];
+              if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
+                editModeRegions.add(i);
+                madeChange = true;
+                break;
+              }
             }
           }
         }
       }
     }
-  }
-  
-  if (DEBUG) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
-  
-  // Process each HTML region
-  for (let i = 0; i < regions.length; i++) {
-    const region = regions[i];
-    try {
-      // If this region should be in edit mode
-      if (editModeRegions.has(i)) {
-        if (DEBUG) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
-        
-        // Add special plain text decoration to prevent markdown parsing within HTML
-        allDecorations.push({
-          from: region.from,
-          to: region.to,
-          decoration: Decoration.mark({ 
-            class: 'cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown',
-            inclusiveStart: true,
-            inclusiveEnd: true,
-            attributes: { 
-              'data-html-content': 'true',
-              'data-no-markdown': 'true',
-              'data-no-list': 'true'
-            }
-          })
-        });
-        
-        // Get syntax highlighting decorations
-        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
-        
-        // Collect decorations from the decoration set into our array
-        const syntaxDecorations: DecorationItem[] = [];
-        
-        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
-          syntaxDecorations.push({
-            from,
-            to,
-            decoration: deco
-          });
-        });
-        
-        // If we have syntax decorations, add them to our collection
-        if (syntaxDecorations.length > 0) {
-          allDecorations.push(...syntaxDecorations);
-        }
-      } else {
-        if (DEBUG) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
-        
-        // Extract just the HTML content for preview
-        let htmlContent = region.content;
-        
-        // For div and span, try to extract inner content for cleaner display
-        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
-        if (tagMatch) {
-          const tagName = tagMatch[1].toLowerCase();
-          const attributes = tagMatch[2] || '';
-          const innerContent = tagMatch[3] || '';
+    
+    if (DEBUG) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
+    
+    // Process each HTML region
+    for (let i = 0; i < validRegions.length; i++) {
+      const region = validRegions[i];
+      try {
+        // If this region should be in edit mode
+        if (editModeRegions.has(i)) {
+          if (DEBUG) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
           
-          // Create an HTML string that preserves styling but focuses on content
-          if (tagName === 'div' || tagName === 'span') {
-            const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
-            const styleValue = styleMatch ? styleMatch[2] : '';
-            
-            if (styleValue) {
-              htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
-            } else {
-              htmlContent = innerContent;
-            }
-          }
-        }
-        
-        // Make sure this region doesn't overlap with any edit mode regions
-        // This can happen with malformed HTML where regions overlap
-        let overlapsEditMode = false;
-        for (const editIndex of editModeRegions) {
-          const editRegion = regions[editIndex];
-          if ((region.from >= editRegion.from && region.from < editRegion.to) ||
-              (region.to > editRegion.from && region.to <= editRegion.to) ||
-              (region.from <= editRegion.from && region.to >= editRegion.to)) {
-            overlapsEditMode = true;
-            break;
-          }
-        }
-        
-        if (!overlapsEditMode) {
-          // Completely hide the original HTML code with a preview widget
+          // Add special plain text decoration to prevent markdown parsing within HTML
           allDecorations.push({
             from: region.from,
             to: region.to,
-            decoration: Decoration.replace({
-              widget: new HtmlPreviewWidget(htmlContent, region.isMultiline),
+            decoration: Decoration.mark({ 
+              class: 'cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown',
+              inclusiveStart: true,
+              inclusiveEnd: true,
+              attributes: { 
+                'data-html-content': 'true',
+                'data-no-markdown': 'true',
+                'data-no-list': 'true'
+              }
             })
           });
-        }
-      }
-    } catch (error) {
-      console.error('Error processing region:', error, region);
-    }
-  }
-  
-  // COMPLETELY REWRITTEN DECORATION SORTING AND BUILDING LOGIC
-  const builder = new RangeSetBuilder<Decoration>();
-  
-  try {
-    // Create a map to store decorations by position
-    // The key is the from position, and the value is an array of decorations at that position
-    const positionMap = new Map<number, {from: number, to: number, decoration: Decoration}[]>();
-    
-    // Group decorations by from position
-    for (const deco of allDecorations) {
-      if (deco.from < deco.to) { // Skip invalid ranges
-        if (!positionMap.has(deco.from)) {
-          positionMap.set(deco.from, []);
-        }
-        positionMap.get(deco.from)!.push(deco);
-      }
-    }
-    
-    // Get all positions sorted
-    const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
-    
-    // For each position, sort its decorations by startSide and priority
-    for (const pos of positions) {
-      const decos = positionMap.get(pos)!;
-      
-      // Sort decorations at this position
-      decos.sort((a, b) => {
-        // First prioritize by whether it's a replace widget
-        const aIsWidget = a.decoration.spec.widget !== undefined;
-        const bIsWidget = b.decoration.spec.widget !== undefined;
-        
-        if (aIsWidget !== bIsWidget) {
-          return aIsWidget ? -1 : 1; // Widgets come first
-        }
-        
-        // For marks, sort by startSide (inclusiveStart)
-        if (!aIsWidget && !bIsWidget) {
-          const aInclusive = a.decoration.spec.inclusiveStart === true;
-          const bInclusive = b.decoration.spec.inclusiveStart === true;
           
-          if (aInclusive !== bInclusive) {
-            return aInclusive ? -1 : 1; // Inclusive comes first
+          // Get syntax highlighting decorations
+          const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
+          
+          // Collect decorations from the decoration set into our array
+          const syntaxDecorations: DecorationItem[] = [];
+          
+          syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
+            syntaxDecorations.push({
+              from,
+              to,
+              decoration: deco
+            });
+          });
+          
+          // If we have syntax decorations, add them to our collection
+          if (syntaxDecorations.length > 0) {
+            allDecorations.push(...syntaxDecorations);
+          }
+        } else {
+          if (DEBUG) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
+          
+          // Extract just the HTML content for preview
+          let htmlContent = region.content;
+          
+          // For div and span, try to extract inner content for cleaner display
+          const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
+          if (tagMatch) {
+            const tagName = tagMatch[1].toLowerCase();
+            const attributes = tagMatch[2] || '';
+            const innerContent = tagMatch[3] || '';
+            
+            // Create an HTML string that preserves styling but focuses on content
+            if (tagName === 'div' || tagName === 'span') {
+              const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
+              const styleValue = styleMatch ? styleMatch[2] : '';
+              
+              if (styleValue) {
+                htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
+              } else {
+                htmlContent = innerContent;
+              }
+            }
+          }
+          
+          // Make sure this region doesn't overlap with any edit mode regions
+          // This can happen with malformed HTML where regions overlap
+          let overlapsEditMode = false;
+          for (const editIndex of editModeRegions) {
+            const editRegion = validRegions[editIndex];
+            if ((region.from >= editRegion.from && region.from < editRegion.to) ||
+                (region.to > editRegion.from && region.to <= editRegion.to) ||
+                (region.from <= editRegion.from && region.to >= editRegion.to)) {
+              overlapsEditMode = true;
+              break;
+            }
+          }
+          
+          if (!overlapsEditMode) {
+            // Completely hide the original HTML code with a preview widget
+            allDecorations.push({
+              from: region.from,
+              to: region.to,
+              decoration: Decoration.replace({
+                widget: new HtmlPreviewWidget(htmlContent, region.isMultiline),
+              })
+            });
           }
         }
-        
-        // If still tied, sort by end position
-        return a.to - b.to;
-      });
-      
-      // Add sorted decorations to the builder
-      for (const deco of decos) {
-        try {
-          builder.add(deco.from, deco.to, deco.decoration);
-        } catch (e) {
-          if (DEBUG) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
-        }
+      } catch (error) {
+        console.error('Error processing region:', error, region);
       }
     }
     
-    return builder.finish();
+    // COMPLETELY REWRITTEN DECORATION SORTING AND BUILDING LOGIC
+    const builder = new RangeSetBuilder<Decoration>();
+    
+    try {
+      // Create a map to store decorations by position
+      // The key is the from position, and the value is an array of decorations at that position
+      const positionMap = new Map<number, {from: number, to: number, decoration: Decoration}[]>();
+      
+      // Group decorations by from position
+      for (const deco of allDecorations) {
+        if (deco.from < deco.to) { // Skip invalid ranges
+          if (!positionMap.has(deco.from)) {
+            positionMap.set(deco.from, []);
+          }
+          positionMap.get(deco.from)!.push(deco);
+        }
+      }
+      
+      // Get all positions sorted
+      const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
+      
+      // For each position, sort its decorations by startSide and priority
+      for (const pos of positions) {
+        const decos = positionMap.get(pos)!;
+        
+        // Sort decorations at this position
+        decos.sort((a, b) => {
+          // First prioritize by whether it's a replace widget
+          const aIsWidget = a.decoration.spec.widget !== undefined;
+          const bIsWidget = b.decoration.spec.widget !== undefined;
+          
+          if (aIsWidget !== bIsWidget) {
+            return aIsWidget ? -1 : 1; // Widgets come first
+          }
+          
+          // For marks, sort by startSide (inclusiveStart)
+          if (!aIsWidget && !bIsWidget) {
+            const aInclusive = a.decoration.spec.inclusiveStart === true;
+            const bInclusive = b.decoration.spec.inclusiveStart === true;
+            
+            if (aInclusive !== bInclusive) {
+              return aInclusive ? -1 : 1; // Inclusive comes first
+            }
+          }
+          
+          // If still tied, sort by end position
+          return a.to - b.to;
+        });
+        
+        // Add sorted decorations to the builder
+        for (const deco of decos) {
+          try {
+            builder.add(deco.from, deco.to, deco.decoration);
+          } catch (e) {
+            if (DEBUG) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
+          }
+        }
+      }
+      
+      return builder.finish();
+    } catch (error) {
+      console.error("Critical error in decoration building:", error);
+      return Decoration.none;
+    }
   } catch (error) {
     console.error("Critical error in decoration building:", error);
     return Decoration.none;

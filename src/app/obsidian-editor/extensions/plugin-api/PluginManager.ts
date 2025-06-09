@@ -46,7 +46,8 @@ export class PluginManager {
     const { id } = plugin.manifest;
     
     if (this.plugins.has(id)) {
-      throw new Error(`Plugin with ID '${id}' is already loaded`);
+      console.warn(`Plugin with ID '${id}' is already loaded, skipping duplicate load`);
+      return; // Just return instead of throwing an error
     }
     
     if (this.editorView) {

@@ -25,6 +25,8 @@ export interface CodeMirrorEditorProps {
   onChange?: (content: string) => void;
   /** Optional callback for save actions (Ctrl+S) */
   onSave?: () => void;
+  /** Optional callback for when the editor view is ready */
+  onEditorViewReady?: (view: EditorView) => void;
 }
 
 /**
@@ -38,7 +40,8 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   initialValue = '', 
   readOnly = false, 
   onChange, 
-  onSave 
+  onSave,
+  onEditorViewReady
 }) => {
   // Editor view reference
   const [editorView, setEditorView] = useState<EditorView | null>(null);
@@ -52,6 +55,9 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   // Handle editor view creation
   const handleEditorViewCreated = (view: EditorView) => {
     setEditorView(view);
+    if (onEditorViewReady) {
+      onEditorViewReady(view);
+    }
   };
   
   // Handle mode changes
