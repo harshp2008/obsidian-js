@@ -1226,11 +1226,21 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--background-primary, #ffffff);
+  max-height: 100%;
 }
 .obsidian-editor-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   position: relative;
+}
+.obsidian-editor-core {
+  height: 100%;
+}
+.cm-editor {
+  height: 100% !important;
+}
+.cm-scroller {
+  overflow: auto !important;
 }
 .dark .obsidian-editor-container {
   background-color: var(--background-primary, #2b2b2b);
@@ -1323,6 +1333,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--background-primary, #ffffff);
+  max-height: 100%;
 }
 .obsidian-editor-content {
   flex: 1;
@@ -1547,5 +1558,62 @@ html[data-markdown-mode=preview] .markdown-syntax-dim,
   border: 1px dotted #ccc;
   display: inline-block !important;
   min-width: 4px !important;
+}
+
+/* src/styles/Editor.css */
+.obsidian-editor-wrapper {
+  height: 100%;
+  width: 100%;
+  background-color: var(--background);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.obsidian-editor-wrapper .obsidian-editor-container {
+  border-radius: 4px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.obsidian-editor-wrapper .obsidian-editor-toolbar {
+  background-color: var(--background-secondary);
+  flex-shrink: 0;
+}
+.obsidian-editor-wrapper .obsidian-editor-content {
+  flex: 1;
+  overflow: auto;
+  height: auto !important;
+}
+.obsidian-editor-wrapper .cm-editor {
+  height: 100% !important;
+}
+.obsidian-editor-wrapper .cm-scroller {
+  overflow: auto !important;
+  height: 100% !important;
+}
+.obsidian-editor-wrapper .cm-content {
+  font-family: var( --font-sans, "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif );
+  font-size: 16px;
+  line-height: 1.6;
+  min-height: 100%;
+}
+.obsidian-editor-wrapper h1 {
+  font-size: 1.8em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: var(--heading-color);
+}
+.obsidian-editor-wrapper h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: var(--heading-color);
+}
+.obsidian-editor-wrapper h3 {
+  font-size: 1.2em;
+  font-weight: 600;
+  margin: 0.5em 0;
+  color: var(--heading-color);
 }
 /*# sourceMappingURL=client.css.map */

@@ -1381,12 +1381,25 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--background-primary, #ffffff);
+  max-height: 100%;
 }
 
 .obsidian-editor-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
   position: relative;
+}
+
+.obsidian-editor-core {
+  height: 100%;
+}
+
+.cm-editor {
+  height: 100% !important;
+}
+
+.cm-scroller {
+  overflow: auto !important;
 }
 
 /* Dark mode styles */
@@ -1505,6 +1518,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   border-radius: 4px;
   overflow: hidden;
   background-color: var(--background-primary, #ffffff);
+  max-height: 100%;
 }
 
 .obsidian-editor-content {

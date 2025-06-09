@@ -15,6 +15,8 @@ interface CodeMirrorEditorProps {
     onChange?: (content: string) => void;
     /** Optional callback for save actions (Ctrl+S) */
     onSave?: () => void;
+    /** Optional callback for when the editor view is ready */
+    onEditorViewReady?: (view: EditorView) => void;
 }
 /**
  * A CodeMirror editor component with Markdown syntax highlighting and preview mode.
@@ -91,7 +93,11 @@ interface ThemeSwitcherProps {
  */
 declare const ThemeSwitcher: React.FC<ThemeSwitcherProps>;
 
-declare function Editor(props: CodeMirrorEditorProps): react_jsx_runtime.JSX.Element;
+interface EditorProps extends CodeMirrorEditorProps {
+    className?: string;
+    onEditorViewReady?: (view: EditorView) => void;
+}
+declare function Editor({ className, onEditorViewReady, ...props }: EditorProps): react_jsx_runtime.JSX.Element;
 
 /**
  * A simple toggle button for switching between light and dark themes

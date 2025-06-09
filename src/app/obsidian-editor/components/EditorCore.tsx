@@ -300,7 +300,7 @@ export const EditorCore: React.FC<EditorCoreProps> = ({
     );
   }
   
-  return <div ref={editorRef} className="obsidian-editor-core" />;
+  return <div ref={editorRef} className="obsidian-editor-core" style={{ height: '100%' }} />;
 };
 
 export default EditorCore; 

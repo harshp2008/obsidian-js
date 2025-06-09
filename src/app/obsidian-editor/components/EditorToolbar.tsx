@@ -3,7 +3,7 @@
 import React from 'react';
 import { EditorView } from '@codemirror/view';
 import { EditorSelection, Transaction } from '@codemirror/state';
-import { toggleBold, toggleItalic, toggleHeading } from '../utils/formatting/markdownFormatting';
+import { toggleBold, toggleItalic, toggleHeading, createLink } from '../utils/formatting/markdownFormatting';
 import ThemeSwitcher from './ThemeSwitcher';
 import { EditorThemeName } from '../utils/theme';
 
@@ -64,6 +64,78 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
   return (
     <div className="obsidian-editor-toolbar">
       <div className="toolbar-left">
+        {/* Basic formatting */}
+        <button 
+          onClick={() => applyFormatting(toggleBold)}
+          className="format-button"
+          aria-label="Bold"
+          title="Bold (Ctrl+B)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+            <path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path>
+          </svg>
+        </button>
+
+        <button 
+          onClick={() => applyFormatting(toggleItalic)}
+          className="format-button"
+          aria-label="Italic"
+          title="Italic (Ctrl+I)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="19" y1="4" x2="10" y2="4"></line>
+            <line x1="14" y1="20" x2="5" y2="20"></line>
+            <line x1="15" y1="4" x2="9" y2="20"></line>
+          </svg>
+        </button>
+
+        {/* Link button */}
+        <button 
+          onClick={() => applyFormatting(createLink)}
+          className="format-button"
+          aria-label="Link"
+          title="Insert link (Ctrl+K)"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+          </svg>
+        </button>
+
+        {/* Divider */}
+        <div className="format-divider"></div>
+
+        {/* Headings */}
+        <button 
+          onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1))}
+          className="format-button"
+          aria-label="Heading 1"
+          title="Heading 1 (Ctrl+1)"
+        >
+          <span className="heading-btn">H1</span>
+        </button>
+        
+        <button 
+          onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2))}
+          className="format-button"
+          aria-label="Heading 2"
+          title="Heading 2 (Ctrl+2)"
+        >
+          <span className="heading-btn">H2</span>
+        </button>
+        
+        <button 
+          onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3))}
+          className="format-button"
+          aria-label="Heading 3"
+          title="Heading 3 (Ctrl+3)"
+        >
+          <span className="heading-btn">H3</span>
+        </button>
+      </div>
+      
+      <div className="toolbar-right">
         {/* Mode Toggle */}
         <div className="mode-toggle">
           <button 
@@ -73,8 +145,12 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             aria-label="Edit mode"
             title="Edit mode"
           >
-            Edit
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+            </svg>
           </button>
+          
           <button 
             className={`mode-button ${mode === 'preview' ? 'active' : ''}`}
             onClick={() => onModeChange('preview')}
@@ -82,58 +158,13 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
             aria-label="Preview mode"
             title="Preview mode"
           >
-            Preview
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
           </button>
         </div>
         
-        {/* Format Buttons (only shown in edit mode) */}
-        {mode === 'live' && (
-          <div className="format-buttons">
-            <button 
-              onClick={() => applyFormatting(toggleBold)}
-              className="format-button"
-              aria-label="Bold"
-              title="Bold (Ctrl+B)"
-            >
-              <strong>B</strong>
-            </button>
-            <button 
-              onClick={() => applyFormatting(toggleItalic)}
-              className="format-button"
-              aria-label="Italic"
-              title="Italic (Ctrl+I)"
-            >
-              <em>I</em>
-            </button>
-            <button 
-              onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1))}
-              className="format-button"
-              aria-label="Heading 1"
-              title="Heading 1 (Ctrl+1)"
-            >
-              H1
-            </button>
-            <button 
-              onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2))}
-              className="format-button"
-              aria-label="Heading 2"
-              title="Heading 2 (Ctrl+2)"
-            >
-              H2
-            </button>
-            <button 
-              onClick={() => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3))}
-              className="format-button"
-              aria-label="Heading 3"
-              title="Heading 3 (Ctrl+3)"
-            >
-              H3
-            </button>
-          </div>
-        )}
-      </div>
-      
-      <div className="toolbar-right">
         {/* Theme Switcher */}
         <ThemeSwitcher onThemeChange={onThemeChange} />
       </div>
@@ -152,7 +183,14 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         .toolbar-left, .toolbar-right {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 8px;
+        }
+        
+        .format-divider {
+          width: 1px;
+          height: 22px;
+          background-color: var(--hr-color, #dcddde);
+          margin: 0 4px;
         }
         
         .mode-toggle {
@@ -163,12 +201,15 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
         }
         
         .mode-button {
-          padding: 4px 12px;
+          padding: 4px 8px;
           border: none;
-          background: var(--background-primary, #ffffff);
+          background: var(--background, #ffffff);
           color: var(--text-normal, #2e3338);
           cursor: pointer;
           transition: background 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         
         .mode-button.active {
@@ -176,42 +217,43 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = ({
           color: white;
         }
         
-        .format-buttons {
-          display: flex;
-          gap: 4px;
-        }
-        
         .format-button {
-          width: 32px;
-          height: 32px;
+          min-width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid var(--hr-color, #dcddde);
+          border: 1px solid transparent;
           border-radius: 4px;
-          background: var(--background-primary, #ffffff);
+          background: transparent;
           color: var(--text-normal, #2e3338);
           cursor: pointer;
-          transition: background 0.2s;
+          transition: all 0.2s;
+          padding: 0 6px;
         }
         
         .format-button:hover {
-          background: var(--interactive-hover, #e9e9e9);
+          background: var(--background-modifier-hover, #e9e9e9);
+          border-color: var(--hr-color, #dcddde);
+        }
+        
+        .heading-btn {
+          font-weight: 600;
+          font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
         }
         
         .dark .mode-button {
-          background: var(--background-primary, #2b2b2b);
+          background: var(--background, #2b2b2b);
           color: var(--text-normal, #dcddde);
         }
         
         .dark .format-button {
-          background: var(--background-primary, #2b2b2b);
           color: var(--text-normal, #dcddde);
-          border-color: var(--hr-color, #444444);
         }
         
         .dark .format-button:hover {
-          background: var(--interactive-hover, #4a4a4a);
+          background: var(--background-modifier-hover, #353535);
+          border-color: var(--hr-color, #444444);
         }
         `}
       </style>

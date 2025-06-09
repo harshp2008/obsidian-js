@@ -6,3 +6,54 @@
 
 /* Additional CSS files are loaded dynamically based on the theme */
 /* See the CodeMirrorEditor component for details */
+
+/* Main package styles */
+
+.obsidian-editor-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--hr-color, #dcddde);
+  border-radius: 4px;
+  background-color: var(--background, #ffffff);
+}
+
+.obsidian-editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--background-secondary, #f8f8f8);
+  border-bottom: 1px solid var(--hr-color, #dcddde);
+}
+
+.obsidian-editor-content {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  height: auto !important;
+}
+
+.obsidian-editor-core {
+  height: 100%;
+}
+
+.cm-editor {
+  height: 100% !important;
+}
+
+.cm-scroller {
+  overflow: auto !important;
+}
+
+/* Dark mode styles */
+:root.dark .obsidian-editor-toolbar {
+  background-color: var(--background-secondary, #262626);
+  border-color: var(--hr-color, #444444);
+}
+
+:root.dark .obsidian-editor-container {
+  border-color: var(--hr-color, #444444);
+  background-color: var(--background, #202020);
+}

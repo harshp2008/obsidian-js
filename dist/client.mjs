@@ -1,14 +1,2201 @@
+import { EditorView, ViewPlugin, Decoration, keymap, WidgetType, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
+import { StateEffect, StateField, RangeSetBuilder, RangeSet, Compartment, EditorSelection, EditorState, Prec, countColumn } from '@codemirror/state';
+import { EventEmitter } from 'events';
+import { LRLanguage, HighlightStyle, indentNodeProp, foldNodeProp, continuedIndent, delimitedIndent, flatIndent, foldInside, sublanguageProp, defineLanguageFacet, syntaxTree, syntaxHighlighting, LanguageSupport, Language, foldService, LanguageDescription, ParseContext, bracketMatchingHandle, indentUnit, languageDataProp } from '@codemirror/language';
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { jsx, jsxs, Fragment } from 'react/jsx-runtime';
-import { EditorView, ViewPlugin, Decoration, keymap, WidgetType, highlightActiveLine, highlightActiveLineGutter } from '@codemirror/view';
-import { LRLanguage, HighlightStyle, indentNodeProp, foldNodeProp, continuedIndent, delimitedIndent, flatIndent, foldInside, sublanguageProp, defineLanguageFacet, syntaxTree, syntaxHighlighting, LanguageSupport, Language, foldService, LanguageDescription, ParseContext, bracketMatchingHandle, indentUnit, languageDataProp } from '@codemirror/language';
 import { styleTags, tags } from '@lezer/highlight';
-import { StateEffect, StateField, RangeSetBuilder, RangeSet, Compartment, EditorSelection, EditorState, Prec, countColumn } from '@codemirror/state';
 import { snippetCompletion, ifNotIn, completeFromList, CompletionContext } from '@codemirror/autocomplete';
 import { MarkdownParser, parseCode, parser as parser$1, GFM, Subscript, Superscript, Emoji } from '@lezer/markdown';
 import { languages } from '@codemirror/language-data';
 import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
 
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/types.ts
+var VOID_TAGS, DANGEROUS_TAGS;
+var init_types = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/types.ts"() {
+    VOID_TAGS = /* @__PURE__ */ new Set([
+      "area",
+      "base",
+      "br",
+      "col",
+      "embed",
+      "hr",
+      "img",
+      "input",
+      "link",
+      "meta",
+      "param",
+      "source",
+      "track",
+      "wbr"
+    ]);
+    DANGEROUS_TAGS = /* @__PURE__ */ new Set([
+      "script",
+      "iframe",
+      "object",
+      "embed",
+      "applet",
+      "base",
+      "form",
+      "frame",
+      "frameset"
+    ]);
+  }
+});
+var DEBUG, HtmlPreviewWidget;
+var init_html_widget = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts"() {
+    init_types();
+    DEBUG = false;
+    HtmlPreviewWidget = class extends WidgetType {
+      constructor(content, isMultiline = false) {
+        super();
+        this.content = content;
+        this.isMultiline = isMultiline;
+        if (DEBUG) {
+          console.log("Creating HTML widget:", {
+            content: content.substring(0, 100) + (content.length > 100 ? "..." : ""),
+            isMultiline
+          });
+        }
+      }
+      eq(other) {
+        return this.content === other.content && this.isMultiline === other.isMultiline;
+      }
+      /**
+       * Renders the HTML content as a DOM element
+       */
+      toDOM() {
+        try {
+          if (DEBUG) console.log("Rendering HTML widget", this.isMultiline ? "multiline" : "inline");
+          const wrapper = document.createElement("div");
+          wrapper.className = "cm-html-preview-widget";
+          if (this.isMultiline) {
+            wrapper.classList.add("cm-html-preview-multiline");
+          } else {
+            wrapper.classList.add("cm-html-preview-inline");
+          }
+          const contentContainer = document.createElement("div");
+          contentContainer.className = "cm-html-content-container";
+          contentContainer.style.cssText = `
+        padding: 0;
+        background: transparent;
+        border-radius: 0;
+      `;
+          try {
+            const securityWarnings = this.checkSecurityIssues(this.content);
+            if (securityWarnings.length > 0) {
+              securityWarnings.forEach((warning) => {
+                const warningElement = document.createElement("div");
+                warningElement.className = "cm-html-security-warning";
+                warningElement.innerHTML = `\u26A0\uFE0F ${warning}`;
+                contentContainer.appendChild(warningElement);
+              });
+            }
+            let htmlToRender = this.content;
+            let isBlockElement = false;
+            const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\s*\/?>)/i.exec(this.content);
+            if (tagMatch) {
+              const tagName = tagMatch[1].toLowerCase();
+              isBlockElement = this.isBlockElement(tagName);
+            }
+            const htmlContainer = document.createElement("div");
+            htmlContainer.style.cssText = `
+          display: block; 
+          width: 100%;
+          font-family: inherit;
+          font-size: inherit;
+          line-height: inherit;
+          color: inherit;
+        `;
+            if (isBlockElement) {
+              htmlContainer.style.cssText += "display: block;";
+            }
+            htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
+            htmlContainer.querySelectorAll("*").forEach((element) => {
+              if (element instanceof HTMLElement) {
+                if (!element.hasAttribute("style")) {
+                  element.style.fontFamily = "inherit";
+                  element.style.fontSize = "inherit";
+                  element.style.lineHeight = "inherit";
+                  element.style.color = "inherit";
+                }
+                if (this.isBlockElement(element.tagName)) {
+                  element.style.display = "block";
+                  element.style.width = "100%";
+                  element.style.boxSizing = "border-box";
+                  if (!element.style.marginTop) element.style.marginTop = "0";
+                  if (!element.style.marginBottom) element.style.marginBottom = "0";
+                }
+                if (element.tagName === "UL") {
+                  element.style.listStyleType = "disc";
+                  element.style.paddingLeft = "2em";
+                  element.style.marginTop = "0.2em";
+                  element.style.marginBottom = "0.2em";
+                } else if (element.tagName === "OL") {
+                  element.style.listStyleType = "decimal";
+                  element.style.paddingLeft = "2em";
+                  element.style.marginTop = "0.2em";
+                  element.style.marginBottom = "0.2em";
+                } else if (element.tagName === "LI") {
+                  element.style.display = "list-item";
+                  element.style.marginTop = "0.1em";
+                  element.style.marginBottom = "0.1em";
+                } else if (element.tagName === "DIV") {
+                  element.style.width = "100%";
+                  element.style.boxSizing = "border-box";
+                  element.style.margin = "0";
+                  element.style.padding = "0";
+                } else if (element.tagName === "P") {
+                  element.style.marginTop = "0.2em";
+                  element.style.marginBottom = "0.2em";
+                }
+              }
+            });
+            contentContainer.appendChild(htmlContainer);
+            this.disableInteractiveElements(htmlContainer);
+          } catch (error) {
+            console.error("Error rendering HTML:", error);
+            const errorDiv = document.createElement("div");
+            errorDiv.className = "cm-html-error";
+            errorDiv.textContent = `Error rendering HTML: ${error.message || "Unknown error"}`;
+            contentContainer.appendChild(errorDiv);
+          }
+          wrapper.appendChild(contentContainer);
+          return wrapper;
+        } catch (error) {
+          console.error("Fatal error in HTML widget:", error);
+          const errorElement = document.createElement("div");
+          errorElement.className = "cm-html-error";
+          errorElement.textContent = "Error rendering HTML content";
+          return errorElement;
+        }
+      }
+      /**
+       * Check for potential security issues in HTML content
+       */
+      checkSecurityIssues(html2) {
+        const warnings = [];
+        DANGEROUS_TAGS.forEach((tag) => {
+          const tagRegex = new RegExp(`<${tag}[\\s>]`, "i");
+          if (tagRegex.test(html2)) {
+            warnings.push(`${tag.toUpperCase()} tag detected and will be sanitized`);
+          }
+        });
+        if (/\son\w+\s*=/i.test(html2)) {
+          warnings.push("Event handlers detected and removed");
+        }
+        if (/javascript:/i.test(html2)) {
+          warnings.push("JavaScript URLs detected and removed");
+        }
+        return warnings;
+      }
+      /**
+       * Sanitizes HTML to prevent XSS attacks
+       */
+      sanitizeHtml(html2) {
+        let sanitized = html2.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+        sanitized = sanitized.replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "");
+        sanitized = sanitized.replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
+        sanitized = sanitized.replace(/javascript:/gi, "void:");
+        DANGEROUS_TAGS.forEach((tag) => {
+          const tagName = tag.toUpperCase();
+          const regex = new RegExp(`<${tag}([^>]*)>([\\s\\S]*?)<\\/${tag}>`, "gi");
+          sanitized = sanitized.replace(regex, (match, attrs, content) => {
+            return `<div class="cm-html-removed-tag">[${tagName} removed]</div>`;
+          });
+          const selfClosingRegex = new RegExp(`<${tag}([^>]*?)\\s*\\/>`, "gi");
+          sanitized = sanitized.replace(
+            selfClosingRegex,
+            `<div class="cm-html-removed-tag">[${tagName} removed]</div>`
+          );
+        });
+        return sanitized;
+      }
+      /**
+       * Disable interactive elements like links and forms
+       */
+      disableInteractiveElements(container) {
+        try {
+          const links = container.querySelectorAll("a");
+          links.forEach((link) => {
+            link.addEventListener("click", (e) => e.preventDefault());
+            link.style.pointerEvents = "none";
+            if (link.hasAttribute("href")) {
+              link.setAttribute("data-href", link.getAttribute("href") || "");
+              link.removeAttribute("href");
+            }
+          });
+          const forms = container.querySelectorAll("form");
+          forms.forEach((form) => {
+            form.addEventListener("submit", (e) => e.preventDefault());
+            form.setAttribute("onsubmit", "return false;");
+          });
+          const buttons = container.querySelectorAll('button, input[type="submit"], input[type="button"]');
+          buttons.forEach((button) => {
+            button.setAttribute("disabled", "disabled");
+            button.addEventListener("click", (e) => e.preventDefault());
+          });
+        } catch (error) {
+          if (DEBUG) console.error("Error disabling interactive elements:", error);
+        }
+      }
+      /**
+       * Try to find the editor view from a DOM element
+       */
+      getEditorViewFromElement(element) {
+        try {
+          let current = element;
+          while (current) {
+            const editorEl = current.closest(".cm-editor");
+            if (editorEl) {
+              for (const key in editorEl) {
+                if (key.startsWith("__")) {
+                  const value = editorEl[key];
+                  if (value instanceof EditorView) {
+                    return value;
+                  }
+                }
+              }
+              if (editorEl.cmView) {
+                return editorEl.cmView;
+              }
+            }
+            current = current.parentElement;
+          }
+          if (window.CodeMirrorViewRegistry) {
+            const registry = window.CodeMirrorViewRegistry;
+            for (const view of registry) {
+              if (view.dom && view.dom.contains(element)) {
+                return view;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error finding editor view:", error);
+        }
+        return null;
+      }
+      /**
+       * Allow events from the content (like scrolling in a div)
+       */
+      ignoreEvent() {
+        return false;
+      }
+      /**
+       * Check if a tag name represents a block element
+       */
+      isBlockElement(tagName) {
+        const blockElements = [
+          "DIV",
+          "P",
+          "H1",
+          "H2",
+          "H3",
+          "H4",
+          "H5",
+          "H6",
+          "ARTICLE",
+          "SECTION",
+          "HEADER",
+          "FOOTER",
+          "BLOCKQUOTE",
+          "UL",
+          "OL",
+          "LI",
+          "TABLE",
+          "TR",
+          "HR",
+          "PRE",
+          "FIGURE"
+        ];
+        return blockElements.includes(tagName.toUpperCase());
+      }
+    };
+  }
+});
+var HtmlSyntaxHighlighter;
+var init_syntax_highlighter = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/syntax-highlighter.ts"() {
+    init_types();
+    HtmlSyntaxHighlighter = class {
+      /**
+       * Highlight HTML code with appropriate syntax classes
+       */
+      static highlight(region) {
+        try {
+          if (!region.content || region.content.length === 0) {
+            return Decoration.none;
+          }
+          const builder = new RangeSetBuilder();
+          builder.add(
+            region.from,
+            region.to,
+            Decoration.mark({
+              class: "cm-html-code-mode cm-disable-markdown-parsing cm-plain-text",
+              inclusive: true
+            })
+          );
+          this.addHtmlTokens(builder, region.content, region.from);
+          return builder.finish();
+        } catch (error) {
+          console.error("Error in HTML syntax highlighter:", error);
+          return Decoration.none;
+        }
+      }
+      /**
+       * Add HTML token decorations directly to builder
+       */
+      static addHtmlTokens(builder, html2, baseOffset) {
+        const tagStack = [];
+        let currentLevel = 0;
+        const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(=(?:(['"]).*?\4|\S+))?|(['"])(.*?)\5|(\/?>)/g;
+        let match;
+        const tokens = [];
+        while ((match = tokenRegex.exec(html2)) !== null) {
+          try {
+            const [full, tagName, attrName, fullAttr, q1, attrValue, q2, bracket] = match;
+            const start = baseOffset + match.index;
+            if (tagName) {
+              const isClosing = full.startsWith("</");
+              const tagStart2 = start;
+              const tagEnd = start + (isClosing ? 2 : 1) + tagName.length;
+              tokens.push({
+                from: tagStart2,
+                to: tagStart2 + (isClosing ? 2 : 1),
+                class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}`
+              });
+              tokens.push({
+                from: tagStart2 + (isClosing ? 2 : 1),
+                to: tagEnd,
+                class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}`
+              });
+              if (isClosing) {
+                for (let i = tagStack.length - 1; i >= 0; i--) {
+                  if (tagStack[i].name === tagName.toLowerCase()) {
+                    currentLevel = tagStack[i].level;
+                    tagStack.splice(i);
+                    break;
+                  }
+                }
+              } else {
+                tagStack.push({
+                  name: tagName.toLowerCase(),
+                  level: currentLevel
+                });
+                currentLevel = (currentLevel + 1) % 6;
+              }
+            } else if (attrName) {
+              const attrStart = start + 1;
+              const attrEnd = attrStart + attrName.length;
+              tokens.push({
+                from: attrStart,
+                to: attrEnd,
+                class: "cm-html-attribute"
+              });
+              if (fullAttr && fullAttr.includes("=")) {
+                const equalsPos = fullAttr.indexOf("=");
+                const valueStart = attrStart + attrName.length + 1;
+                if (q1) {
+                  const quoteLen = q1.length;
+                  tokens.push({
+                    from: valueStart,
+                    to: valueStart + fullAttr.length - equalsPos - 1,
+                    class: "cm-html-attribute-value"
+                  });
+                } else if (fullAttr.length > equalsPos + 1) {
+                  tokens.push({
+                    from: valueStart,
+                    to: valueStart + fullAttr.length - equalsPos - 1,
+                    class: "cm-html-attribute-value"
+                  });
+                }
+              }
+            } else if (attrValue !== void 0 && q2) {
+              const valueStart = start;
+              const valueEnd = start + q2.length + attrValue.length + q2.length;
+              tokens.push({
+                from: valueStart,
+                to: valueEnd,
+                class: "cm-html-attribute-value"
+              });
+            } else if (bracket) {
+              const bracketStart = start;
+              const bracketEnd = start + bracket.length;
+              const isSelfClosing = bracket === "/>" || bracket === ">" && tagStack.length > 0 && VOID_TAGS.has(tagStack[tagStack.length - 1].name);
+              tokens.push({
+                from: bracketStart,
+                to: bracketEnd,
+                class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}`
+              });
+              if (isSelfClosing && tagStack.length > 0) {
+                currentLevel = tagStack[tagStack.length - 1].level;
+                tagStack.pop();
+              }
+            }
+          } catch (tokenError) {
+            console.warn("Error processing token:", tokenError);
+          }
+        }
+        tokens.sort((a, b) => {
+          if (a.from !== b.from) return a.from - b.from;
+          return a.to - b.to;
+        });
+        for (const token of tokens) {
+          builder.add(
+            token.from,
+            token.to,
+            Decoration.mark({ class: token.class })
+          );
+        }
+      }
+    };
+  }
+});
+function detectHtmlRegions(view) {
+  try {
+    const regions = [];
+    const { state } = view;
+    const doc = state.doc;
+    const docLength = doc.length;
+    const fullText = doc.toString();
+    const commentRegions = findHtmlComments(fullText);
+    const parsedRegions = parseHtmlHierarchy(fullText, commentRegions);
+    for (const region of parsedRegions) {
+      try {
+        const { from, to, tagName, content, isMultiline, isSelfClosing, openTagEnd, closeTagStart } = region;
+        if (from < 0 || to > docLength || from > to) {
+          console.warn(`Skipping invalid HTML region: ${from}-${to}, doc length: ${docLength}`);
+          continue;
+        }
+        regions.push({
+          from,
+          to,
+          tagName,
+          isMultiline,
+          content,
+          openTagEnd,
+          closeTagStart,
+          isSelfClosing
+        });
+      } catch (error) {
+        console.error("Error processing HTML region:", error);
+      }
+    }
+    regions.sort((a, b) => a.from - b.from);
+    return regions;
+  } catch (error) {
+    console.error("Error detecting HTML regions:", error);
+    return [];
+  }
+}
+function parseHtmlHierarchy(text, commentRegions) {
+  try {
+    const regions = [];
+    if (!text || text.length === 0) {
+      return regions;
+    }
+    const tagStack = [];
+    const tagRegex = /<\/?\s*([a-zA-Z][a-zA-Z0-9\-_:]*)((?:\s+[a-zA-Z][a-zA-Z0-9\-_:]*(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*)\s*(\/?)>/g;
+    let match;
+    while ((match = tagRegex.exec(text)) !== null) {
+      try {
+        const [fullMatch, tagName, attributes, selfClosing] = match;
+        const position = match.index;
+        const matchEnd = position + fullMatch.length;
+        if (position < 0 || matchEnd > text.length) {
+          console.warn(`Skipping HTML tag with invalid positions: ${position}-${matchEnd}, text length: ${text.length}`);
+          continue;
+        }
+        const lowerTagName = tagName.toLowerCase();
+        if (isPositionInRanges(position, commentRegions)) {
+          continue;
+        }
+        const isClosingTag = fullMatch.startsWith("</");
+        const isSelfClosingTag = selfClosing === "/" || VOID_TAGS.has(lowerTagName);
+        if (isClosingTag) {
+          let foundMatchingTag = false;
+          for (let i = tagStack.length - 1; i >= 0; i--) {
+            const openTag = tagStack[i];
+            if (openTag.tagName.toLowerCase() === lowerTagName) {
+              const from = openTag.startIndex;
+              const to = matchEnd;
+              const content = text.substring(from, to);
+              const isMultiline = content.includes("\n");
+              regions.push({
+                from,
+                to,
+                tagName: lowerTagName,
+                content,
+                isMultiline,
+                isSelfClosing: false,
+                openTagEnd: openTag.openTagEnd,
+                closeTagStart: position
+              });
+              tagStack.splice(i);
+              foundMatchingTag = true;
+              break;
+            }
+          }
+          if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) {
+          }
+        } else if (isSelfClosingTag) {
+          regions.push({
+            from: position,
+            to: matchEnd,
+            tagName: lowerTagName,
+            content: fullMatch,
+            isMultiline: false,
+            isSelfClosing: true,
+            openTagEnd: matchEnd,
+            closeTagStart: matchEnd
+          });
+        } else {
+          tagStack.push({
+            tagName: lowerTagName,
+            startIndex: position,
+            openTagEnd: matchEnd,
+            content: fullMatch
+          });
+        }
+      } catch (matchError) {
+        console.error("Error processing HTML tag:", matchError);
+      }
+    }
+    const voidTagRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>/g;
+    voidTagRegex.lastIndex = 0;
+    while ((match = voidTagRegex.exec(text)) !== null) {
+      const [fullTag, tagName, attributes] = match;
+      const lowerTagName = tagName.toLowerCase();
+      const position = match.index;
+      const tagEnd = position + fullTag.length;
+      if (VOID_TAGS.has(lowerTagName) && !regions.some((r) => r.from === position) && !isPositionInRanges(position, commentRegions)) {
+        regions.push({
+          from: position,
+          to: tagEnd,
+          tagName: lowerTagName,
+          isMultiline: false,
+          content: fullTag,
+          openTagEnd: tagEnd,
+          closeTagStart: tagEnd,
+          isSelfClosing: true
+        });
+      }
+    }
+    return regions;
+  } catch (error) {
+    console.error("Error parsing HTML hierarchy:", error);
+    return [];
+  }
+}
+function isPositionInRanges(position, ranges) {
+  return ranges.some((range) => position >= range.from && position < range.to);
+}
+function findHtmlComments(text) {
+  const comments = [];
+  const commentRegex = /<!--[\s\S]*?-->/g;
+  let match;
+  while ((match = commentRegex.exec(text)) !== null) {
+    comments.push({
+      from: match.index,
+      to: match.index + match[0].length
+    });
+  }
+  return comments;
+}
+function isCursorNearRegion(view, region) {
+  const selection = view.state.selection.main;
+  const cursor = selection.head;
+  view.state.doc;
+  if (cursor > region.from && cursor < region.to) {
+    return true;
+  }
+  if (cursor === region.from || cursor === region.to) {
+    return true;
+  }
+  return false;
+}
+function isEditorInPreviewMode(view) {
+  if (!view.state.facet(EditorView.editable)) {
+    return true;
+  }
+  let element = view.dom;
+  while (element) {
+    if (element.classList && element.classList.contains("preview-mode")) {
+      return true;
+    }
+    element = element.parentElement;
+  }
+  return false;
+}
+var init_tag_detector = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/tag-detector.ts"() {
+    init_types();
+  }
+});
+function buildHtmlDecorations(view) {
+  try {
+    if (DEBUG2) console.log("Building HTML decorations");
+    const regions = detectHtmlRegions(view);
+    if (!regions.length) {
+      if (DEBUG2) console.log("No HTML regions found");
+      return Decoration.none;
+    }
+    if (DEBUG2) console.log(`Found ${regions.length} HTML regions:`, regions);
+    const inPreviewMode = isEditorInPreviewMode(view);
+    return buildSmartDecorations(regions, view, inPreviewMode);
+  } catch (error) {
+    console.error("Error building HTML decorations:", error);
+    return Decoration.none;
+  }
+}
+function buildSmartDecorations(regions, view, inPreviewMode) {
+  try {
+    const allDecorations = [];
+    const cursorRanges = view.state.selection.ranges;
+    const docLength = view.state.doc.length;
+    const editModeRegions = /* @__PURE__ */ new Set();
+    const validRegions = regions.filter((region) => {
+      if (region.from < 0 || region.to > docLength || region.from > region.to) {
+        console.warn(`Invalid HTML region detected: ${region.from}-${region.to}, doc length: ${docLength}`);
+        return false;
+      }
+      return true;
+    });
+    for (let i = 0; i < validRegions.length; i++) {
+      const region = validRegions[i];
+      for (const range of cursorRanges) {
+        if (isCursorNearRegion(view, region)) {
+          editModeRegions.add(i);
+          break;
+        }
+      }
+    }
+    let madeChange = true;
+    while (madeChange) {
+      madeChange = false;
+      for (let i = 0; i < validRegions.length; i++) {
+        const region = validRegions[i];
+        if (editModeRegions.has(i)) {
+          for (let j = 0; j < validRegions.length; j++) {
+            if (i !== j && !editModeRegions.has(j)) {
+              const nestedRegion = validRegions[j];
+              if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
+                editModeRegions.add(j);
+                madeChange = true;
+              }
+            }
+          }
+        } else {
+          for (let j = 0; j < validRegions.length; j++) {
+            if (editModeRegions.has(j)) {
+              const editModeRegion = validRegions[j];
+              if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
+                editModeRegions.add(i);
+                madeChange = true;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    if (DEBUG2) console.log(`${editModeRegions.size} regions will be in edit mode out of ${regions.length} total`);
+    for (let i = 0; i < validRegions.length; i++) {
+      const region = validRegions[i];
+      try {
+        if (editModeRegions.has(i)) {
+          if (DEBUG2) console.log(`Creating editable syntax highlighting for ${region.tagName} (${region.from}-${region.to})`);
+          allDecorations.push({
+            from: region.from,
+            to: region.to,
+            decoration: Decoration.mark({
+              class: "cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown",
+              inclusiveStart: true,
+              inclusiveEnd: true,
+              attributes: {
+                "data-html-content": "true",
+                "data-no-markdown": "true",
+                "data-no-list": "true"
+              }
+            })
+          });
+          const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
+          const syntaxDecorations = [];
+          syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
+            syntaxDecorations.push({
+              from,
+              to,
+              decoration: deco
+            });
+          });
+          if (syntaxDecorations.length > 0) {
+            allDecorations.push(...syntaxDecorations);
+          }
+        } else {
+          if (DEBUG2) console.log(`Creating preview for ${region.tagName} (${region.from}-${region.to})`);
+          let htmlContent = region.content;
+          const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
+          if (tagMatch) {
+            const tagName = tagMatch[1].toLowerCase();
+            const attributes = tagMatch[2] || "";
+            const innerContent = tagMatch[3] || "";
+            if (tagName === "div" || tagName === "span") {
+              const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
+              const styleValue = styleMatch ? styleMatch[2] : "";
+              if (styleValue) {
+                htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
+              } else {
+                htmlContent = innerContent;
+              }
+            }
+          }
+          let overlapsEditMode = false;
+          for (const editIndex of editModeRegions) {
+            const editRegion = validRegions[editIndex];
+            if (region.from >= editRegion.from && region.from < editRegion.to || region.to > editRegion.from && region.to <= editRegion.to || region.from <= editRegion.from && region.to >= editRegion.to) {
+              overlapsEditMode = true;
+              break;
+            }
+          }
+          if (!overlapsEditMode) {
+            allDecorations.push({
+              from: region.from,
+              to: region.to,
+              decoration: Decoration.replace({
+                widget: new HtmlPreviewWidget(htmlContent, region.isMultiline)
+              })
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error processing region:", error, region);
+      }
+    }
+    const builder = new RangeSetBuilder();
+    try {
+      const positionMap = /* @__PURE__ */ new Map();
+      for (const deco of allDecorations) {
+        if (deco.from < deco.to) {
+          if (!positionMap.has(deco.from)) {
+            positionMap.set(deco.from, []);
+          }
+          positionMap.get(deco.from).push(deco);
+        }
+      }
+      const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
+      for (const pos of positions) {
+        const decos = positionMap.get(pos);
+        decos.sort((a, b) => {
+          const aIsWidget = a.decoration.spec.widget !== void 0;
+          const bIsWidget = b.decoration.spec.widget !== void 0;
+          if (aIsWidget !== bIsWidget) {
+            return aIsWidget ? -1 : 1;
+          }
+          if (!aIsWidget && !bIsWidget) {
+            const aInclusive = a.decoration.spec.inclusiveStart === true;
+            const bInclusive = b.decoration.spec.inclusiveStart === true;
+            if (aInclusive !== bInclusive) {
+              return aInclusive ? -1 : 1;
+            }
+          }
+          return a.to - b.to;
+        });
+        for (const deco of decos) {
+          try {
+            builder.add(deco.from, deco.to, deco.decoration);
+          } catch (e) {
+            if (DEBUG2) console.warn(`Skipping decoration ${deco.from}-${deco.to} due to error:`, e);
+          }
+        }
+      }
+      return builder.finish();
+    } catch (error) {
+      console.error("Critical error in decoration building:", error);
+      return Decoration.none;
+    }
+  } catch (error) {
+    console.error("Critical error in decoration building:", error);
+    return Decoration.none;
+  }
+}
+var DEBUG2;
+var init_decorations = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/decorations.ts"() {
+    init_html_widget();
+    init_syntax_highlighter();
+    init_tag_detector();
+    DEBUG2 = false;
+  }
+});
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/cssVarStyles.ts
+function addCssVarHtmlStyles() {
+  if (typeof document === "undefined") return;
+  if (document.getElementById("cm-html-decorator-styles")) {
+    const oldStyles = document.getElementById("cm-html-decorator-styles");
+    if (oldStyles && oldStyles.parentNode) {
+      oldStyles.parentNode.removeChild(oldStyles);
+    }
+  }
+  console.log("Adding HTML decorator styles with CSS variables");
+  const style = document.createElement("style");
+  style.id = "cm-html-decorator-styles";
+  style.textContent = `
+    /* Editor container - ensure it can display overflow */
+    .cm-editor {
+      position: relative !important;
+      z-index: 1 !important;
+    }
+    
+    /* HTML decoration using CSS variables - Light Theme */
+    .cm-html-preview {
+      position: relative;
+      background-color: var(--light-html-preview-bg, #f8f8f8);
+      border: 1px solid var(--light-html-preview-border, #e0e0e0);
+      border-radius: 4px;
+      padding: 12px;
+      margin: 4px 0;
+      box-shadow: var(--light-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.1));
+      min-height: 20px;
+      max-width: 100%;
+      width: calc(100% - 16px);
+      display: block;
+      visibility: visible !important;
+      color: var(--light-html-content-color, #333333);
+      z-index: 9999;
+    }
+    
+    /* HTML preview label */
+    .cm-html-preview-label {
+      position: absolute;
+      top: -10px;
+      left: 8px;
+      background: var(--light-html-label-bg, #e3e3e3);
+      color: var(--light-html-label-color, #333333);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      z-index: 10000;
+    }
+    
+    /* HTML content container */
+    .cm-html-content {
+      background: var(--light-html-content-bg, #ffffff);
+      padding: 8px;
+      border-radius: 3px;
+      color: var(--light-html-content-color, #333333);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      line-height: 1.5;
+      min-height: 10px;
+    }
+    
+    /* HTML code syntax highlighting */
+    .cm-editor .cm-html-code-mode {
+      color: var(--light-html-content-color, #333333) !important;
+      font-family: monospace !important;
+      background-color: transparent !important;
+      border-radius: 0 !important;
+    }
+    
+    .cm-editor .cm-html-tag-name {
+      color: var(--light-html-tag-color, #d73a49) !important;
+      font-weight: 600 !important;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+    }
+    
+    .cm-editor .cm-html-attribute {
+      color: var(--light-html-attribute-color, #e36209) !important;
+      font-style: normal !important;
+    }
+    
+    .cm-editor .cm-html-attribute-value {
+      color: var(--light-html-attribute-value-color, #22863a) !important;
+      font-style: normal !important;
+    }
+    
+    .cm-editor .cm-html-bracket {
+      color: var(--light-html-bracket-color, #909090) !important;
+      font-weight: normal !important;
+      opacity: 1 !important;
+    }
+    
+    /* Dark theme styles */
+    .dark .cm-html-preview {
+      background-color: var(--dark-html-preview-bg, #282828);
+      border: 1px solid var(--dark-html-preview-border, #444444);
+      box-shadow: var(--dark-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.3));
+      color: var(--dark-html-content-color, #e0e0e0);
+    }
+    
+    .dark .cm-html-preview-label {
+      background: var(--dark-html-label-bg, #4a4a4a);
+      color: var(--dark-html-label-color, #e0e0e0);
+    }
+    
+    .dark .cm-html-content {
+      background: var(--dark-html-content-bg, #333333);
+      color: var(--dark-html-content-color, #e0e0e0);
+    }
+    
+    .dark .cm-editor .cm-html-tag-name {
+      color: var(--dark-html-tag-color, #f97583) !important;
+    }
+    
+    .dark .cm-editor .cm-html-attribute {
+      color: var(--dark-html-attribute-color, #ffab70) !important;
+    }
+    
+    .dark .cm-editor .cm-html-attribute-value {
+      color: var(--dark-html-attribute-value-color, #85e89d) !important;
+    }
+    
+    .dark .cm-editor .cm-html-bracket {
+      color: var(--dark-html-bracket-color, #a0a0a0) !important;
+    }
+    
+    /* Force visibility of HTML elements inside the preview */
+    .cm-html-preview * {
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    /* Block element defaults */
+    .cm-html-preview div,
+    .cm-html-preview p,
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6,
+    .cm-html-preview ul,
+    .cm-html-preview ol {
+      display: block !important;
+      margin: 0.4em 0 !important;
+    }
+    
+    /* Heading styles */
+    .cm-html-preview h1,
+    .cm-html-preview h2,
+    .cm-html-preview h3,
+    .cm-html-preview h4,
+    .cm-html-preview h5,
+    .cm-html-preview h6 {
+      font-weight: 600 !important;
+      color: var(--light-html-heading-color, #333333) !important;
+    }
+    
+    .dark .cm-html-preview h1,
+    .dark .cm-html-preview h2,
+    .dark .cm-html-preview h3,
+    .dark .cm-html-preview h4,
+    .dark .cm-html-preview h5,
+    .dark .cm-html-preview h6 {
+      color: var(--dark-html-heading-color, #e0e0e0) !important;
+    }
+    
+    .cm-html-preview h1 { font-size: 1.4em !important; }
+    .cm-html-preview h2 { font-size: 1.2em !important; }
+    .cm-html-preview h3 { font-size: 1.1em !important; }
+    
+    /* Debug info */
+    .cm-html-debug-info {
+      position: absolute;
+      bottom: -12px;
+      right: 4px;
+      font-size: 8px;
+      color: var(--light-html-debug-color, #999999);
+      background: rgba(255,255,255,0.7);
+      padding: 1px 3px;
+      border-radius: 2px;
+    }
+    
+    .dark .cm-html-debug-info {
+      color: var(--dark-html-debug-color, #777777);
+      background: rgba(0,0,0,0.3);
+    }
+    
+    /* Editorial indicator when in edit mode */
+    .cm-editing-html {
+      position: relative;
+    }
+    
+    .cm-editing-html::before {
+      content: "Editing HTML";
+      position: absolute;
+      top: -16px;
+      right: 8px;
+      background-color: var(--light-html-edit-label-bg, #f0f0f0);
+      color: var(--light-html-edit-label-color, #555555);
+      font-size: 9px;
+      padding: 1px 5px;
+      border-radius: 2px;
+      opacity: 0.8;
+    }
+    
+    .dark .cm-editing-html::before {
+      background-color: var(--dark-html-edit-label-bg, #3a3a3a);
+      color: var(--dark-html-edit-label-color, #bbbbbb);
+    }
+  `;
+  document.head.appendChild(style);
+  console.log("HTML decorator styles with CSS variables added to document");
+}
+var init_cssVarStyles = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/cssVarStyles.ts"() {
+  }
+});
+
+// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/styles.ts
+function addHtmlStyles() {
+  addCssVarHtmlStyles();
+}
+var init_styles = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/styles.ts"() {
+    init_cssVarStyles();
+  }
+});
+function htmlDecorator() {
+  return [
+    htmlDecorationsField,
+    ViewPlugin.define((view) => new HtmlDecoratorPlugin(view))
+  ];
+}
+var HtmlDecoratorPlugin, setHtmlDecorations, htmlDecorationsField;
+var init_html_decorator = __esm({
+  "src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/index.ts"() {
+    init_decorations();
+    init_styles();
+    init_types();
+    HtmlDecoratorPlugin = class {
+      constructor(view) {
+        this.enabled = true;
+        this.debug = false;
+        this.updateScheduled = false;
+        this.isDestroyed = false;
+        this.lastSelectionHead = -1;
+        this.htmlRegions = [];
+        this.view = view;
+        addHtmlStyles();
+        if (view.state.selection.ranges.length > 0) {
+          this.lastSelectionHead = view.state.selection.main.head;
+        }
+        setTimeout(() => {
+          this.updateDecorations();
+        }, 100);
+        if (this.debug) console.log("HtmlDecorator plugin initialized");
+      }
+      /**
+       * Update the view - rebuild decorations when editor changes
+       */
+      update(update) {
+        if (!this.enabled || this.isDestroyed) return;
+        const contentChanged = update.docChanged;
+        const selectionChanged = update.selectionSet;
+        let cursorMoved = false;
+        if (selectionChanged && update.state.selection.ranges.length > 0) {
+          const newHead = update.state.selection.main.head;
+          cursorMoved = newHead !== this.lastSelectionHead;
+          this.lastSelectionHead = newHead;
+        }
+        let htmlContentChanged = false;
+        if (contentChanged) {
+          update.changes.iterChanges((fromA, toA, fromB, toB) => {
+            if (htmlContentChanged) return;
+            for (const region of this.htmlRegions) {
+              if (fromA <= region.to && toA >= region.from) {
+                htmlContentChanged = true;
+                break;
+              }
+            }
+            if (!htmlContentChanged) {
+              const changedText = update.state.doc.sliceString(fromB, toB);
+              htmlContentChanged = changedText.includes("<") && changedText.includes(">");
+            }
+          });
+        }
+        if (cursorMoved) {
+          const currentPosition = update.state.selection.main.head;
+          const cursorInHtmlRegion = this.htmlRegions.some(
+            (region) => currentPosition >= region.from && currentPosition <= region.to
+          );
+          if (!cursorInHtmlRegion) {
+            this.htmlRegions.some(
+              (region) => currentPosition === region.from || currentPosition === region.to
+            );
+          }
+        }
+        if (contentChanged && htmlContentChanged || cursorMoved) {
+          const reason = contentChanged ? "HTML content change" : "cursor movement";
+          if (this.debug) console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
+          if (!this.updateScheduled) {
+            this.updateScheduled = true;
+            setTimeout(() => {
+              this.updateDecorations();
+              this.updateScheduled = false;
+            }, 0);
+          }
+        }
+      }
+      /**
+       * Update decorations using the measure/notify pattern
+       */
+      updateDecorations() {
+        if (this.isDestroyed) return;
+        try {
+          if (this.debug) console.log("Updating HTML decorations");
+          let decorations;
+          try {
+            decorations = buildHtmlDecorations(this.view);
+          } catch (buildError) {
+            console.error("Error building HTML decorations:", buildError);
+            decorations = Decoration.none;
+          }
+          try {
+            this.updateHtmlRegions();
+          } catch (regionError) {
+            console.error("Error updating HTML regions:", regionError);
+            this.htmlRegions = [];
+          }
+          if (!this.isDestroyed) {
+            try {
+              this.view.dispatch({
+                effects: setHtmlDecorations.of(decorations)
+              });
+            } catch (dispatchError) {
+              console.error("Error dispatching HTML decorations:", dispatchError);
+            }
+          }
+        } catch (error) {
+          console.error("Critical error updating HTML decorations:", error);
+        }
+      }
+      /**
+       * Update the cached list of HTML regions
+       */
+      updateHtmlRegions() {
+        try {
+          const { state } = this.view;
+          const doc = state.doc;
+          const fullText = doc.toString();
+          const regions = [];
+          const htmlRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/g;
+          let match;
+          while ((match = htmlRegex.exec(fullText)) !== null) {
+            regions.push({
+              from: match.index,
+              to: match.index + match[0].length
+            });
+          }
+          this.htmlRegions = regions;
+        } catch (error) {
+          console.error("Error updating HTML regions cache:", error);
+        }
+      }
+      /**
+       * Clean up resources when plugin is removed
+       */
+      destroy() {
+        this.updateScheduled = false;
+        this.isDestroyed = true;
+        if (this.debug) console.log("HtmlDecorator plugin destroyed");
+      }
+    };
+    setHtmlDecorations = StateEffect.define();
+    htmlDecorationsField = StateField.define({
+      create: () => Decoration.none,
+      update: (decorations, tr) => {
+        try {
+          if (tr.docChanged) {
+            try {
+              decorations = decorations.map(tr.changes);
+            } catch (error) {
+              console.warn("Error mapping HTML decorations, resetting:", error);
+              return Decoration.none;
+            }
+          }
+          for (const effect of tr.effects) {
+            if (effect.is(setHtmlDecorations)) {
+              decorations = effect.value;
+            }
+          }
+          return decorations;
+        } catch (error) {
+          console.error("Critical error in HTML decoration state field:", error);
+          return Decoration.none;
+        }
+      },
+      provide: (field) => EditorView.decorations.from(field)
+    });
+  }
+});
+var ObsidianPluginAPI, obsidianPluginAPI;
+var init_ObsidianPluginAPI = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/ObsidianPluginAPI.ts"() {
+    ObsidianPluginAPI = class {
+      constructor() {
+        this.editorView = null;
+        this.extensions = /* @__PURE__ */ new Map();
+        this.eventEmitter = new EventEmitter();
+        this.registeredCommands = /* @__PURE__ */ new Map();
+        this.registeredHooks = /* @__PURE__ */ new Map();
+      }
+      /**
+       * Initialize the API with an EditorView
+       * @param view - The CodeMirror EditorView instance
+       */
+      initialize(view) {
+        this.editorView = view;
+      }
+      /**
+       * Register a CodeMirror extension with the editor
+       * @param id - Unique identifier for the extension
+       * @param extension - CodeMirror extension to add
+       * @throws Error if extension with this ID is already registered
+       */
+      registerExtension(id2, extension) {
+        console.log(`Registering extension with ID: ${id2}`);
+        if (this.extensions.has(id2)) {
+          throw new Error(`Extension with ID '${id2}' is already registered`);
+        }
+        this.extensions.set(id2, extension);
+        if (this.editorView) {
+          console.log(`Applying extension ${id2} to editor view`);
+          try {
+            this.editorView.dispatch({
+              effects: StateEffect.appendConfig.of(extension)
+            });
+            console.log(`Successfully applied extension ${id2}`);
+          } catch (error) {
+            console.error(`Error applying extension ${id2}:`, error);
+            throw error;
+          }
+        } else {
+          console.warn(`No editor view available when registering extension ${id2}`);
+        }
+      }
+      /**
+       * Unregister a previously registered extension
+       * @param id - ID of the extension to remove
+       * @returns boolean - Whether the extension was found and removed
+       */
+      unregisterExtension(id2) {
+        const extension = this.extensions.get(id2);
+        if (!extension) return false;
+        this.extensions.delete(id2);
+        this.eventEmitter.emit("extension:removed", id2);
+        return true;
+      }
+      /**
+       * Register a command that can be executed by users
+       * @param id - Unique identifier for the command
+       * @param command - Command function that returns true if handled
+       */
+      registerCommand(id2, command) {
+        if (this.registeredCommands.has(id2)) {
+          throw new Error(`Command with ID '${id2}' is already registered`);
+        }
+        this.registeredCommands.set(id2, command);
+        this.eventEmitter.emit("command:registered", id2);
+      }
+      /**
+       * Execute a registered command by ID
+       * @param id - ID of the command to execute
+       * @returns boolean - Whether the command was found and executed successfully
+       */
+      executeCommand(id2) {
+        if (!this.editorView) return false;
+        const command = this.registeredCommands.get(id2);
+        if (!command) return false;
+        return command(this.editorView);
+      }
+      /**
+       * Register a hook for a specific editor event
+       * @param event - Event name to hook into
+       * @param callback - Function to call when the event occurs
+       */
+      registerHook(event, callback) {
+        if (!this.registeredHooks.has(event)) {
+          this.registeredHooks.set(event, /* @__PURE__ */ new Set());
+        }
+        this.registeredHooks.get(event)?.add(callback);
+      }
+      /**
+       * Unregister a previously registered hook
+       * @param event - Event name
+       * @param callback - The callback function to remove
+       * @returns boolean - Whether the hook was found and removed
+       */
+      unregisterHook(event, callback) {
+        const hooks = this.registeredHooks.get(event);
+        if (!hooks) return false;
+        return hooks.delete(callback);
+      }
+      /**
+       * Trigger hooks for a specific event
+       * @param event - Event name to trigger
+       * @param args - Arguments to pass to the hook callbacks
+       */
+      triggerHooks(event, ...args) {
+        const hooks = this.registeredHooks.get(event);
+        if (!hooks) return;
+        hooks.forEach((hook) => {
+          try {
+            hook(...args);
+          } catch (error) {
+            console.error(`Error in hook for event '${event}':`, error);
+          }
+        });
+      }
+      /**
+       * Get the current content of the editor
+       * @returns string - Current document content
+       */
+      getContent() {
+        if (!this.editorView) return "";
+        return this.editorView.state.doc.toString();
+      }
+      /**
+       * Replace the current content of the editor
+       * @param content - New content
+       */
+      setContent(content) {
+        if (!this.editorView) return;
+        this.editorView.dispatch({
+          changes: {
+            from: 0,
+            to: this.editorView.state.doc.length,
+            insert: content
+          }
+        });
+      }
+      /**
+       * Insert text at the current cursor position
+       * @param text - Text to insert
+       */
+      insertAtCursor(text) {
+        if (!this.editorView) return;
+        const selection = this.editorView.state.selection.main;
+        this.editorView.dispatch({
+          changes: {
+            from: selection.from,
+            to: selection.to,
+            insert: text
+          }
+        });
+      }
+      /**
+       * Create a new state field for plugins to store and access state
+       * @param id - Unique identifier for the state field
+       * @param initialValue - Initial value for the state
+       * @param updateHandler - Function to update state based on editor transactions
+       * @returns The created state field extension
+       */
+      createStateField(id2, initialValue, updateHandler) {
+        const stateField = StateField.define({
+          create: () => initialValue,
+          update: updateHandler
+        });
+        this.registerExtension(id2 + "StateField", stateField);
+        return stateField;
+      }
+    };
+    obsidianPluginAPI = new ObsidianPluginAPI();
+  }
+});
+
+// src/app/obsidian-editor/extensions/plugin-api/PluginManager.ts
+var PluginManager, pluginManager;
+var init_PluginManager = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/PluginManager.ts"() {
+    init_ObsidianPluginAPI();
+    PluginManager = class {
+      constructor() {
+        /** Map of loaded plugins by ID */
+        this.plugins = /* @__PURE__ */ new Map();
+        /** Map of enabled plugins by ID */
+        this.enabledPlugins = /* @__PURE__ */ new Set();
+        /** Reference to the editor view */
+        this.editorView = null;
+        /** Event callbacks */
+        this.eventHandlers = {
+          onLoad: [],
+          onEnable: [],
+          onDisable: [],
+          onUnload: []
+        };
+      }
+      /**
+       * Initialize the plugin manager with an EditorView
+       * @param view - The CodeMirror editor view
+       */
+      initialize(view) {
+        this.editorView = view;
+        obsidianPluginAPI.initialize(view);
+      }
+      /**
+       * Load a plugin
+       * @param plugin - Plugin instance to load
+       * @throws Error if a plugin with the same ID is already loaded
+       */
+      async loadPlugin(plugin) {
+        const { id: id2 } = plugin.manifest;
+        if (this.plugins.has(id2)) {
+          console.warn(`Plugin with ID '${id2}' is already loaded, skipping duplicate load`);
+          return;
+        }
+        if (this.editorView) {
+          plugin._initialize(this.editorView);
+        }
+        this.plugins.set(id2, plugin);
+        this.notifyEventHandlers("onLoad", plugin);
+      }
+      /**
+       * Load a plugin from a constructor and manifest
+       * @param PluginClass - Plugin class constructor
+       * @param manifest - Plugin manifest
+       */
+      async loadPluginFromClass(PluginClass, manifest) {
+        const plugin = new PluginClass(manifest);
+        await this.loadPlugin(plugin);
+        return plugin;
+      }
+      /**
+       * Enable a loaded plugin by ID
+       * @param id - Plugin ID to enable
+       * @returns boolean - Whether the plugin was found and enabled
+       */
+      async enablePlugin(id2) {
+        const plugin = this.plugins.get(id2);
+        if (!plugin) return false;
+        if (this.enabledPlugins.has(id2)) return true;
+        await plugin.enable();
+        this.enabledPlugins.add(id2);
+        this.notifyEventHandlers("onEnable", plugin);
+        return true;
+      }
+      /**
+       * Disable a plugin by ID
+       * @param id - Plugin ID to disable
+       * @returns boolean - Whether the plugin was found and disabled
+       */
+      async disablePlugin(id2) {
+        const plugin = this.plugins.get(id2);
+        if (!plugin) return false;
+        if (!this.enabledPlugins.has(id2)) return true;
+        await plugin.disable();
+        this.enabledPlugins.delete(id2);
+        this.notifyEventHandlers("onDisable", plugin);
+        return true;
+      }
+      /**
+       * Unload a plugin by ID
+       * @param id - Plugin ID to unload
+       * @returns boolean - Whether the plugin was found and unloaded
+       */
+      async unloadPlugin(id2) {
+        const plugin = this.plugins.get(id2);
+        if (!plugin) return false;
+        if (this.enabledPlugins.has(id2)) {
+          await this.disablePlugin(id2);
+        }
+        this.plugins.delete(id2);
+        this.notifyEventHandlers("onUnload", id2);
+        return true;
+      }
+      /**
+       * Get a loaded plugin by ID
+       * @param id - Plugin ID
+       * @returns Plugin instance or undefined if not found
+       */
+      getPlugin(id2) {
+        return this.plugins.get(id2);
+      }
+      /**
+       * Get all loaded plugins
+       * @returns Array of all loaded plugins
+       */
+      getAllPlugins() {
+        return Array.from(this.plugins.values());
+      }
+      /**
+       * Get all enabled plugins
+       * @returns Array of all enabled plugins
+       */
+      getEnabledPlugins() {
+        return Array.from(this.enabledPlugins).map((id2) => this.plugins.get(id2));
+      }
+      /**
+       * Check if a plugin is enabled
+       * @param id - Plugin ID
+       * @returns boolean - Whether the plugin is enabled
+       */
+      isPluginEnabled(id2) {
+        return this.enabledPlugins.has(id2);
+      }
+      on(event, handler) {
+        switch (event) {
+          case "load":
+            this.eventHandlers.onLoad.push(handler);
+            break;
+          case "enable":
+            this.eventHandlers.onEnable.push(handler);
+            break;
+          case "disable":
+            this.eventHandlers.onDisable.push(handler);
+            break;
+          case "unload":
+            this.eventHandlers.onUnload.push(handler);
+            break;
+        }
+      }
+      notifyEventHandlers(event, data2) {
+        const handlers = this.eventHandlers[event];
+        handlers.forEach((handler) => {
+          try {
+            handler(data2);
+          } catch (error) {
+            console.error(`Error in plugin manager ${event} handler:`, error);
+          }
+        });
+      }
+    };
+    pluginManager = new PluginManager();
+  }
+});
+
+// src/app/obsidian-editor/extensions/plugin-api/Plugin.ts
+var Plugin;
+var init_Plugin = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/Plugin.ts"() {
+    init_ObsidianPluginAPI();
+    Plugin = class {
+      /**
+       * Create a new plugin instance
+       * @param manifest - Plugin metadata
+       */
+      constructor(manifest) {
+        /** Flag indicating if the plugin is currently enabled */
+        this._enabled = false;
+        /** Reference to the editor view */
+        this.view = null;
+        /** List of registered extensions by this plugin */
+        this.registeredExtensionIds = [];
+        /** List of registered commands by this plugin */
+        this.registeredCommandIds = [];
+        this.manifest = manifest;
+      }
+      /** Get whether the plugin is currently enabled */
+      get enabled() {
+        return this._enabled;
+      }
+      /**
+       * Initialize the plugin with the editor view
+       * Should not be called directly by plugin developers
+       * @param view - The CodeMirror editor view
+       * @internal
+       */
+      _initialize(view) {
+        this.view = view;
+      }
+      /**
+       * Enable the plugin
+       * Called when the plugin is activated
+       */
+      async enable() {
+        if (this._enabled) {
+          console.log(`Plugin ${this.manifest.id} is already enabled, skipping`);
+          return;
+        }
+        try {
+          console.log(`Enabling plugin ${this.manifest.id}...`);
+          if (!this.view) {
+            console.error(`Plugin ${this.manifest.id} has no editor view set. Plugin may not work correctly.`);
+          } else {
+            console.log(`Plugin ${this.manifest.id} has valid editor view:`, this.view);
+          }
+          console.log(`Calling onEnable for plugin ${this.manifest.id}...`);
+          await this.onEnable();
+          console.log(`Successfully called onEnable for plugin ${this.manifest.id}`);
+          console.log(`Plugin ${this.manifest.id} registered extensions: ${this.registeredExtensionIds.length}`);
+          console.log(`Plugin ${this.manifest.id} registered commands: ${this.registeredCommandIds.length}`);
+          this._enabled = true;
+          console.log(`Plugin ${this.manifest.id} is now enabled`);
+        } catch (error) {
+          console.error(`Error enabling plugin ${this.manifest.id}:`, error);
+          console.error(`Stack trace:`, error.stack);
+          throw error;
+        }
+      }
+      /**
+       * Disable the plugin
+       * Called when the plugin is deactivated
+       */
+      async disable() {
+        if (!this._enabled) return;
+        try {
+          this.registeredExtensionIds.forEach((id2) => {
+            obsidianPluginAPI.unregisterExtension(id2);
+          });
+          this.registeredCommandIds = [];
+          this.registeredExtensionIds = [];
+          await this.onDisable();
+          this._enabled = false;
+        } catch (error) {
+          console.error(`Error disabling plugin ${this.manifest.id}:`, error);
+          throw error;
+        }
+      }
+      /**
+       * Register a CodeMirror extension with a unique ID
+       * The extension will be automatically cleaned up when the plugin is disabled
+       * @param id - Unique identifier for the extension
+       * @param extension - CodeMirror extension
+       */
+      registerExtension(id2, extension) {
+        const fullId = `${this.manifest.id}:${id2}`;
+        obsidianPluginAPI.registerExtension(fullId, extension);
+        this.registeredExtensionIds.push(fullId);
+      }
+      /**
+       * Register a command that can be executed by users
+       * The command will be automatically cleaned up when the plugin is disabled
+       * @param id - Command identifier
+       * @param name - Human-readable command name
+       * @param callback - Command function that returns true if handled
+       */
+      registerCommand(id2, name, callback) {
+        const fullId = `${this.manifest.id}:${id2}`;
+        obsidianPluginAPI.registerCommand(fullId, callback);
+        this.registeredCommandIds.push(fullId);
+      }
+      /**
+       * Hook into editor events
+       * @param event - Event name
+       * @param callback - Callback function to execute when the event occurs
+       */
+      registerHook(event, callback) {
+        obsidianPluginAPI.registerHook(event, callback);
+      }
+      /**
+       * Get the current editor content
+       * @returns The current document content
+       */
+      getContent() {
+        return obsidianPluginAPI.getContent();
+      }
+      /**
+       * Set the editor content
+       * @param content - New content
+       */
+      setContent(content) {
+        obsidianPluginAPI.setContent(content);
+      }
+      /**
+       * Insert text at the current cursor position
+       * @param text - Text to insert
+       */
+      insertAtCursor(text) {
+        obsidianPluginAPI.insertAtCursor(text);
+      }
+      /**
+       * Execute a registered command by ID
+       * @param id - Command ID to execute
+       * @returns Whether the command was found and executed
+       */
+      executeCommand(id2) {
+        const fullId = `${this.manifest.id}:${id2}`;
+        return obsidianPluginAPI.executeCommand(fullId);
+      }
+    };
+  }
+});
+function createSyntaxDecorator(nodeTypes, createDecoration) {
+  return ViewPlugin.fromClass(class {
+    constructor(view) {
+      this.decorations = this.buildDecorations(view);
+    }
+    update(update) {
+      if (update.docChanged || update.viewportChanged || update.selectionSet) {
+        this.decorations = this.buildDecorations(update.view);
+      }
+    }
+    buildDecorations(view) {
+      const builder = new RangeSetBuilder();
+      for (const { from, to } of view.visibleRanges) {
+        syntaxTree(view.state).iterate({
+          from,
+          to,
+          enter: (node) => {
+            if (nodeTypes.includes(node.type.name)) {
+              const decoration = createDecoration(node, view);
+              if (decoration) {
+                builder.add(node.from, node.to, decoration);
+              }
+            }
+          }
+        });
+      }
+      return builder.finish();
+    }
+  }, {
+    decorations: (v) => v.decorations
+  });
+}
+function createEventTracker(options) {
+  return ViewPlugin.fromClass(class {
+    constructor(view) {
+    }
+    update(update) {
+      if (update.docChanged && options.onDocChanged) {
+        options.onDocChanged(update);
+      }
+      if (update.selectionSet && options.onSelectionChanged) {
+        options.onSelectionChanged(update);
+      }
+      if (update.viewportChanged && options.onViewportChanged) {
+        options.onViewportChanged(update);
+      }
+      update.transactions.forEach((tr) => {
+        if (options.onTransaction) {
+          options.onTransaction(tr, update.view);
+        }
+      });
+    }
+  });
+}
+function createStateField(initialValue, update) {
+  return StateField.define({
+    create: () => initialValue,
+    update: (value, tr) => update(value, tr)
+  });
+}
+function createKeymap(key, run) {
+  return keymap.of([{
+    key,
+    run
+  }]);
+}
+function createInlineDecorator(pattern, createDecoration) {
+  return ViewPlugin.fromClass(class {
+    constructor(view) {
+      this.decorations = this.buildDecorations(view);
+    }
+    update(update) {
+      if (update.docChanged || update.viewportChanged) {
+        this.decorations = this.buildDecorations(update.view);
+      }
+    }
+    buildDecorations(view) {
+      const builder = new RangeSetBuilder();
+      for (const { from, to } of view.visibleRanges) {
+        const text = view.state.doc.sliceString(from, to);
+        let match;
+        pattern.lastIndex = 0;
+        while ((match = pattern.exec(text)) !== null) {
+          const decoration = createDecoration(match, view);
+          if (decoration) {
+            const matchFrom = from + match.index;
+            const matchTo = matchFrom + match[0].length;
+            builder.add(matchFrom, matchTo, decoration);
+          }
+        }
+      }
+      return builder.finish();
+    }
+  }, {
+    decorations: (v) => v.decorations
+  });
+}
+function createTextModifier(shouldActivate, modifyText) {
+  return EditorView.updateListener.of((update) => {
+    if (!update.docChanged) return;
+    update.transactions.forEach((tr) => {
+      if (!tr.isUserEvent("input")) return;
+      tr.changes.iterChangedRanges((fromA, toA, fromB, toB) => {
+        const insertedText = update.state.doc.sliceString(fromB, toB);
+        if (shouldActivate(insertedText, fromB, toB, update.view)) {
+          const newText = modifyText(insertedText, fromB, toB, update.view);
+          if (newText !== insertedText) {
+            setTimeout(() => {
+              update.view.dispatch({
+                changes: { from: fromB, to: toB, insert: newText },
+                userEvent: "input.textModifier"
+              });
+            }, 0);
+          }
+        }
+      });
+    });
+  });
+}
+var init_ExtensionPoints = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/ExtensionPoints.ts"() {
+  }
+});
+function createExamplePlugin() {
+  return new ExamplePlugin({
+    id: "example-plugin",
+    name: "Example Plugin",
+    version: "1.0.0",
+    description: "An example plugin that demonstrates the Obsidian-js plugin API",
+    author: "Obsidian-js Team"
+  });
+}
+var ExamplePlugin;
+var init_ExamplePlugin = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/ExamplePlugin.ts"() {
+    init_Plugin();
+    init_ExtensionPoints();
+    ExamplePlugin = class extends Plugin {
+      /**
+       * Called when the plugin is enabled
+       */
+      async onEnable() {
+        this.registerCommand(
+          "insert-timestamp",
+          "Insert Timestamp",
+          (view) => {
+            this.insertAtCursor((/* @__PURE__ */ new Date()).toLocaleString());
+            return true;
+          }
+        );
+        this.registerExtension(
+          "bold-text-shortcut",
+          createKeymap("Ctrl-b", (view) => {
+            const selection = view.state.selection.main;
+            const selectedText = view.state.doc.sliceString(selection.from, selection.to);
+            if (selectedText.length > 0) {
+              view.dispatch({
+                changes: {
+                  from: selection.from,
+                  to: selection.to,
+                  insert: `**${selectedText}**`
+                }
+              });
+            } else {
+              view.dispatch({
+                changes: {
+                  from: selection.from,
+                  to: selection.to,
+                  insert: "****"
+                },
+                selection: { anchor: selection.from + 2 }
+              });
+            }
+            return true;
+          })
+        );
+        this.registerExtension(
+          "heading-decorator",
+          createSyntaxDecorator(["ATXHeading1", "ATXHeading2"], (node, view) => {
+            const level = node.type.name.charAt(node.type.name.length - 1);
+            return Decoration.mark({
+              class: `custom-heading-${level}`,
+              attributes: {
+                style: `font-size: ${2 - Number(level) * 0.2}em; color: #2563eb;`
+              }
+            });
+          })
+        );
+        this.registerHook("document:change", (content) => {
+          console.log("Document content changed:", content.substr(0, 50) + "...");
+        });
+      }
+      /**
+       * Called when the plugin is disabled
+       */
+      async onDisable() {
+      }
+    };
+  }
+});
+function createWordCountPlugin() {
+  return new WordCountPlugin({
+    id: "word-count",
+    name: "Word Count",
+    version: "1.0.0",
+    description: "Displays word count and other document statistics",
+    author: "Obsidian-js Team"
+  });
+}
+var WordCountPlugin;
+var init_WordCountPlugin = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/examples/WordCountPlugin.ts"() {
+    init_plugin_api();
+    WordCountPlugin = class extends Plugin {
+      constructor() {
+        super(...arguments);
+        // Store for the element that displays the word count
+        this.statusElement = null;
+        // Store the style element for cleanup
+        this.styleElement = null;
+        // Store counts to avoid unnecessary DOM updates
+        this.lastCounts = { words: 0, chars: 0, lines: 0 };
+      }
+      /**
+       * Enable the plugin
+       */
+      async onEnable() {
+        this.addStyles();
+        const statsStateField = createStateField(
+          { words: 0, chars: 0, lines: 0 },
+          (value, tr) => {
+            if (tr.docChanged) {
+              const text = tr.newDoc.toString();
+              return {
+                words: text.split(/\s+/).filter(Boolean).length,
+                chars: text.length,
+                lines: tr.newDoc.lines
+              };
+            }
+            return value;
+          }
+        );
+        this.registerExtension("stats-state-field", statsStateField);
+        const statusBarExtension = EditorView.updateListener.of((update) => {
+          if (update.docChanged || !this.statusElement) {
+            this.createOrUpdateStatusBar(update.view);
+          }
+        });
+        this.registerExtension("status-bar-extension", statusBarExtension);
+        this.registerCommand(
+          "show-word-count",
+          "Show Word Count Statistics",
+          (view) => {
+            const stats = this.getDocumentStats(view.state.doc.toString());
+            alert(
+              `Document Statistics:
+- Words: ${stats.words}
+- Characters: ${stats.chars}
+- Lines: ${stats.lines}`
+            );
+            return true;
+          }
+        );
+        this.registerExtension(
+          "long-paragraph-highlighter",
+          this.createLongParagraphHighlighter()
+        );
+        this.registerHook("document:change", (content) => {
+          const stats = this.getDocumentStats(content);
+          console.log("Document statistics:", stats);
+        });
+      }
+      /**
+       * Clean up when the plugin is disabled
+       */
+      async onDisable() {
+        if (this.statusElement && this.statusElement.parentElement) {
+          this.statusElement.parentElement.removeChild(this.statusElement);
+          this.statusElement = null;
+        }
+        if (this.styleElement && this.styleElement.parentElement) {
+          this.styleElement.parentElement.removeChild(this.styleElement);
+          this.styleElement = null;
+        }
+      }
+      /**
+       * Add CSS styles for the plugin
+       */
+      addStyles() {
+        const style = document.createElement("style");
+        style.id = `${this.manifest.id}-styles`;
+        style.textContent = `
+      .word-count-status {
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        font-size: 12px;
+        color: #888;
+        user-select: none;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.7);
+        padding: 2px 8px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+      }
+      
+      .word-count-status:hover {
+        background: rgba(255, 255, 255, 0.9);
+        color: #333;
+      }
+      
+      .long-paragraph {
+        background-color: rgba(255, 235, 235, 0.5);
+        border-radius: 2px;
+      }
+    `;
+        document.head.appendChild(style);
+        this.styleElement = style;
+      }
+      /**
+       * Create or update the status bar element
+       */
+      createOrUpdateStatusBar(view) {
+        const stats = this.getDocumentStats(view.state.doc.toString());
+        if (this.statusElement && stats.words === this.lastCounts.words && stats.chars === this.lastCounts.chars && stats.lines === this.lastCounts.lines) {
+          return;
+        }
+        this.lastCounts = stats;
+        if (!this.statusElement) {
+          this.statusElement = document.createElement("div");
+          this.statusElement.className = "word-count-status";
+          view.dom.parentElement?.appendChild(this.statusElement);
+          this.statusElement.addEventListener("click", () => {
+            if (view) {
+              this.executeCommand("show-word-count");
+            }
+          });
+        }
+        this.statusElement.innerHTML = `${stats.words} words`;
+        this.statusElement.title = `${stats.words} words
+${stats.chars} characters
+${stats.lines} lines`;
+      }
+      /**
+       * Calculate document statistics
+       */
+      getDocumentStats(text) {
+        return {
+          words: text.split(/\s+/).filter(Boolean).length,
+          chars: text.length,
+          lines: (text.match(/\n/g) || []).length + 1
+        };
+      }
+      /**
+       * Create an extension that highlights long paragraphs
+       * (more than 100 words)
+       */
+      createLongParagraphHighlighter() {
+        return EditorView.decorations.compute(["doc"], (state) => {
+          const builder = new RangeSetBuilder();
+          const doc = state.doc;
+          let paraStart = 0;
+          let currentPara = "";
+          let lineCount = doc.lines;
+          for (let i = 1; i <= lineCount; i++) {
+            const line = doc.line(i);
+            const isEmptyLine = line.text.trim() === "";
+            if (isEmptyLine || i === lineCount) {
+              if (currentPara.trim() !== "") {
+                const wordCount = currentPara.split(/\s+/).filter(Boolean).length;
+                if (wordCount > 100) {
+                  builder.add(
+                    paraStart,
+                    line.from - 1,
+                    // End before the empty line
+                    Decoration.mark({
+                      class: "long-paragraph",
+                      attributes: { title: `Long paragraph (${wordCount} words)` }
+                    })
+                  );
+                }
+              }
+              paraStart = line.to;
+              currentPara = "";
+            } else {
+              if (currentPara) {
+                currentPara += " " + line.text;
+              } else {
+                currentPara = line.text;
+                paraStart = line.from;
+              }
+            }
+          }
+          return builder.finish();
+        });
+      }
+    };
+  }
+});
+
+// src/app/obsidian-editor/extensions/plugin-api/examples/index.ts
+var init_examples = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/examples/index.ts"() {
+    init_WordCountPlugin();
+  }
+});
+
+// src/app/obsidian-editor/extensions/plugin-api/setupPlugins.ts
+async function setupExamplePlugins(enableAll = false) {
+  try {
+    console.warn(
+      "setupExamplePlugins() is deprecated. In a real application, you should create your own plugin registry similar to what is in the demo/src/plugins directory."
+    );
+    if (typeof window !== "undefined" && window.demoPluginsInitialized) {
+      console.log("Using demo app plugin system");
+      return;
+    }
+    const isInitialized = typeof window !== "undefined" && window.obsidianJS;
+    if (isInitialized) {
+      console.log("Obsidian-js plugins already initialized.");
+      return;
+    }
+    if (typeof window !== "undefined") {
+      window.obsidianJS = {
+        pluginManager,
+        plugins: {}
+      };
+      const readyEvent = new CustomEvent("obsidian-ready");
+      window.dispatchEvent(readyEvent);
+      console.log("Basic plugin system initialized (no plugins loaded)");
+    }
+  } catch (error) {
+    console.error("Error setting up example plugins:", error);
+  }
+}
+var init_setupPlugins = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/setupPlugins.ts"() {
+    init_PluginManager();
+  }
+});
+
+// src/app/obsidian-editor/extensions/plugin-api/index.ts
+var plugin_api_exports = {};
+__export(plugin_api_exports, {
+  ExamplePlugin: () => ExamplePlugin,
+  Plugin: () => Plugin,
+  WordCountPlugin: () => WordCountPlugin,
+  createEventTracker: () => createEventTracker,
+  createExamplePlugin: () => createExamplePlugin,
+  createInlineDecorator: () => createInlineDecorator,
+  createKeymap: () => createKeymap,
+  createStateField: () => createStateField,
+  createSyntaxDecorator: () => createSyntaxDecorator,
+  createTextModifier: () => createTextModifier,
+  createWordCountPlugin: () => createWordCountPlugin,
+  htmlDecorator: () => htmlDecorator,
+  obsidianPluginAPI: () => obsidianPluginAPI,
+  pluginManager: () => pluginManager,
+  setupExamplePlugins: () => setupExamplePlugins
+});
+var init_plugin_api = __esm({
+  "src/app/obsidian-editor/extensions/plugin-api/index.ts"() {
+    init_ObsidianPluginAPI();
+    init_PluginManager();
+    init_Plugin();
+    init_ExtensionPoints();
+    init_ExamplePlugin();
+    init_examples();
+    init_setupPlugins();
+    init_html_decorator();
+  }
+});
 var ThemeContext = createContext({
   theme: "light",
   mounted: false,
@@ -8247,1116 +10434,8 @@ var LineBreakDecorator = ViewPlugin.fromClass(
   }
 );
 
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/types.ts
-var VOID_TAGS = /* @__PURE__ */ new Set([
-  "area",
-  "base",
-  "br",
-  "col",
-  "embed",
-  "hr",
-  "img",
-  "input",
-  "link",
-  "meta",
-  "param",
-  "source",
-  "track",
-  "wbr"
-]);
-var DANGEROUS_TAGS = /* @__PURE__ */ new Set([
-  "script",
-  "iframe",
-  "object",
-  "embed",
-  "applet",
-  "base",
-  "form",
-  "frame",
-  "frameset"
-]);
-
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/html-widget.ts
-var DEBUG = false;
-var HtmlPreviewWidget = class extends WidgetType {
-  constructor(content, isMultiline = false) {
-    super();
-    this.content = content;
-    this.isMultiline = isMultiline;
-  }
-  eq(other) {
-    return this.content === other.content && this.isMultiline === other.isMultiline;
-  }
-  /**
-   * Renders the HTML content as a DOM element
-   */
-  toDOM() {
-    try {
-      if (DEBUG) ;
-      const wrapper = document.createElement("div");
-      wrapper.className = "cm-html-preview-widget";
-      if (this.isMultiline) {
-        wrapper.classList.add("cm-html-preview-multiline");
-      } else {
-        wrapper.classList.add("cm-html-preview-inline");
-      }
-      const contentContainer = document.createElement("div");
-      contentContainer.className = "cm-html-content-container";
-      contentContainer.style.cssText = `
-        padding: 0;
-        background: transparent;
-        border-radius: 0;
-      `;
-      try {
-        const securityWarnings = this.checkSecurityIssues(this.content);
-        if (securityWarnings.length > 0) {
-          securityWarnings.forEach((warning) => {
-            const warningElement = document.createElement("div");
-            warningElement.className = "cm-html-security-warning";
-            warningElement.innerHTML = `\u26A0\uFE0F ${warning}`;
-            contentContainer.appendChild(warningElement);
-          });
-        }
-        let htmlToRender = this.content;
-        let isBlockElement = false;
-        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\s*\/?>)/i.exec(this.content);
-        if (tagMatch) {
-          const tagName = tagMatch[1].toLowerCase();
-          isBlockElement = this.isBlockElement(tagName);
-        }
-        const htmlContainer = document.createElement("div");
-        htmlContainer.style.cssText = `
-          display: block; 
-          width: 100%;
-          font-family: inherit;
-          font-size: inherit;
-          line-height: inherit;
-          color: inherit;
-        `;
-        if (isBlockElement) {
-          htmlContainer.style.cssText += "display: block;";
-        }
-        htmlContainer.innerHTML = this.sanitizeHtml(htmlToRender);
-        htmlContainer.querySelectorAll("*").forEach((element) => {
-          if (element instanceof HTMLElement) {
-            if (!element.hasAttribute("style")) {
-              element.style.fontFamily = "inherit";
-              element.style.fontSize = "inherit";
-              element.style.lineHeight = "inherit";
-              element.style.color = "inherit";
-            }
-            if (this.isBlockElement(element.tagName)) {
-              element.style.display = "block";
-              element.style.width = "100%";
-              element.style.boxSizing = "border-box";
-              if (!element.style.marginTop) element.style.marginTop = "0";
-              if (!element.style.marginBottom) element.style.marginBottom = "0";
-            }
-            if (element.tagName === "UL") {
-              element.style.listStyleType = "disc";
-              element.style.paddingLeft = "2em";
-              element.style.marginTop = "0.2em";
-              element.style.marginBottom = "0.2em";
-            } else if (element.tagName === "OL") {
-              element.style.listStyleType = "decimal";
-              element.style.paddingLeft = "2em";
-              element.style.marginTop = "0.2em";
-              element.style.marginBottom = "0.2em";
-            } else if (element.tagName === "LI") {
-              element.style.display = "list-item";
-              element.style.marginTop = "0.1em";
-              element.style.marginBottom = "0.1em";
-            } else if (element.tagName === "DIV") {
-              element.style.width = "100%";
-              element.style.boxSizing = "border-box";
-              element.style.margin = "0";
-              element.style.padding = "0";
-            } else if (element.tagName === "P") {
-              element.style.marginTop = "0.2em";
-              element.style.marginBottom = "0.2em";
-            }
-          }
-        });
-        contentContainer.appendChild(htmlContainer);
-        this.disableInteractiveElements(htmlContainer);
-      } catch (error) {
-        console.error("Error rendering HTML:", error);
-        const errorDiv = document.createElement("div");
-        errorDiv.className = "cm-html-error";
-        errorDiv.textContent = `Error rendering HTML: ${error.message || "Unknown error"}`;
-        contentContainer.appendChild(errorDiv);
-      }
-      wrapper.appendChild(contentContainer);
-      return wrapper;
-    } catch (error) {
-      console.error("Fatal error in HTML widget:", error);
-      const errorElement = document.createElement("div");
-      errorElement.className = "cm-html-error";
-      errorElement.textContent = "Error rendering HTML content";
-      return errorElement;
-    }
-  }
-  /**
-   * Check for potential security issues in HTML content
-   */
-  checkSecurityIssues(html2) {
-    const warnings = [];
-    DANGEROUS_TAGS.forEach((tag) => {
-      const tagRegex = new RegExp(`<${tag}[\\s>]`, "i");
-      if (tagRegex.test(html2)) {
-        warnings.push(`${tag.toUpperCase()} tag detected and will be sanitized`);
-      }
-    });
-    if (/\son\w+\s*=/i.test(html2)) {
-      warnings.push("Event handlers detected and removed");
-    }
-    if (/javascript:/i.test(html2)) {
-      warnings.push("JavaScript URLs detected and removed");
-    }
-    return warnings;
-  }
-  /**
-   * Sanitizes HTML to prevent XSS attacks
-   */
-  sanitizeHtml(html2) {
-    let sanitized = html2.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
-    sanitized = sanitized.replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "");
-    sanitized = sanitized.replace(/\son\w+\s*=\s*[^\s>]+/gi, "");
-    sanitized = sanitized.replace(/javascript:/gi, "void:");
-    DANGEROUS_TAGS.forEach((tag) => {
-      const tagName = tag.toUpperCase();
-      const regex = new RegExp(`<${tag}([^>]*)>([\\s\\S]*?)<\\/${tag}>`, "gi");
-      sanitized = sanitized.replace(regex, (match, attrs, content) => {
-        return `<div class="cm-html-removed-tag">[${tagName} removed]</div>`;
-      });
-      const selfClosingRegex = new RegExp(`<${tag}([^>]*?)\\s*\\/>`, "gi");
-      sanitized = sanitized.replace(
-        selfClosingRegex,
-        `<div class="cm-html-removed-tag">[${tagName} removed]</div>`
-      );
-    });
-    return sanitized;
-  }
-  /**
-   * Disable interactive elements like links and forms
-   */
-  disableInteractiveElements(container) {
-    try {
-      const links = container.querySelectorAll("a");
-      links.forEach((link) => {
-        link.addEventListener("click", (e) => e.preventDefault());
-        link.style.pointerEvents = "none";
-        if (link.hasAttribute("href")) {
-          link.setAttribute("data-href", link.getAttribute("href") || "");
-          link.removeAttribute("href");
-        }
-      });
-      const forms = container.querySelectorAll("form");
-      forms.forEach((form) => {
-        form.addEventListener("submit", (e) => e.preventDefault());
-        form.setAttribute("onsubmit", "return false;");
-      });
-      const buttons = container.querySelectorAll('button, input[type="submit"], input[type="button"]');
-      buttons.forEach((button) => {
-        button.setAttribute("disabled", "disabled");
-        button.addEventListener("click", (e) => e.preventDefault());
-      });
-    } catch (error) {
-    }
-  }
-  /**
-   * Try to find the editor view from a DOM element
-   */
-  getEditorViewFromElement(element) {
-    try {
-      let current = element;
-      while (current) {
-        const editorEl = current.closest(".cm-editor");
-        if (editorEl) {
-          for (const key in editorEl) {
-            if (key.startsWith("__")) {
-              const value = editorEl[key];
-              if (value instanceof EditorView) {
-                return value;
-              }
-            }
-          }
-          if (editorEl.cmView) {
-            return editorEl.cmView;
-          }
-        }
-        current = current.parentElement;
-      }
-      if (window.CodeMirrorViewRegistry) {
-        const registry = window.CodeMirrorViewRegistry;
-        for (const view of registry) {
-          if (view.dom && view.dom.contains(element)) {
-            return view;
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Error finding editor view:", error);
-    }
-    return null;
-  }
-  /**
-   * Allow events from the content (like scrolling in a div)
-   */
-  ignoreEvent() {
-    return false;
-  }
-  /**
-   * Check if a tag name represents a block element
-   */
-  isBlockElement(tagName) {
-    const blockElements = [
-      "DIV",
-      "P",
-      "H1",
-      "H2",
-      "H3",
-      "H4",
-      "H5",
-      "H6",
-      "ARTICLE",
-      "SECTION",
-      "HEADER",
-      "FOOTER",
-      "BLOCKQUOTE",
-      "UL",
-      "OL",
-      "LI",
-      "TABLE",
-      "TR",
-      "HR",
-      "PRE",
-      "FIGURE"
-    ];
-    return blockElements.includes(tagName.toUpperCase());
-  }
-};
-var HtmlSyntaxHighlighter = class {
-  /**
-   * Highlight HTML code with appropriate syntax classes
-   */
-  static highlight(region) {
-    try {
-      if (!region.content || region.content.length === 0) {
-        return Decoration.none;
-      }
-      const builder = new RangeSetBuilder();
-      builder.add(
-        region.from,
-        region.to,
-        Decoration.mark({
-          class: "cm-html-code-mode cm-disable-markdown-parsing cm-plain-text",
-          inclusive: true
-        })
-      );
-      this.addHtmlTokens(builder, region.content, region.from);
-      return builder.finish();
-    } catch (error) {
-      console.error("Error in HTML syntax highlighter:", error);
-      return Decoration.none;
-    }
-  }
-  /**
-   * Add HTML token decorations directly to builder
-   */
-  static addHtmlTokens(builder, html2, baseOffset) {
-    const tagStack = [];
-    let currentLevel = 0;
-    const tokenRegex = /<\/?([a-zA-Z][a-zA-Z0-9\-_:]*)|\s([a-zA-Z][a-zA-Z0-9\-_:]*)(=(?:(['"]).*?\4|\S+))?|(['"])(.*?)\5|(\/?>)/g;
-    let match;
-    const tokens = [];
-    while ((match = tokenRegex.exec(html2)) !== null) {
-      try {
-        const [full, tagName, attrName, fullAttr, q1, attrValue, q2, bracket] = match;
-        const start = baseOffset + match.index;
-        if (tagName) {
-          const isClosing = full.startsWith("</");
-          const tagStart2 = start;
-          const tagEnd = start + (isClosing ? 2 : 1) + tagName.length;
-          tokens.push({
-            from: tagStart2,
-            to: tagStart2 + (isClosing ? 2 : 1),
-            class: `cm-html-bracket cm-html-bracket-level-${currentLevel % 6}`
-          });
-          tokens.push({
-            from: tagStart2 + (isClosing ? 2 : 1),
-            to: tagEnd,
-            class: `cm-html-tag-name cm-html-tag-level-${currentLevel % 6}`
-          });
-          if (isClosing) {
-            for (let i = tagStack.length - 1; i >= 0; i--) {
-              if (tagStack[i].name === tagName.toLowerCase()) {
-                currentLevel = tagStack[i].level;
-                tagStack.splice(i);
-                break;
-              }
-            }
-          } else {
-            tagStack.push({
-              name: tagName.toLowerCase(),
-              level: currentLevel
-            });
-            currentLevel = (currentLevel + 1) % 6;
-          }
-        } else if (attrName) {
-          const attrStart = start + 1;
-          const attrEnd = attrStart + attrName.length;
-          tokens.push({
-            from: attrStart,
-            to: attrEnd,
-            class: "cm-html-attribute"
-          });
-          if (fullAttr && fullAttr.includes("=")) {
-            const equalsPos = fullAttr.indexOf("=");
-            const valueStart = attrStart + attrName.length + 1;
-            if (q1) {
-              const quoteLen = q1.length;
-              tokens.push({
-                from: valueStart,
-                to: valueStart + fullAttr.length - equalsPos - 1,
-                class: "cm-html-attribute-value"
-              });
-            } else if (fullAttr.length > equalsPos + 1) {
-              tokens.push({
-                from: valueStart,
-                to: valueStart + fullAttr.length - equalsPos - 1,
-                class: "cm-html-attribute-value"
-              });
-            }
-          }
-        } else if (attrValue !== void 0 && q2) {
-          const valueStart = start;
-          const valueEnd = start + q2.length + attrValue.length + q2.length;
-          tokens.push({
-            from: valueStart,
-            to: valueEnd,
-            class: "cm-html-attribute-value"
-          });
-        } else if (bracket) {
-          const bracketStart = start;
-          const bracketEnd = start + bracket.length;
-          const isSelfClosing = bracket === "/>" || bracket === ">" && tagStack.length > 0 && VOID_TAGS.has(tagStack[tagStack.length - 1].name);
-          tokens.push({
-            from: bracketStart,
-            to: bracketEnd,
-            class: `cm-html-bracket cm-html-bracket-level-${Math.max(0, currentLevel - (isSelfClosing ? 1 : 0)) % 6}`
-          });
-          if (isSelfClosing && tagStack.length > 0) {
-            currentLevel = tagStack[tagStack.length - 1].level;
-            tagStack.pop();
-          }
-        }
-      } catch (tokenError) {
-        console.warn("Error processing token:", tokenError);
-      }
-    }
-    tokens.sort((a, b) => {
-      if (a.from !== b.from) return a.from - b.from;
-      return a.to - b.to;
-    });
-    for (const token of tokens) {
-      builder.add(
-        token.from,
-        token.to,
-        Decoration.mark({ class: token.class })
-      );
-    }
-  }
-};
-function detectHtmlRegions(view) {
-  try {
-    const regions = [];
-    const { state } = view;
-    const doc = state.doc;
-    const fullText = doc.toString();
-    const commentRegions = findHtmlComments(fullText);
-    const parsedRegions = parseHtmlHierarchy(fullText, commentRegions);
-    for (const region of parsedRegions) {
-      try {
-        const { from, to, tagName, content, isMultiline, isSelfClosing, openTagEnd, closeTagStart } = region;
-        regions.push({
-          from,
-          to,
-          tagName,
-          isMultiline,
-          content,
-          openTagEnd,
-          closeTagStart,
-          isSelfClosing
-        });
-      } catch (error) {
-        console.error("Error processing HTML region:", error);
-      }
-    }
-    regions.sort((a, b) => a.from - b.from);
-    return regions;
-  } catch (error) {
-    console.error("Error detecting HTML regions:", error);
-    return [];
-  }
-}
-function parseHtmlHierarchy(text, commentRegions) {
-  const regions = [];
-  const tagStack = [];
-  const tagRegex = /<\/?\s*([a-zA-Z][a-zA-Z0-9\-_:]*)((?:\s+[a-zA-Z][a-zA-Z0-9\-_:]*(?:=(?:"[^"]*"|'[^']*'|[^\s>]*))?)*)\s*(\/?)>/g;
-  let match;
-  while ((match = tagRegex.exec(text)) !== null) {
-    const [fullMatch, tagName, attributes, selfClosing] = match;
-    const position = match.index;
-    const matchEnd = position + fullMatch.length;
-    const lowerTagName = tagName.toLowerCase();
-    if (isPositionInRanges(position, commentRegions)) {
-      continue;
-    }
-    const isClosingTag = fullMatch.startsWith("</");
-    const isSelfClosingTag = selfClosing === "/" || VOID_TAGS.has(lowerTagName);
-    if (isClosingTag) {
-      let foundMatchingTag = false;
-      for (let i = tagStack.length - 1; i >= 0; i--) {
-        const openTag = tagStack[i];
-        if (openTag.tagName.toLowerCase() === lowerTagName) {
-          const from = openTag.startIndex;
-          const to = matchEnd;
-          const content = text.substring(from, to);
-          const isMultiline = content.includes("\n");
-          regions.push({
-            from,
-            to,
-            tagName: lowerTagName,
-            content,
-            isMultiline,
-            isSelfClosing: false,
-            openTagEnd: openTag.openTagEnd,
-            closeTagStart: position
-          });
-          tagStack.splice(i);
-          foundMatchingTag = true;
-          break;
-        }
-      }
-      if (!foundMatchingTag && VOID_TAGS.has(lowerTagName) === false) ;
-    } else if (isSelfClosingTag) {
-      regions.push({
-        from: position,
-        to: matchEnd,
-        tagName: lowerTagName,
-        content: fullMatch,
-        isMultiline: false,
-        isSelfClosing: true,
-        openTagEnd: matchEnd,
-        closeTagStart: matchEnd
-      });
-    } else {
-      tagStack.push({
-        tagName: lowerTagName,
-        startIndex: position,
-        openTagEnd: matchEnd,
-        content: fullMatch
-      });
-    }
-  }
-  const voidTagRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>/g;
-  voidTagRegex.lastIndex = 0;
-  while ((match = voidTagRegex.exec(text)) !== null) {
-    const [fullTag, tagName, attributes] = match;
-    const lowerTagName = tagName.toLowerCase();
-    const position = match.index;
-    const tagEnd = position + fullTag.length;
-    if (VOID_TAGS.has(lowerTagName) && !regions.some((r) => r.from === position) && !isPositionInRanges(position, commentRegions)) {
-      regions.push({
-        from: position,
-        to: tagEnd,
-        tagName: lowerTagName,
-        isMultiline: false,
-        content: fullTag,
-        openTagEnd: tagEnd,
-        closeTagStart: tagEnd,
-        isSelfClosing: true
-      });
-    }
-  }
-  return regions;
-}
-function isPositionInRanges(position, ranges) {
-  return ranges.some((range) => position >= range.from && position < range.to);
-}
-function findHtmlComments(text) {
-  const comments = [];
-  const commentRegex = /<!--[\s\S]*?-->/g;
-  let match;
-  while ((match = commentRegex.exec(text)) !== null) {
-    comments.push({
-      from: match.index,
-      to: match.index + match[0].length
-    });
-  }
-  return comments;
-}
-function isCursorNearRegion(view, region) {
-  const selection = view.state.selection.main;
-  const cursor = selection.head;
-  view.state.doc;
-  if (cursor > region.from && cursor < region.to) {
-    return true;
-  }
-  if (cursor === region.from || cursor === region.to) {
-    return true;
-  }
-  return false;
-}
-function isEditorInPreviewMode(view) {
-  if (!view.state.facet(EditorView.editable)) {
-    return true;
-  }
-  let element = view.dom;
-  while (element) {
-    if (element.classList && element.classList.contains("preview-mode")) {
-      return true;
-    }
-    element = element.parentElement;
-  }
-  return false;
-}
-
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/decorations.ts
-var DEBUG2 = false;
-function buildHtmlDecorations(view) {
-  try {
-    if (DEBUG2) ;
-    const regions = detectHtmlRegions(view);
-    if (!regions.length) {
-      if (DEBUG2) ;
-      return Decoration.none;
-    }
-    if (DEBUG2) ;
-    const inPreviewMode = isEditorInPreviewMode(view);
-    return buildSmartDecorations(regions, view, inPreviewMode);
-  } catch (error) {
-    console.error("Error building HTML decorations:", error);
-    return Decoration.none;
-  }
-}
-function buildSmartDecorations(regions, view, inPreviewMode) {
-  const allDecorations = [];
-  const cursorRanges = view.state.selection.ranges;
-  const editModeRegions = /* @__PURE__ */ new Set();
-  for (let i = 0; i < regions.length; i++) {
-    const region = regions[i];
-    for (const range of cursorRanges) {
-      if (isCursorNearRegion(view, region)) {
-        editModeRegions.add(i);
-        break;
-      }
-    }
-  }
-  let madeChange = true;
-  while (madeChange) {
-    madeChange = false;
-    for (let i = 0; i < regions.length; i++) {
-      const region = regions[i];
-      if (editModeRegions.has(i)) {
-        for (let j = 0; j < regions.length; j++) {
-          if (i !== j && !editModeRegions.has(j)) {
-            const nestedRegion = regions[j];
-            if (nestedRegion.from >= region.from && nestedRegion.to <= region.to) {
-              editModeRegions.add(j);
-              madeChange = true;
-            }
-          }
-        }
-      } else {
-        for (let j = 0; j < regions.length; j++) {
-          if (editModeRegions.has(j)) {
-            const editModeRegion = regions[j];
-            if (editModeRegion.from >= region.from && editModeRegion.to <= region.to) {
-              editModeRegions.add(i);
-              madeChange = true;
-              break;
-            }
-          }
-        }
-      }
-    }
-  }
-  for (let i = 0; i < regions.length; i++) {
-    const region = regions[i];
-    try {
-      if (editModeRegions.has(i)) {
-        if (DEBUG2) ;
-        allDecorations.push({
-          from: region.from,
-          to: region.to,
-          decoration: Decoration.mark({
-            class: "cm-plain-text-marker cm-disable-markdown-parsing cm-html-code-mode cm-no-list-rendering cm-no-markdown",
-            inclusiveStart: true,
-            inclusiveEnd: true,
-            attributes: {
-              "data-html-content": "true",
-              "data-no-markdown": "true",
-              "data-no-list": "true"
-            }
-          })
-        });
-        const syntaxDecorationSet = HtmlSyntaxHighlighter.highlight(region);
-        const syntaxDecorations = [];
-        syntaxDecorationSet.between(region.from, region.to, (from, to, deco) => {
-          syntaxDecorations.push({
-            from,
-            to,
-            decoration: deco
-          });
-        });
-        if (syntaxDecorations.length > 0) {
-          allDecorations.push(...syntaxDecorations);
-        }
-      } else {
-        if (DEBUG2) ;
-        let htmlContent = region.content;
-        const tagMatch = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)>([\s\S]*?)<\/\1>/i.exec(region.content);
-        if (tagMatch) {
-          const tagName = tagMatch[1].toLowerCase();
-          const attributes = tagMatch[2] || "";
-          const innerContent = tagMatch[3] || "";
-          if (tagName === "div" || tagName === "span") {
-            const styleMatch = /style\s*=\s*(['"])(.*?)\1/i.exec(attributes);
-            const styleValue = styleMatch ? styleMatch[2] : "";
-            if (styleValue) {
-              htmlContent = `<div style="${styleValue}">${innerContent}</div>`;
-            } else {
-              htmlContent = innerContent;
-            }
-          }
-        }
-        let overlapsEditMode = false;
-        for (const editIndex of editModeRegions) {
-          const editRegion = regions[editIndex];
-          if (region.from >= editRegion.from && region.from < editRegion.to || region.to > editRegion.from && region.to <= editRegion.to || region.from <= editRegion.from && region.to >= editRegion.to) {
-            overlapsEditMode = true;
-            break;
-          }
-        }
-        if (!overlapsEditMode) {
-          allDecorations.push({
-            from: region.from,
-            to: region.to,
-            decoration: Decoration.replace({
-              widget: new HtmlPreviewWidget(htmlContent, region.isMultiline)
-            })
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Error processing region:", error, region);
-    }
-  }
-  const builder = new RangeSetBuilder();
-  try {
-    const positionMap = /* @__PURE__ */ new Map();
-    for (const deco of allDecorations) {
-      if (deco.from < deco.to) {
-        if (!positionMap.has(deco.from)) {
-          positionMap.set(deco.from, []);
-        }
-        positionMap.get(deco.from).push(deco);
-      }
-    }
-    const positions = Array.from(positionMap.keys()).sort((a, b) => a - b);
-    for (const pos of positions) {
-      const decos = positionMap.get(pos);
-      decos.sort((a, b) => {
-        const aIsWidget = a.decoration.spec.widget !== void 0;
-        const bIsWidget = b.decoration.spec.widget !== void 0;
-        if (aIsWidget !== bIsWidget) {
-          return aIsWidget ? -1 : 1;
-        }
-        if (!aIsWidget && !bIsWidget) {
-          const aInclusive = a.decoration.spec.inclusiveStart === true;
-          const bInclusive = b.decoration.spec.inclusiveStart === true;
-          if (aInclusive !== bInclusive) {
-            return aInclusive ? -1 : 1;
-          }
-        }
-        return a.to - b.to;
-      });
-      for (const deco of decos) {
-        try {
-          builder.add(deco.from, deco.to, deco.decoration);
-        } catch (e) {
-          if (DEBUG2) ;
-        }
-      }
-    }
-    return builder.finish();
-  } catch (error) {
-    console.error("Critical error in decoration building:", error);
-    return Decoration.none;
-  }
-}
-
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/cssVarStyles.ts
-function addCssVarHtmlStyles() {
-  if (typeof document === "undefined") return;
-  if (document.getElementById("cm-html-decorator-styles")) {
-    const oldStyles = document.getElementById("cm-html-decorator-styles");
-    if (oldStyles && oldStyles.parentNode) {
-      oldStyles.parentNode.removeChild(oldStyles);
-    }
-  }
-  console.log("Adding HTML decorator styles with CSS variables");
-  const style = document.createElement("style");
-  style.id = "cm-html-decorator-styles";
-  style.textContent = `
-    /* Editor container - ensure it can display overflow */
-    .cm-editor {
-      position: relative !important;
-      z-index: 1 !important;
-    }
-    
-    /* HTML decoration using CSS variables - Light Theme */
-    .cm-html-preview {
-      position: relative;
-      background-color: var(--light-html-preview-bg, #f8f8f8);
-      border: 1px solid var(--light-html-preview-border, #e0e0e0);
-      border-radius: 4px;
-      padding: 12px;
-      margin: 4px 0;
-      box-shadow: var(--light-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.1));
-      min-height: 20px;
-      max-width: 100%;
-      width: calc(100% - 16px);
-      display: block;
-      visibility: visible !important;
-      color: var(--light-html-content-color, #333333);
-      z-index: 9999;
-    }
-    
-    /* HTML preview label */
-    .cm-html-preview-label {
-      position: absolute;
-      top: -10px;
-      left: 8px;
-      background: var(--light-html-label-bg, #e3e3e3);
-      color: var(--light-html-label-color, #333333);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 10px;
-      font-weight: 500;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-      z-index: 10000;
-    }
-    
-    /* HTML content container */
-    .cm-html-content {
-      background: var(--light-html-content-bg, #ffffff);
-      padding: 8px;
-      border-radius: 3px;
-      color: var(--light-html-content-color, #333333);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-      line-height: 1.5;
-      min-height: 10px;
-    }
-    
-    /* HTML code syntax highlighting */
-    .cm-editor .cm-html-code-mode {
-      color: var(--light-html-content-color, #333333) !important;
-      font-family: monospace !important;
-      background-color: transparent !important;
-      border-radius: 0 !important;
-    }
-    
-    .cm-editor .cm-html-tag-name {
-      color: var(--light-html-tag-color, #d73a49) !important;
-      font-weight: 600 !important;
-      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
-    }
-    
-    .cm-editor .cm-html-attribute {
-      color: var(--light-html-attribute-color, #e36209) !important;
-      font-style: normal !important;
-    }
-    
-    .cm-editor .cm-html-attribute-value {
-      color: var(--light-html-attribute-value-color, #22863a) !important;
-      font-style: normal !important;
-    }
-    
-    .cm-editor .cm-html-bracket {
-      color: var(--light-html-bracket-color, #909090) !important;
-      font-weight: normal !important;
-      opacity: 1 !important;
-    }
-    
-    /* Dark theme styles */
-    .dark .cm-html-preview {
-      background-color: var(--dark-html-preview-bg, #282828);
-      border: 1px solid var(--dark-html-preview-border, #444444);
-      box-shadow: var(--dark-html-preview-shadow, 0 1px 3px rgba(0,0,0,0.3));
-      color: var(--dark-html-content-color, #e0e0e0);
-    }
-    
-    .dark .cm-html-preview-label {
-      background: var(--dark-html-label-bg, #4a4a4a);
-      color: var(--dark-html-label-color, #e0e0e0);
-    }
-    
-    .dark .cm-html-content {
-      background: var(--dark-html-content-bg, #333333);
-      color: var(--dark-html-content-color, #e0e0e0);
-    }
-    
-    .dark .cm-editor .cm-html-tag-name {
-      color: var(--dark-html-tag-color, #f97583) !important;
-    }
-    
-    .dark .cm-editor .cm-html-attribute {
-      color: var(--dark-html-attribute-color, #ffab70) !important;
-    }
-    
-    .dark .cm-editor .cm-html-attribute-value {
-      color: var(--dark-html-attribute-value-color, #85e89d) !important;
-    }
-    
-    .dark .cm-editor .cm-html-bracket {
-      color: var(--dark-html-bracket-color, #a0a0a0) !important;
-    }
-    
-    /* Force visibility of HTML elements inside the preview */
-    .cm-html-preview * {
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-    
-    /* Block element defaults */
-    .cm-html-preview div,
-    .cm-html-preview p,
-    .cm-html-preview h1,
-    .cm-html-preview h2,
-    .cm-html-preview h3,
-    .cm-html-preview h4,
-    .cm-html-preview h5,
-    .cm-html-preview h6,
-    .cm-html-preview ul,
-    .cm-html-preview ol {
-      display: block !important;
-      margin: 0.4em 0 !important;
-    }
-    
-    /* Heading styles */
-    .cm-html-preview h1,
-    .cm-html-preview h2,
-    .cm-html-preview h3,
-    .cm-html-preview h4,
-    .cm-html-preview h5,
-    .cm-html-preview h6 {
-      font-weight: 600 !important;
-      color: var(--light-html-heading-color, #333333) !important;
-    }
-    
-    .dark .cm-html-preview h1,
-    .dark .cm-html-preview h2,
-    .dark .cm-html-preview h3,
-    .dark .cm-html-preview h4,
-    .dark .cm-html-preview h5,
-    .dark .cm-html-preview h6 {
-      color: var(--dark-html-heading-color, #e0e0e0) !important;
-    }
-    
-    .cm-html-preview h1 { font-size: 1.4em !important; }
-    .cm-html-preview h2 { font-size: 1.2em !important; }
-    .cm-html-preview h3 { font-size: 1.1em !important; }
-    
-    /* Debug info */
-    .cm-html-debug-info {
-      position: absolute;
-      bottom: -12px;
-      right: 4px;
-      font-size: 8px;
-      color: var(--light-html-debug-color, #999999);
-      background: rgba(255,255,255,0.7);
-      padding: 1px 3px;
-      border-radius: 2px;
-    }
-    
-    .dark .cm-html-debug-info {
-      color: var(--dark-html-debug-color, #777777);
-      background: rgba(0,0,0,0.3);
-    }
-    
-    /* Editorial indicator when in edit mode */
-    .cm-editing-html {
-      position: relative;
-    }
-    
-    .cm-editing-html::before {
-      content: "Editing HTML";
-      position: absolute;
-      top: -16px;
-      right: 8px;
-      background-color: var(--light-html-edit-label-bg, #f0f0f0);
-      color: var(--light-html-edit-label-color, #555555);
-      font-size: 9px;
-      padding: 1px 5px;
-      border-radius: 2px;
-      opacity: 0.8;
-    }
-    
-    .dark .cm-editing-html::before {
-      background-color: var(--dark-html-edit-label-bg, #3a3a3a);
-      color: var(--dark-html-edit-label-color, #bbbbbb);
-    }
-  `;
-  document.head.appendChild(style);
-  console.log("HTML decorator styles with CSS variables added to document");
-}
-
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/styles.ts
-function addHtmlStyles() {
-  addCssVarHtmlStyles();
-}
-
-// src/app/obsidian-editor/extensions/markdown-syntax/html-decorator/index.ts
-var HtmlDecoratorPlugin = class {
-  constructor(view) {
-    this.enabled = true;
-    this.debug = false;
-    this.updateScheduled = false;
-    this.isDestroyed = false;
-    this.lastSelectionHead = -1;
-    this.htmlRegions = [];
-    this.view = view;
-    addHtmlStyles();
-    if (view.state.selection.ranges.length > 0) {
-      this.lastSelectionHead = view.state.selection.main.head;
-    }
-    setTimeout(() => {
-      this.updateDecorations();
-    }, 100);
-    if (this.debug) console.log("HtmlDecorator plugin initialized");
-  }
-  /**
-   * Update the view - rebuild decorations when editor changes
-   */
-  update(update) {
-    if (!this.enabled || this.isDestroyed) return;
-    const contentChanged = update.docChanged;
-    const selectionChanged = update.selectionSet;
-    let cursorMoved = false;
-    if (selectionChanged && update.state.selection.ranges.length > 0) {
-      const newHead = update.state.selection.main.head;
-      cursorMoved = newHead !== this.lastSelectionHead;
-      this.lastSelectionHead = newHead;
-    }
-    let htmlContentChanged = false;
-    if (contentChanged) {
-      update.changes.iterChanges((fromA, toA, fromB, toB) => {
-        if (htmlContentChanged) return;
-        for (const region of this.htmlRegions) {
-          if (fromA <= region.to && toA >= region.from) {
-            htmlContentChanged = true;
-            break;
-          }
-        }
-        if (!htmlContentChanged) {
-          const changedText = update.state.doc.sliceString(fromB, toB);
-          htmlContentChanged = changedText.includes("<") && changedText.includes(">");
-        }
-      });
-    }
-    if (cursorMoved) {
-      const currentPosition = update.state.selection.main.head;
-      const cursorInHtmlRegion = this.htmlRegions.some(
-        (region) => currentPosition >= region.from && currentPosition <= region.to
-      );
-      if (!cursorInHtmlRegion) {
-        this.htmlRegions.some(
-          (region) => currentPosition === region.from || currentPosition === region.to
-        );
-      }
-    }
-    if (contentChanged && htmlContentChanged || cursorMoved) {
-      const reason = contentChanged ? "HTML content change" : "cursor movement";
-      if (this.debug) console.log(`HtmlDecorator: Scheduling update due to ${reason}`);
-      if (!this.updateScheduled) {
-        this.updateScheduled = true;
-        setTimeout(() => {
-          this.updateDecorations();
-          this.updateScheduled = false;
-        }, 0);
-      }
-    }
-  }
-  /**
-   * Update decorations using the measure/notify pattern
-   */
-  updateDecorations() {
-    if (this.isDestroyed) return;
-    try {
-      if (this.debug) console.log("Updating HTML decorations");
-      const decorations = buildHtmlDecorations(this.view);
-      this.updateHtmlRegions();
-      this.view.dispatch({
-        effects: setHtmlDecorations.of(decorations)
-      });
-    } catch (error) {
-      console.error("Error updating HTML decorations:", error);
-    }
-  }
-  /**
-   * Update the cached list of HTML regions
-   */
-  updateHtmlRegions() {
-    try {
-      const { state } = this.view;
-      const doc = state.doc;
-      const fullText = doc.toString();
-      const regions = [];
-      const htmlRegex = /<([a-zA-Z][a-zA-Z0-9\-_:]*)([^>]*?)(?:\/>|>([\s\S]*?)<\/\1>)/g;
-      let match;
-      while ((match = htmlRegex.exec(fullText)) !== null) {
-        regions.push({
-          from: match.index,
-          to: match.index + match[0].length
-        });
-      }
-      this.htmlRegions = regions;
-    } catch (error) {
-      console.error("Error updating HTML regions cache:", error);
-    }
-  }
-  /**
-   * Clean up resources when plugin is removed
-   */
-  destroy() {
-    this.updateScheduled = false;
-    this.isDestroyed = true;
-    if (this.debug) console.log("HtmlDecorator plugin destroyed");
-  }
-};
-var setHtmlDecorations = StateEffect.define();
-var htmlDecorationsField = StateField.define({
-  create: () => Decoration.none,
-  update: (decorations, tr) => {
-    decorations = decorations.map(tr.changes);
-    for (const effect of tr.effects) {
-      if (effect.is(setHtmlDecorations)) {
-        decorations = effect.value;
-      }
-    }
-    return decorations;
-  },
-  provide: (field) => EditorView.decorations.from(field)
-});
-function htmlDecorator() {
-  return [
-    htmlDecorationsField,
-    ViewPlugin.define((view) => new HtmlDecoratorPlugin(view))
-  ];
-}
+// src/app/obsidian-editor/extensions/markdown-syntax/index.ts
+init_html_decorator();
 var VerticalBarWidget = class extends WidgetType {
   toDOM() {
     const bar = document.createElement("span");
@@ -10447,6 +11526,7 @@ function createNoMarkdownInHtmlExtension() {
 }
 
 // src/app/obsidian-editor/extensions/index.ts
+init_html_decorator();
 function createAllExtensions() {
   return [
     createMarkdownSyntaxPlugin(),
@@ -10559,6 +11639,41 @@ function getLineAt(doc, pos) {
     from: lineStart,
     to: lineEnd,
     text: doc.slice(lineStart, lineEnd)
+  };
+}
+function createLink(selection, doc) {
+  const changes = [];
+  let newRanges = [];
+  for (const range of selection.ranges) {
+    if (range.empty) {
+      const template = "[link text](url)";
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: template
+      });
+      newRanges.push({
+        anchor: range.from + 1,
+        head: range.from + 10
+      });
+    } else {
+      const selectedText = doc.slice(range.from, range.to);
+      changes.push({
+        from: range.from,
+        to: range.to,
+        insert: `[${selectedText}](url)`
+      });
+      newRanges.push({
+        anchor: range.from + selectedText.length + 3,
+        head: range.from + selectedText.length + 3
+      });
+    }
+  }
+  return {
+    changes,
+    selection: newRanges.length > 0 ? EditorSelection.create(
+      newRanges.map((range) => EditorSelection.range(range.anchor, range.head))
+    ) : void 0
   };
 }
 
@@ -11051,7 +12166,11 @@ var EditorCore = ({
         if (update.docChanged && onChangeRef.current) {
           if (update.transactions.some((tr) => tr.isUserEvent("input") || tr.isUserEvent("delete"))) {
             const doc = update.state.doc;
-            onChangeRef.current(doc.toString());
+            const content = doc.toString();
+            onChangeRef.current(content);
+            Promise.resolve().then(() => (init_plugin_api(), plugin_api_exports)).then(({ obsidianPluginAPI: obsidianPluginAPI2 }) => {
+              obsidianPluginAPI2.triggerHooks("document:change", content);
+            }).catch(console.error);
           }
         }
       });
@@ -11080,6 +12199,9 @@ var EditorCore = ({
         parent: editorRef.current
       });
       editorViewRef.current = view;
+      if (typeof window !== "undefined") {
+        window.__obsidianEditorView = view;
+      }
       if (onEditorViewCreated) {
         onEditorViewCreated(view);
       }
@@ -11176,7 +12298,7 @@ var EditorCore = ({
       )
     ] });
   }
-  return /* @__PURE__ */ jsx("div", { ref: editorRef, className: "obsidian-editor-core" });
+  return /* @__PURE__ */ jsx("div", { ref: editorRef, className: "obsidian-editor-core", style: { height: "100%" } });
 };
 var EditorCore_default = EditorCore;
 var ThemeSwitcher = ({ onThemeChange }) => {
@@ -11250,6 +12372,79 @@ var EditorToolbar = ({
   };
   return /* @__PURE__ */ jsxs("div", { className: "obsidian-editor-toolbar", children: [
     /* @__PURE__ */ jsxs("div", { className: "toolbar-left", children: [
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting(toggleBold),
+          className: "format-button",
+          "aria-label": "Bold",
+          title: "Bold (Ctrl+B)",
+          children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+            /* @__PURE__ */ jsx("path", { d: "M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" }),
+            /* @__PURE__ */ jsx("path", { d: "M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z" })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting(toggleItalic),
+          className: "format-button",
+          "aria-label": "Italic",
+          title: "Italic (Ctrl+I)",
+          children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+            /* @__PURE__ */ jsx("line", { x1: "19", y1: "4", x2: "10", y2: "4" }),
+            /* @__PURE__ */ jsx("line", { x1: "14", y1: "20", x2: "5", y2: "20" }),
+            /* @__PURE__ */ jsx("line", { x1: "15", y1: "4", x2: "9", y2: "20" })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting(createLink),
+          className: "format-button",
+          "aria-label": "Link",
+          title: "Insert link (Ctrl+K)",
+          children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+            /* @__PURE__ */ jsx("path", { d: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" }),
+            /* @__PURE__ */ jsx("path", { d: "M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" })
+          ] })
+        }
+      ),
+      /* @__PURE__ */ jsx("div", { className: "format-divider" }),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
+          className: "format-button",
+          "aria-label": "Heading 1",
+          title: "Heading 1 (Ctrl+1)",
+          children: /* @__PURE__ */ jsx("span", { className: "heading-btn", children: "H1" })
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
+          className: "format-button",
+          "aria-label": "Heading 2",
+          title: "Heading 2 (Ctrl+2)",
+          children: /* @__PURE__ */ jsx("span", { className: "heading-btn", children: "H2" })
+        }
+      ),
+      /* @__PURE__ */ jsx(
+        "button",
+        {
+          onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
+          className: "format-button",
+          "aria-label": "Heading 3",
+          title: "Heading 3 (Ctrl+3)",
+          children: /* @__PURE__ */ jsx("span", { className: "heading-btn", children: "H3" })
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxs("div", { className: "toolbar-right", children: [
       /* @__PURE__ */ jsxs("div", { className: "mode-toggle", children: [
         /* @__PURE__ */ jsx(
           "button",
@@ -11259,7 +12454,10 @@ var EditorToolbar = ({
             "aria-pressed": mode === "live",
             "aria-label": "Edit mode",
             title: "Edit mode",
-            children: "Edit"
+            children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+              /* @__PURE__ */ jsx("path", { d: "M12 20h9" }),
+              /* @__PURE__ */ jsx("path", { d: "M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" })
+            ] })
           }
         ),
         /* @__PURE__ */ jsx(
@@ -11270,64 +12468,15 @@ var EditorToolbar = ({
             "aria-pressed": mode === "preview",
             "aria-label": "Preview mode",
             title: "Preview mode",
-            children: "Preview"
+            children: /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+              /* @__PURE__ */ jsx("path", { d: "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" }),
+              /* @__PURE__ */ jsx("circle", { cx: "12", cy: "12", r: "3" })
+            ] })
           }
         )
       ] }),
-      mode === "live" && /* @__PURE__ */ jsxs("div", { className: "format-buttons", children: [
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => applyFormatting(toggleBold),
-            className: "format-button",
-            "aria-label": "Bold",
-            title: "Bold (Ctrl+B)",
-            children: /* @__PURE__ */ jsx("strong", { children: "B" })
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => applyFormatting(toggleItalic),
-            className: "format-button",
-            "aria-label": "Italic",
-            title: "Italic (Ctrl+I)",
-            children: /* @__PURE__ */ jsx("em", { children: "I" })
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 1)),
-            className: "format-button",
-            "aria-label": "Heading 1",
-            title: "Heading 1 (Ctrl+1)",
-            children: "H1"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 2)),
-            className: "format-button",
-            "aria-label": "Heading 2",
-            title: "Heading 2 (Ctrl+2)",
-            children: "H2"
-          }
-        ),
-        /* @__PURE__ */ jsx(
-          "button",
-          {
-            onClick: () => applyFormatting((sel, doc) => toggleHeading(sel, doc, 3)),
-            className: "format-button",
-            "aria-label": "Heading 3",
-            title: "Heading 3 (Ctrl+3)",
-            children: "H3"
-          }
-        )
-      ] })
+      /* @__PURE__ */ jsx(ThemeSwitcher_default, { onThemeChange })
     ] }),
-    /* @__PURE__ */ jsx("div", { className: "toolbar-right", children: /* @__PURE__ */ jsx(ThemeSwitcher_default, { onThemeChange }) }),
     /* @__PURE__ */ jsx("style", { children: `
         .obsidian-editor-toolbar {
           display: flex;
@@ -11341,7 +12490,14 @@ var EditorToolbar = ({
         .toolbar-left, .toolbar-right {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 8px;
+        }
+        
+        .format-divider {
+          width: 1px;
+          height: 22px;
+          background-color: var(--hr-color, #dcddde);
+          margin: 0 4px;
         }
         
         .mode-toggle {
@@ -11352,12 +12508,15 @@ var EditorToolbar = ({
         }
         
         .mode-button {
-          padding: 4px 12px;
+          padding: 4px 8px;
           border: none;
-          background: var(--background-primary, #ffffff);
+          background: var(--background, #ffffff);
           color: var(--text-normal, #2e3338);
           cursor: pointer;
           transition: background 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         
         .mode-button.active {
@@ -11365,42 +12524,43 @@ var EditorToolbar = ({
           color: white;
         }
         
-        .format-buttons {
-          display: flex;
-          gap: 4px;
-        }
-        
         .format-button {
-          width: 32px;
-          height: 32px;
+          min-width: 28px;
+          height: 28px;
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid var(--hr-color, #dcddde);
+          border: 1px solid transparent;
           border-radius: 4px;
-          background: var(--background-primary, #ffffff);
+          background: transparent;
           color: var(--text-normal, #2e3338);
           cursor: pointer;
-          transition: background 0.2s;
+          transition: all 0.2s;
+          padding: 0 6px;
         }
         
         .format-button:hover {
-          background: var(--interactive-hover, #e9e9e9);
+          background: var(--background-modifier-hover, #e9e9e9);
+          border-color: var(--hr-color, #dcddde);
+        }
+        
+        .heading-btn {
+          font-weight: 600;
+          font-family: var(--font-sans, 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
         }
         
         .dark .mode-button {
-          background: var(--background-primary, #2b2b2b);
+          background: var(--background, #2b2b2b);
           color: var(--text-normal, #dcddde);
         }
         
         .dark .format-button {
-          background: var(--background-primary, #2b2b2b);
           color: var(--text-normal, #dcddde);
-          border-color: var(--hr-color, #444444);
         }
         
         .dark .format-button:hover {
-          background: var(--interactive-hover, #4a4a4a);
+          background: var(--background-modifier-hover, #353535);
+          border-color: var(--hr-color, #444444);
         }
         ` })
   ] });
@@ -11410,13 +12570,17 @@ var CodeMirrorEditor = ({
   initialValue = "",
   readOnly = false,
   onChange,
-  onSave
+  onSave,
+  onEditorViewReady
 }) => {
   const [editorView, setEditorView] = useState(null);
   const [currentMode, setCurrentMode] = useState("live");
   const { mounted } = useTheme();
   const handleEditorViewCreated = (view) => {
     setEditorView(view);
+    if (onEditorViewReady) {
+      onEditorViewReady(view);
+    }
   };
   const handleModeChange = (mode) => {
     setCurrentMode(mode);
@@ -11448,45 +12612,57 @@ var CodeMirrorEditor = ({
   ] }) });
 };
 var CodeMirrorEditor_default = CodeMirrorEditor;
-function Editor(props) {
-  return /* @__PURE__ */ jsx(CodeMirrorEditor_default, { ...props });
+function Editor({ className, onEditorViewReady, ...props }) {
+  const { theme } = useTheme();
+  return /* @__PURE__ */ jsx("div", { className: `obsidian-editor-wrapper ${theme} ${className || ""}`, children: /* @__PURE__ */ jsx(
+    CodeMirrorEditor_default,
+    {
+      ...props,
+      onEditorViewReady
+    }
+  ) });
 }
 function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-  return /* @__PURE__ */ jsxs(
+  const buttonStyle = {
+    border: "none",
+    background: "transparent",
+    color: "var(--foreground)",
+    borderRadius: "4px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "4px",
+    transition: "background-color 0.2s",
+    opacity: 0.8
+  };
+  return /* @__PURE__ */ jsx(
     "button",
     {
       onClick: toggleTheme,
-      className: "theme-toggle-button",
-      "aria-label": `Switch to ${theme === "light" ? "dark" : "light"} theme`,
-      children: [
-        theme === "light" ? "\u{1F319}" : "\u2600\uFE0F",
-        /* @__PURE__ */ jsx("style", { children: `
-        .theme-toggle-button {
-          padding: 8px 12px;
-          border-radius: 4px;
-          background: var(--background-secondary, #f5f5f5);
-          border: 1px solid var(--border-color, #e2e2e2);
-          cursor: pointer;
-          font-size: 16px;
-          line-height: 1;
-          transition: background-color 0.2s ease;
-        }
-        
-        .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #e9e9e9);
-        }
-        
-        .dark .theme-toggle-button {
-          background: var(--background-secondary, #2d333b);
-          border-color: var(--border-color, #444c56);
-        }
-        
-        .dark .theme-toggle-button:hover {
-          background: var(--background-modifier-hover, #444c56);
-        }
-        ` })
-      ]
+      className: "theme-toggle",
+      style: buttonStyle,
+      onMouseOver: (e) => {
+        e.target.style.backgroundColor = "var(--background-modifier-hover)";
+        e.target.style.opacity = "1";
+      },
+      onMouseOut: (e) => {
+        e.target.style.backgroundColor = "transparent";
+        e.target.style.opacity = "0.8";
+      },
+      "aria-label": theme === "dark" ? "Switch to light theme" : "Switch to dark theme",
+      children: theme === "dark" ? /* @__PURE__ */ jsxs("svg", { xmlns: "http://www.w3.org/2000/svg", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: [
+        /* @__PURE__ */ jsx("circle", { cx: "12", cy: "12", r: "5" }),
+        /* @__PURE__ */ jsx("line", { x1: "12", y1: "1", x2: "12", y2: "3" }),
+        /* @__PURE__ */ jsx("line", { x1: "12", y1: "21", x2: "12", y2: "23" }),
+        /* @__PURE__ */ jsx("line", { x1: "4.22", y1: "4.22", x2: "5.64", y2: "5.64" }),
+        /* @__PURE__ */ jsx("line", { x1: "18.36", y1: "18.36", x2: "19.78", y2: "19.78" }),
+        /* @__PURE__ */ jsx("line", { x1: "1", y1: "12", x2: "3", y2: "12" }),
+        /* @__PURE__ */ jsx("line", { x1: "21", y1: "12", x2: "23", y2: "12" }),
+        /* @__PURE__ */ jsx("line", { x1: "4.22", y1: "19.78", x2: "5.64", y2: "18.36" }),
+        /* @__PURE__ */ jsx("line", { x1: "18.36", y1: "5.64", x2: "19.78", y2: "4.22" })
+      ] }) : /* @__PURE__ */ jsx("svg", { xmlns: "http://www.w3.org/2000/svg", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", children: /* @__PURE__ */ jsx("path", { d: "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" }) })
     }
   );
 }
