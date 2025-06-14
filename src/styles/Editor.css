@@ -23,16 +23,16 @@
 .obsidian-editor-wrapper .obsidian-editor-content {
   flex: 1;
   overflow: auto;
-  height: auto !important; /* Override any inline height */
+  height: auto ; /* Override any inline height */
 }
 
 .obsidian-editor-wrapper .cm-editor {
-  height: 100% !important;
+  height: 100%;
 }
 
 .obsidian-editor-wrapper .cm-scroller {
-  overflow: auto !important;
-  height: 100% !important;
+  overflow: auto ;
+  height: 100%;
 }
 
 .obsidian-editor-wrapper .cm-content {

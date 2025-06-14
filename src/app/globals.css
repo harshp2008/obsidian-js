@@ -1,5 +1,3 @@
-@tailwind base;
-@tailwind components;
 @tailwind utilities;
 
 :root {
@@ -86,35 +84,35 @@ body {
 
 /* Override editor styles for Obsidian-like UI */
 .obsidian-editor-content h1 {
-  font-size: 1.8em !important;
-  font-weight: 600 !important;
-  margin: 0.5em 0 !important;
-  color: var(--heading-color) !important;
+  font-size: 1.8em ;
+  font-weight: 600 ;
+  margin: 0.5em 0 ;
+  color: var(--heading-color) ;
 }
 
 .obsidian-editor-content h2 {
-  font-size: 1.4em !important;
-  font-weight: 600 !important;
-  margin: 0.5em 0 !important;
-  color: var(--heading-color) !important;
+  font-size: 1.4em ;
+  font-weight: 600 ;
+  margin: 0.5em 0 ;
+  color: var(--heading-color) ;
 }
 
 .obsidian-editor-content h3 {
-  font-size: 1.2em !important;
-  font-weight: 600 !important;
-  margin: 0.5em 0 !important;
-  color: var(--heading-color) !important;
+  font-size: 1.2em ;
+  font-weight: 600 ;
+  margin: 0.5em 0 ;
+  color: var(--heading-color) ;
 }
 
 .obsidian-editor-core {
-  height: 100% !important;
+  height: 100% ;
 }
 
 .cm-editor {
-  height: 100% !important;
+  height: 100% ;
 }
 
 .cm-scroller {
-  overflow: auto !important;
-  height: 100% !important;
+  overflow: auto ;
+  height: 100% ;
 }
