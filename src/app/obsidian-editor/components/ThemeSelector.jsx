@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import themeManager, { THEME_PREFERENCES } from '../themes/theme-manager';
+import { themeManager } from '../themes/theme-manager.js';
+import { THEME_PREFERENCES } from '../themes/theme-manager';
 
 /**
  * ThemeSelector component that allows users to select and apply themes

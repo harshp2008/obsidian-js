@@ -7,21 +7,19 @@ import { THEMES } from "../../../public/themes/index.js";
 
 /**
  * MediaQueryList for detecting system dark mode preference
- * @type {MediaQueryList|null}
  */
-let darkModeMediaQuery = null;
+let darkModeMediaQuery: MediaQueryList | null = null;
 
 /**
  * Callbacks to run when system theme changes
- * @type {Array<Function>}
  */
-const changeListeners = [];
+const changeListeners: Array<(isDark: boolean) => void> = [];
 
 /**
  * Initialize the system theme detector
  * @returns {boolean} Whether dark mode is preferred
  */
-export function initSystemThemeDetector() {
+export function initSystemThemeDetector(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) {
     return false;
   }
@@ -46,7 +44,7 @@ export function initSystemThemeDetector() {
 /**
  * Clean up the system theme detector
  */
-export function cleanupSystemThemeDetector() {
+export function cleanupSystemThemeDetector(): void {
   if (!darkModeMediaQuery) return;
 
   try {
@@ -65,7 +63,7 @@ export function cleanupSystemThemeDetector() {
  * @param {MediaQueryListEvent} event - Media query change event
  * @private
  */
-function handleSystemThemeChange(event) {
+function handleSystemThemeChange(event: MediaQueryListEvent): void {
   const isDark = event.matches;
   notifyListeners(isDark);
 }
@@ -74,7 +72,7 @@ function handleSystemThemeChange(event) {
  * Check if dark mode is preferred by the system
  * @returns {boolean} True if dark mode is preferred
  */
-export function isDarkModePreferred() {
+export function isDarkModePreferred(): boolean {
   return darkModeMediaQuery ? darkModeMediaQuery.matches : false;
 }
 
@@ -82,7 +80,7 @@ export function isDarkModePreferred() {
  * Get the preferred theme based on system setting
  * @returns {string} Theme ID based on system preference
  */
-export function getPreferredTheme() {
+export function getPreferredTheme(): string {
   return isDarkModePreferred() ? THEMES.VANILLA_DARK : THEMES.VANILLA_LIGHT;
 }
 
@@ -91,7 +89,7 @@ export function getPreferredTheme() {
  * @param {Function} listener - Callback function that receives a boolean indicating dark mode
  * @returns {Function} Function to remove the listener
  */
-export function addSystemThemeChangeListener(listener) {
+export function addSystemThemeChangeListener(listener: (isDark: boolean) => void): () => void {
   changeListeners.push(listener);
 
   // Return function to remove this listener
@@ -108,7 +106,7 @@ export function addSystemThemeChangeListener(listener) {
  * @param {boolean} isDark - Whether dark mode is now preferred
  * @private
  */
-function notifyListeners(isDark) {
+function notifyListeners(isDark: boolean): void {
   changeListeners.forEach((listener) => {
     try {
       listener(isDark);
@@ -121,4 +119,4 @@ function notifyListeners(isDark) {
 // Initialize on import in browser environments
 if (typeof window !== "undefined") {
   initSystemThemeDetector();
-}
+} 
