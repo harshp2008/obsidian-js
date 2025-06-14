@@ -93,37 +93,37 @@ html.light {
 
 /* Attempt to aggressively hide widget buffer on lines containing our HR widget */
 .cm-line:has(.cm-rendered-hr) img.cm-widgetBuffer {
-  display: none !important;
-  height: 0 !important;
-  width: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  visibility: hidden !important; /* Strongest way to hide and remove from layout */
-  content: "" !important; /* For pseudo-elements, but sometimes helps with img replacement */
-  font-size: 0 !important; /* Just in case */
-  line-height: 0 !important; /* Just in case */
+  display: none;
+  height: 0;
+  width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  visibility: hidden;
+  content: "";
+  font-size: 0;
+  line-height: 0;
 }
 
 /* Markdown syntax styles - shown when cursor is near, hidden when not */
 .markdown-syntax-dim {
-  opacity: 0 !important; /* Make invisible but keep its space */
-  color: transparent !important;
-  text-shadow: none !important;
-  background-color: transparent !important;
+  opacity: 0;
+  color: transparent;
+  text-shadow: none;
+  background-color: transparent;
 }
 
 /* Make sure the hidden syntax doesn't interfere with the content */
 [data-markdown-mode="preview"] .markdown-syntax-dim,
 html[data-markdown-mode="preview"] .markdown-syntax-dim,
 .markdown-preview-mode .markdown-syntax-dim {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
-  overflow: hidden !important;
-  position: absolute !important;
-  pointer-events: none !important;
-  visibility: hidden !important;
+  display: none;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  position: absolute;
+  pointer-events: none;
+  visibility: hidden;
 }
 
 .markdown-syntax-active {
@@ -1155,7 +1155,7 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* HTML syntax highlighting - subtle colors */
 .cm-html-tag-syntax {
-  color: var(--html-tag-color) !important;
+  color: var(--html-tag-color);
   font-weight: normal;
 }
 
@@ -1291,7 +1291,7 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* Ensure script tags are visible with proper syntax highlighting */
 .cm-html-tag-syntax {
-  color: var(--html-tag-color) !important;
+  color: var(--html-tag-color);
   font-weight: normal;
 }
 
@@ -1302,50 +1302,16 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* Script tag specific styling */
 span.cm-html-tag-syntax:has(span:contains("script")) {
-  color: var(--html-tag-color) !important;
-}
-
-.cm-content script,
-.cm-html-rendered script {
-  display: inline;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  background-color: var(--cm-code-background);
-  color: var(--cm-text-normal);
-}
-
-/* Make HTML tags in script elements visible */
-.cm-html-rendered .cm-html-tag-syntax {
-  display: inline !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Script tag highlighting */
-.cm-content .cm-line .script-tag,
-.script-tag {
-  color: var(--html-tag-color) !important;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  background-color: transparent;
-}
-
-/* Script content highlighting */
-.script-tag-content {
-  color: var(--html-content-color) !important;
-  font-family: "Menlo", "Monaco", "Courier New", monospace;
-  background-color: var(--cm-code-background);
-  padding: 0.2em;
-  display: block;
-  margin: 0.2em 0;
-  border-radius: 3px;
+  color: var(--html-tag-color);
 }
 
 /* Override hidden or rendered script tags */
 .cm-html-rendered script,
 .cm-html-inline script,
 .cm-html-block script {
-  display: inline !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  display: inline;
+  visibility: visible;
+  opacity: 1;
   background-color: transparent;
 }
 
@@ -1362,7 +1328,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
 
 /* Ensure no scripts get executed */
 .cm-html-rendered script {
-  display: block !important;
+  display: block;
   white-space: pre-wrap;
   font-family: monospace;
   color: var(--html-content-color);
@@ -1500,10 +1466,6 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
   color: var(--link-color, #a8c0e0);
 }
 
-.dark .cm-url {
-  color: var(--text-muted, #999999);
-}
-
 .dark .cm-formatting {
   color: var(--text-faint, #666666);
 }
@@ -1563,7 +1525,7 @@ span.cm-html-tag-syntax:has(span:contains("script")) {
 /* CodeMirror Markdown tokens - More specific selectors to ensure they take precedence */
 .cm-editor .cm-content .cm-line .cm-formatting {
   opacity: 0.35;
-  color: var(--text-faint, #999999) !important;
+  color: var(--text-faint, #999999);
 }
 
 /* More specific selectors for preview mode to hide formatting */
@@ -1573,7 +1535,7 @@ html[data-markdown-mode="preview"]
   .cm-line
   .cm-formatting,
 .cm-editor[data-markdown-mode="preview"] .cm-content .cm-line .cm-formatting {
-  display: none !important;
+  display: none;
 }
 
 /* Specific selectors for different syntax elements */
@@ -1582,7 +1544,7 @@ html[data-markdown-mode="preview"]
 .cm-editor .cm-content .cm-line .cm-formatting-em,
 .cm-editor .cm-content .cm-line .cm-formatting-link,
 .cm-editor .cm-content .cm-line .cm-formatting-code {
-  color: #8b5cf6 !important;
+  color: #8b5cf6;
   opacity: 0.4;
 }
 
@@ -1656,12 +1618,12 @@ html[data-markdown-mode="preview"]
 html[data-markdown-mode="preview"] .markdown-syntax-dim,
 .markdown-preview-mode .markdown-syntax-dim,
 [data-markdown-mode="preview"] .markdown-syntax-dim {
-  display: none !important;
-  opacity: 0 !important;
+  display: none;
+  opacity: 0;
 }
 
 .cm-editor[data-markdown-mode="preview"] .cm-content .cm-line .cm-formatting {
-  display: none !important;
+  display: none;
 }
 
 /* Blockquote styling */
@@ -1778,17 +1740,17 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 [data-markdown-mode="preview"] .cm-atomic-indent,
 [data-markdown-mode="preview"] .cm-list-indent,
 [data-markdown-mode="preview"] .cm-blockquote-indent {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
+  display: inline-block;
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Force blockquote and list markers to be visible even when other syntax is hidden */
 .cm-blockquote-indent.markdown-syntax-dim,
 .cm-list-indent.markdown-syntax-dim {
-  opacity: 1 !important;
-  display: inline-block !important;
-  visibility: visible !important;
+  opacity: 1;
+  display: inline-block;
+  visibility: visible;
 }
 
 /* Explicit styling for white spaces in blockquotes and indented content */
@@ -1796,8 +1758,8 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 .cm-blockquote-indent .cm-tab,
 .cm-list-indent .cm-space,
 .cm-list-indent .cm-tab {
-  display: inline-block !important;
-  min-width: 4px !important;
+  display: inline-block;
+  min-width: 4px;
   background-color: rgba(128, 128, 128, 0.1);
   border-radius: 2px;
   margin: 0;
@@ -1806,8 +1768,8 @@ html[data-markdown-mode="preview"] .markdown-syntax-dim,
 
 /* Add debug highlighting for spaces */
 .cm-whitespace-debug {
-  background-color: rgba(255, 0, 0, 0.1) !important;
+  background-color: rgba(255, 0, 0, 0.1);
   border: 1px dotted #ccc;
-  display: inline-block !important;
-  min-width: 4px !important;
+  display: inline-block;
+  min-width: 4px;
 }
