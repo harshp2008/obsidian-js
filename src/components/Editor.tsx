@@ -1,12 +1,12 @@
 'use client';
 
 import React from 'react';
-import CodeMirrorEditor, { CodeMirrorEditorProps } from '../app/obsidian-editor/CodeMirrorEditor';
+import CodeMirrorEditor, { ObsidianiteEditorProps } from '../app/obsidian-editor/CodeMirrorEditor';
 import { useTheme } from '../contexts/ThemeContext';
 import '../styles/Editor.css';
 import { EditorView } from '@codemirror/view';
 
-export interface EditorProps extends CodeMirrorEditorProps {
+export interface EditorProps extends ObsidianiteEditorProps {
   className?: string;
   onEditorViewReady?: (view: EditorView) => void;
 }

@@ -4,7 +4,7 @@
 
 // Re-export types
 export type { ThemeContextType, Theme } from './contexts/ThemeContext';
-export type { CodeMirrorEditorProps } from './app/obsidian-editor/CodeMirrorEditor';
+export type { ObsidianiteEditorProps } from './app/obsidian-editor/CodeMirrorEditor';
 
 // Re-export client components
 export * from './client';
@@ -19,7 +19,7 @@ import './index.css';
 // Client components will be automatically handled by the Next.js compiler
 
 // Core Components
-export { default as CodeMirrorEditor } from './app/obsidian-editor/CodeMirrorEditor';
+export { default as ObsidianiteEditor } from './app/obsidian-editor/CodeMirrorEditor';
 export { default as EditorCore } from './app/obsidian-editor/components/EditorCore';
 export { default as EditorToolbar } from './app/obsidian-editor/components/EditorToolbar';
 export { default as ThemeSwitcher } from './app/obsidian-editor/components/ThemeSwitcher';

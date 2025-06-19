@@ -14,9 +14,9 @@ import './CodeMirrorEditor.css';
 
 /**
  * Props for the CodeMirrorEditor component.
- * @interface CodeMirrorEditorProps
+ * @interface ObsidianiteEditorProps
  */
-export interface CodeMirrorEditorProps {
+export interface ObsidianiteEditorProps {
   /** Initial markdown content for the editor */
   initialValue?: string;
   /** Whether the editor is read-only */
@@ -36,7 +36,7 @@ export interface CodeMirrorEditorProps {
  * @param props - Component props
  * @returns React component
  */
-const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({ 
+const ObsidianiteEditor: React.FC<ObsidianiteEditorProps> = ({ 
   initialValue = '', 
   readOnly = false, 
   onChange, 
@@ -100,4 +100,4 @@ const CodeMirrorEditor: React.FC<CodeMirrorEditorProps> = ({
   );
 };
 
-export default CodeMirrorEditor;
+export default ObsidianiteEditor;
