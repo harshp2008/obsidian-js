@@ -32,7 +32,7 @@
   flex: 1;
   overflow: auto;
   position: relative;
-  height: auto !important;
+  height: auto;
 }
 
 .obsidian-editor-core {
@@ -40,11 +40,11 @@
 }
 
 .cm-editor {
-  height: 100% !important;
+  height: 100% ;
 }
 
 .cm-scroller {
-  overflow: auto !important;
+  overflow: auto ;
 }
 
 /* Dark mode styles */
